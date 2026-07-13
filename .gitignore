@@ -1,0 +1,14 @@
+# deps
+node_modules/
+
+# build output
+dist/
+target/
+
+# test artifacts
+test-results/
+playwright-report/
+
+# misc
+.DS_Store
+*.local
