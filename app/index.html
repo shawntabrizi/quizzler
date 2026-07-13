@@ -151,13 +151,67 @@
         .countdown.urgent { color: var(--fg-warning); }
 
         .wager-row { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
-        input[type="range"] { flex: 1; accent-color: var(--bg-action-primary); cursor: pointer; }
-        .wager-value { font-size: 1.4rem; font-weight: 600; min-width: 2ch; text-align: center; }
 
-        .answer-row .mark { font-weight: 600; }
-        .answer-row .mark.correct { color: var(--fg-success); }
-        .answer-row .mark.wrong { color: var(--fg-error); }
-        .answer-row .pts { font-variant-numeric: tabular-nums; }
+        /* Once-per-game wager pool: pick a number, spent ones stay colored
+           by outcome (green correct / red wrong), like Sporcle Party. */
+        .wager-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 16px 0;
+            max-width: 360px;
+        }
+        .wager-btn {
+            aspect-ratio: 1;
+            border-radius: var(--radius-full);
+            background: var(--bg-surface-nested);
+            border: 2px solid var(--border-divider-tint);
+            color: var(--fg-primary);
+            font-size: 1.05rem;
+            font-weight: 600;
+            padding: 0;
+        }
+        .wager-btn:hover { background: var(--bg-selection-container-hover); }
+        .wager-btn.selected {
+            background: var(--bg-action-primary);
+            border-color: var(--bg-action-primary);
+            color: var(--fg-primary-inverted);
+        }
+        .wager-btn.selected:hover { background: var(--bg-action-primary-hover); }
+        .wager-btn.used-correct,
+        .wager-btn.used-wrong { opacity: 1; cursor: not-allowed; color: #ffffff; }
+        .wager-btn.used-correct { background: var(--fg-success); border-color: var(--fg-success); }
+        .wager-btn.used-wrong { background: var(--fg-error); border-color: var(--fg-error); }
+        .wager-btn.used-correct:hover { background: var(--fg-success); }
+        .wager-btn.used-wrong:hover { background: var(--fg-error); }
+
+        /* Review: the canonical answer, revealed */
+        .answer-panel {
+            background: var(--bg-surface-nested);
+            border-radius: var(--radius-nested);
+            padding: 18px 16px;
+            text-align: center;
+            margin: 12px 0;
+        }
+        .answer-panel .answer-text { font-size: 1.35rem; font-weight: 600; line-height: 1.3; }
+        .answer-panel .answer-sub { color: var(--fg-secondary); font-size: 0.85rem; margin-top: 6px; }
+
+        .answer-row .player-answer { font-weight: 600; }
+        .answer-row .player-answer.correct { color: var(--fg-success); }
+        .answer-row .player-answer.wrong { color: var(--fg-error); }
+        .wager-badge {
+            min-width: 34px;
+            height: 34px;
+            border-radius: var(--radius-full);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+        .wager-badge.correct { background: var(--fg-success); }
+        .wager-badge.wrong { background: var(--fg-error); }
         .vote-btn { font-size: 0.75rem; padding: 6px 10px; }
 
         .banner { text-align: center; padding: 24px 0 8px; }
@@ -195,7 +249,7 @@
                 <div class="row">
                     <div class="grow">
                         <label for="join-game-id">Game code</label>
-                        <input type="number" id="join-game-id" data-testid="join-game-id" placeholder="e.g. 3" min="0" />
+                        <input type="number" id="join-game-id" data-testid="join-game-id" placeholder="6-digit code" min="0" />
                     </div>
                     <button id="btn-join-game" class="primary" data-testid="btn-join-game" style="align-self: end;">Join game</button>
                 </div>
@@ -208,8 +262,8 @@
                 <ul class="list" id="pack-list" data-testid="pack-list"></ul>
                 <div class="row">
                     <div class="grow">
-                        <label for="cfg-questions">Questions</label>
-                        <input type="number" id="cfg-questions" data-testid="cfg-questions" value="5" min="1" max="64" />
+                        <label for="cfg-questions">Questions (max 10)</label>
+                        <input type="number" id="cfg-questions" data-testid="cfg-questions" value="5" min="1" max="10" />
                     </div>
                     <div class="grow">
                         <label for="cfg-answer-secs">Answer time (s)</label>
@@ -281,8 +335,8 @@
         <!-- Lobby -->
         <section id="screen-lobby" class="screen" data-testid="screen-lobby">
             <div class="card">
-                <h2>Lobby — game <span id="lobby-game-id" data-testid="lobby-game-id"></span></h2>
-                <p class="hint">Share the game code so friends can join.</p>
+                <h2 id="lobby-title" data-testid="lobby-title">Lobby</h2>
+                <p class="hint">Game code: <strong id="lobby-game-id" data-testid="lobby-game-id"></strong> — share it so friends can join.</p>
                 <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
                 <div class="row">
                     <button id="btn-start-game" class="primary" data-testid="btn-start-game" style="display: none;">Start game</button>
@@ -302,16 +356,26 @@
                 <p class="question-text" id="question-text" data-testid="question-text"></p>
                 <div id="answer-form">
                     <input type="text" id="answer-input" data-testid="answer-input" placeholder="Type your answer…" maxlength="64" autocomplete="off" />
-                    <div class="wager-row" id="wager-slider-row">
-                        <label for="wager-slider" style="margin: 0;">Wager</label>
-                        <input type="range" id="wager-slider" data-testid="wager-slider" min="1" max="10" value="5" />
-                        <span class="wager-value" id="wager-value" data-testid="wager-value">5</span>
+                    <div id="wager-grid-block">
+                        <label style="margin-top: 12px;">Wager points — each number can be used once per game</label>
+                        <div class="wager-grid" id="wager-grid" data-testid="wager-grid">
+                            <button class="wager-btn" data-wager="1" data-testid="wager-1">1</button>
+                            <button class="wager-btn" data-wager="2" data-testid="wager-2">2</button>
+                            <button class="wager-btn" data-wager="3" data-testid="wager-3">3</button>
+                            <button class="wager-btn" data-wager="4" data-testid="wager-4">4</button>
+                            <button class="wager-btn" data-wager="5" data-testid="wager-5">5</button>
+                            <button class="wager-btn" data-wager="6" data-testid="wager-6">6</button>
+                            <button class="wager-btn" data-wager="7" data-testid="wager-7">7</button>
+                            <button class="wager-btn" data-wager="8" data-testid="wager-8">8</button>
+                            <button class="wager-btn" data-wager="9" data-testid="wager-9">9</button>
+                            <button class="wager-btn" data-wager="10" data-testid="wager-10">10</button>
+                        </div>
                     </div>
                     <div class="wager-row" id="wager-final-row" style="display: none;">
                         <label for="wager-final" style="margin: 0;">Final wager (0–<span id="wager-final-max"></span>)</label>
                         <input type="number" id="wager-final" data-testid="wager-final" min="0" value="0" style="width: 100px;" />
                     </div>
-                    <button id="btn-submit-answer" class="primary" data-testid="btn-submit-answer">Lock it in</button>
+                    <button id="btn-submit-answer" class="primary" data-testid="btn-submit-answer">Submit answer</button>
                 </div>
                 <div class="error-text" id="question-error" data-testid="question-error"></div>
             </div>
@@ -330,7 +394,10 @@
                     <span class="countdown" id="review-countdown" data-testid="review-countdown" style="margin-left: auto;"></span>
                 </div>
                 <p class="question-text" id="review-question" data-testid="review-question"></p>
-                <p data-testid="review-answer-line">Answer: <strong id="review-answer" data-testid="review-answer"></strong></p>
+                <div class="answer-panel">
+                    <div class="answer-text" id="review-answer" data-testid="review-answer"></div>
+                    <div class="answer-sub" id="review-difficulty" data-testid="review-difficulty"></div>
+                </div>
                 <ul class="list" id="review-rows" data-testid="review-rows" style="margin-top: 12px;"></ul>
                 <div class="row" style="margin-top: 12px;">
                     <button id="btn-continue" class="primary" data-testid="btn-continue">Continue</button>

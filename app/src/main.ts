@@ -1,13 +1,15 @@
 /**
  * Quizzler — social trivia on Polkadot.
  *
- * Boot sequence follows the product-sdk contracts-demo: SignerManager →
- * product account → chain client → ad-hoc contract handle → account mapping.
- * Game state lives entirely in the contract; the app polls `getPhase` (and
- * friends) every few seconds and renders whichever screen the chain says
- * we're in. Answers and correctness are public on-chain — this client just
- * chooses not to show them before the review phase, like a deck of cards
- * lying face-down on the table.
+ * Two contracts: the pack REGISTRY (quiz content — packs, questions,
+ * answers) and the GAME (lobby, phases, scoring, votes). Game state is
+ * polled from the game contract; question text and the review-time
+ * canonical answer are read from the registry by (pack_id, slot).
+ *
+ * Boot follows the product-sdk contracts-demo: SignerManager → product
+ * account → chain client → contract handles → account mapping. Answers and
+ * correctness are public on-chain — this client just chooses not to show
+ * them before the review phase, like cards lying face-down on the table.
  */
 
 import { SignerManager, type SignerAccount } from "@parity/product-sdk-signer";
@@ -20,7 +22,8 @@ import {
 } from "@parity/product-sdk-contracts";
 import { ss58ToH160, truncateAddress } from "@parity/product-sdk-address";
 
-import abi from "./abi.json";
+import registryAbi from "./abi-registry.json";
+import gameAbi from "./abi-game.json";
 import contractInfo from "./contract-address.json";
 import { normalizeAnswer } from "./normalize";
 import { appendLog, getEl, li, renderList, span } from "./ui";
@@ -35,6 +38,8 @@ const STAGE_FINAL_ANSWER = 4;
 const STAGE_FINAL_REVIEW = 5;
 const STAGE_FINISHED = 6;
 const FINAL_QKEY = 255;
+const NO_SLOT = 255;
+const NO_PACK = 0xffffffff;
 const SECONDS_PER_BLOCK = 2; // measured on Paseo Asset Hub Next (2026-07)
 const POLL_MS = 3_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
@@ -47,9 +52,8 @@ interface PhaseView {
     deadline: bigint;
     current_block: bigint;
     final_difficulty: number;
-    question: string;
-    /** Canonical answer, revealed by the contract only during review stages. */
-    answer?: string;
+    /** Registry slot of the live question (255 when none). */
+    slot: number;
     submit_count: number;
     continue_count: number;
     player_count: number;
@@ -89,6 +93,9 @@ interface Snapshot {
     players: string[];
     scores: number[];
     submissions: SubmissionView[];
+    questionText: string;
+    /** Canonical answer — only fetched during review stages. */
+    answerText: string;
 }
 
 // ── App state ────────────────────────────────────────────────────────
@@ -96,7 +103,8 @@ interface Snapshot {
 const manager = new SignerManager({ ss58Prefix: 0, dappName: "quizzler" });
 
 let productAccount: SignerAccount | null = null;
-let contract: any = null;
+let registry: any = null;
+let game: any = null;
 let myAddress = ""; // lowercase H160
 let gameId: bigint | null = null;
 let latest: Snapshot | null = null;
@@ -109,6 +117,16 @@ let busy = false;
 // don't re-send txs the chain would reject anyway.
 let actionKey = "";
 const actionsSent = new Set<string>();
+
+// Once-per-game wager pool: value → correct? (undefined = still available)
+let wagerOutcomes = new Map<number, boolean>();
+let wagerHistoryLoadedUpTo = -1;
+let selectedWager: number | null = null;
+
+// Registry content caches (immutable once sealed)
+const questionCache = new Map<string, string>();
+const answerCache = new Map<string, string>();
+const packTitleCache = new Map<number, string>();
 
 // Pack-builder state
 let builderPackId: number | null = null;
@@ -149,12 +167,29 @@ function txError(e: unknown): string {
  * previous transaction (vote → continue) can race finality and pick an
  * already-spent nonce; a short pause and one retry absorbs it.
  */
-async function sendTx(method: string, ...args: unknown[]): Promise<void> {
+async function sendTx(handle: any, method: string, ...args: unknown[]): Promise<void> {
     if (!productAccount) throw new Error("Account not ready");
     for (let attempt = 0; ; attempt++) {
         try {
-            const result = await contract[method].tx(...args, {
+            // Pre-size the weight with our own margin: the SDK submits with
+            // the dry-run weight exactly, which OutOfGas-es methods that make
+            // cross-contract registry calls. Query errors fall through — the
+            // tx's own dry-run surfaces them with a proper revert reason.
+            let gasLimit: { ref_time: bigint; proof_size: bigint } | undefined;
+            try {
+                const q = await handle[method].query(...args, { origin: productAccount.address });
+                if (q?.gasRequired) {
+                    gasLimit = {
+                        ref_time: (q.gasRequired.ref_time * 3n) / 2n,
+                        proof_size: (q.gasRequired.proof_size * 3n) / 2n,
+                    };
+                }
+            } catch {
+                // ignored — see above
+            }
+            const result = await handle[method].tx(...args, {
                 signer: productAccount.getSigner(),
+                ...(gasLimit ? { gasLimit } : {}),
             });
             if (!result.ok) throw new Error(JSON.stringify(result.dispatchError));
             return;
@@ -169,14 +204,48 @@ async function sendTx(method: string, ...args: unknown[]): Promise<void> {
     }
 }
 
+// ── Registry content lookups (cached) ────────────────────────────────
+
+async function questionText(packId: number, slot: number): Promise<string> {
+    const key = `${packId}:${slot}`;
+    const cached = questionCache.get(key);
+    if (cached !== undefined) return cached;
+    const res = await registry.getQuestion.query(packId, slot);
+    if (!res.success) return "";
+    questionCache.set(key, res.value as string);
+    return res.value as string;
+}
+
+async function canonicalAnswer(packId: number, slot: number): Promise<string> {
+    const key = `${packId}:${slot}`;
+    const cached = answerCache.get(key);
+    if (cached !== undefined) return cached;
+    const res = await registry.getAnswers.query(packId, slot);
+    if (!res.success) return "";
+    const answers = res.value as string[];
+    const canonical = answers[0] ?? "";
+    answerCache.set(key, canonical);
+    return canonical;
+}
+
+async function packTitle(packId: number): Promise<string> {
+    const cached = packTitleCache.get(packId);
+    if (cached !== undefined) return cached;
+    const res = await registry.getPack.query(packId);
+    if (!res.success) return `pack #${packId}`;
+    const title = (res.value as PackView).title;
+    packTitleCache.set(packId, title);
+    return title;
+}
+
 // ── Boot ─────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
     showScreen("boot");
-    if (!contractInfo.address) {
+    if (!contractInfo.registry || !contractInfo.game) {
         $connPill.textContent = "no contract";
         $connPill.className = "err";
-        bootLog("No contract address configured.", "err");
+        bootLog("Contract addresses not configured.", "err");
         bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
         return;
     }
@@ -205,14 +274,21 @@ async function init(): Promise<void> {
     const client = await createChainClient({ chains: { assetHub: paseo_asset_hub } });
     bootLog("Chain client ready", "ok");
 
-    contract = createContractFromClient(
+    registry = createContractFromClient(
         client.raw.assetHub,
         paseo_asset_hub,
-        contractInfo.address as `0x${string}`,
-        abi as never,
+        contractInfo.registry as `0x${string}`,
+        registryAbi as never,
         { signerManager: manager },
     );
-    bootLog("Contract handle ready", "ok");
+    game = createContractFromClient(
+        client.raw.assetHub,
+        paseo_asset_hub,
+        contractInfo.game as `0x${string}`,
+        gameAbi as never,
+        { signerManager: manager },
+    );
+    bootLog("Contract handles ready (registry + game)", "ok");
 
     // One-time SS58 → H160 mapping required by pallet-revive for .tx().
     // Idempotent: costs one signature the first time, free afterwards.
@@ -255,13 +331,13 @@ async function refreshPacks(): Promise<void> {
 }
 
 async function refreshPacksInner(): Promise<void> {
-    const countRes = await contract.packCount.query();
+    const countRes = await registry.packCount.query();
     if (!countRes.success) return;
     const count = Number(countRes.value);
-    const from = Math.max(0, count - 10);
+    const from = Math.max(0, count - 50);
     const rows: HTMLLIElement[] = [];
     for (let id = count - 1; id >= from; id--) {
-        const res = await contract.getPack.query(id);
+        const res = await registry.getPack.query(id);
         if (!res.success) continue;
         const pack = res.value as PackView;
         if (!pack.sealed) continue;
@@ -277,56 +353,45 @@ async function refreshPacksInner(): Promise<void> {
             selectedPack = pack;
             $btnCreateGame.disabled = false;
             const qInput = getEl<HTMLInputElement>("cfg-questions");
-            qInput.max = String(pack.regular_count);
-            if (Number(qInput.value) > pack.regular_count) qInput.value = String(pack.regular_count);
+            const maxQ = Math.min(pack.regular_count, 10);
+            qInput.max = String(maxQ);
+            if (Number(qInput.value) > maxQ) qInput.value = String(maxQ);
             for (const el of $packList.children) el.classList.remove("selected");
             row.classList.add("selected");
         });
         rows.push(row);
     }
     if (rows.length === 0) {
-        const empty = li(span("sub", "No sealed packs yet — create one!"));
-        rows.push(empty);
+        rows.push(li(span("sub", "No sealed packs yet — create one!")));
     }
     renderList($packList, rows);
-}
-
-function secondsToBlocks(seconds: number): number {
-    return Math.max(2, Math.round(seconds / SECONDS_PER_BLOCK));
-}
-
-/**
- * Ids are sequential, but reading the counter before submitting races with
- * other users creating packs/games concurrently. Instead, after our tx
- * lands, walk back from the top for the newest entry we created.
- */
-async function findMyLatest(
-    countMethod: "packCount" | "gameCount",
-    getMethod: "getPack" | "getGame",
-    accept: (v: { creator: string }) => boolean,
-): Promise<bigint | null> {
-    const countRes = await contract[countMethod].query();
-    if (!countRes.success) return null;
-    const count = BigInt(countRes.value);
-    const floor = count > 30n ? count - 30n : 0n;
-    for (let id = count - 1n; id >= floor; id--) {
-        const res = await contract[getMethod].query(id); // viem accepts bigint for any uint width
-        if (res.success) {
-            const v = res.value as { creator: string };
-            if (v.creator.toLowerCase() === myAddress && accept(v)) return id;
-        }
-        if (id === 0n) break;
-    }
-    return null;
 }
 
 // Keep the browse list fresh while the player sits on the home screen —
 // packs published by others should show up without a reload.
 setInterval(() => {
-    if (contract && getEl("screen-home").classList.contains("active") && !busy) {
+    if (registry && getEl("screen-home").classList.contains("active") && !busy) {
         void refreshPacks();
     }
 }, 5_000);
+
+function secondsToBlocks(seconds: number): number {
+    return Math.max(2, Math.round(seconds / SECONDS_PER_BLOCK));
+}
+
+async function myLatestPackId(): Promise<number | null> {
+    const res = await registry.myLatestPack.query(myAddress);
+    if (!res.success) return null;
+    const id = Number(res.value);
+    return id === NO_PACK ? null : id;
+}
+
+async function myLatestGameId(): Promise<bigint | null> {
+    const res = await game.myLatestGame.query(myAddress);
+    if (!res.success) return null;
+    const id = BigInt(res.value);
+    return id === 0n ? null : id;
+}
 
 getEl("btn-create-game").addEventListener("click", async () => {
     if (busy || selectedPackId === null || selectedPack === null || !productAccount) return;
@@ -334,14 +399,15 @@ getEl("btn-create-game").addEventListener("click", async () => {
     const numQuestions = Math.min(
         Number(getEl<HTMLInputElement>("cfg-questions").value) || 5,
         selectedPack.regular_count,
+        10,
     );
     const answerBlocks = secondsToBlocks(Number(getEl<HTMLInputElement>("cfg-answer-secs").value) || 60);
     const reviewBlocks = secondsToBlocks(Number(getEl<HTMLInputElement>("cfg-review-secs").value) || 45);
     const maxPlayers = Number(getEl<HTMLInputElement>("cfg-max-players").value) || 8;
     busy = true;
     try {
-        await sendTx("createGame", selectedPackId, numQuestions, answerBlocks, reviewBlocks, maxPlayers);
-        const id = await findMyLatest("gameCount", "getGame", () => true);
+        await sendTx(game, "createGame", selectedPackId, numQuestions, answerBlocks, reviewBlocks, maxPlayers);
+        const id = await myLatestGameId();
         if (id === null) throw new Error("could not locate the created game");
         enterGame(id);
     } catch (e) {
@@ -362,7 +428,7 @@ getEl("btn-join-game").addEventListener("click", async () => {
     const id = BigInt(raw);
     busy = true;
     try {
-        await sendTx("joinGame", id);
+        await sendTx(game, "joinGame", id);
         enterGame(id);
     } catch (e) {
         const msg = txError(e);
@@ -405,13 +471,10 @@ getEl("btn-create-pack").addEventListener("click", async () => {
     }
     busy = true;
     try {
-        await sendTx("createPack", title);
-        const id = await findMyLatest(
-            "packCount", "getPack",
-            (v) => !(v as unknown as PackView).sealed,
-        );
+        await sendTx(registry, "createPack", title);
+        const id = await myLatestPackId();
         if (id === null) throw new Error("could not locate the created pack");
-        builderPackId = Number(id);
+        builderPackId = id;
         getEl("builder-title").textContent = `${title} (pack #${builderPackId})`;
         getEl("builder-create-row").style.display = "none";
         getEl("builder-question-form").style.display = "";
@@ -453,17 +516,16 @@ getEl("btn-add-question").addEventListener("click", async () => {
     busy = true;
     try {
         try {
-            await sendTx("addQuestion", builderPackId, text, answers, isFinal, difficulty);
+            await sendTx(registry, "addQuestion", builderPackId, text, answers, isFinal, difficulty);
         } catch (e) {
-            // Pack ids are assigned at execution time from a global counter,
-            // so a best-block reorg can shift them between resolution and
-            // dispatch — the tx then hits someone else's pack and reverts.
-            // Re-resolve our pack and retry once.
+            // Pack ids are assigned at execution time, so a best-block reorg
+            // can shift them between resolution and dispatch — the tx then
+            // hits someone else's pack and reverts. Re-resolve and retry once.
             if (!/revert/i.test(txError(e))) throw e;
-            const id = await findMyLatest("packCount", "getPack", (v) => !(v as unknown as PackView).sealed);
+            const id = await myLatestPackId();
             if (id === null) throw e;
-            builderPackId = Number(id);
-            await sendTx("addQuestion", builderPackId, text, answers, isFinal, difficulty);
+            builderPackId = id;
+            await sendTx(registry, "addQuestion", builderPackId, text, answers, isFinal, difficulty);
         }
         if (isFinal) builderFinals[difficulty] = true;
         else builderRegular += 1;
@@ -486,14 +548,14 @@ getEl("btn-seal-pack").addEventListener("click", async () => {
     busy = true;
     try {
         try {
-            await sendTx("sealPack", builderPackId);
+            await sendTx(registry, "sealPack", builderPackId);
         } catch (e) {
             // same reorg id-shift heal as addQuestion
             if (!/revert/i.test(txError(e))) throw e;
-            const id = await findMyLatest("packCount", "getPack", (v) => !(v as unknown as PackView).sealed);
+            const id = await myLatestPackId();
             if (id === null) throw e;
-            builderPackId = Number(id);
-            await sendTx("sealPack", builderPackId);
+            builderPackId = id;
+            await sendTx(registry, "sealPack", builderPackId);
         }
         await refreshPacks();
         showScreen("home");
@@ -515,6 +577,9 @@ function enterGame(id: bigint): void {
     gameId = id;
     latest = null;
     actionsSent.clear();
+    wagerOutcomes = new Map();
+    wagerHistoryLoadedUpTo = -1;
+    selectedWager = null;
     if (pollTimer) clearInterval(pollTimer);
     void poll();
     pollTimer = setInterval(() => void poll(), POLL_MS);
@@ -537,27 +602,66 @@ function questionKeyFor(phase: PhaseView): number {
         : FINAL_QKEY;
 }
 
+/**
+ * Rebuild the used-wager map from past questions (rejoin/refresh safe),
+ * then keep it current from the live snapshot (overturns can flip the
+ * current question's outcome during review).
+ */
+async function syncWagerHistory(snap: Snapshot): Promise<void> {
+    if (gameId === null) return;
+    const uptoCursor =
+        snap.phase.stage === STAGE_ANSWER ? snap.phase.cursor : snap.phase.cursor + 1;
+    for (let k = wagerHistoryLoadedUpTo + 1; k < Math.min(uptoCursor, snap.game.num_questions); k++) {
+        const res = await game.getSubmissions.query(gameId, k);
+        if (!res.success) return;
+        const mine = (res.value as SubmissionView[]).find(
+            (s) => s.player.toLowerCase() === myAddress,
+        );
+        if (mine?.submitted) wagerOutcomes.set(mine.wager, mine.correct);
+        wagerHistoryLoadedUpTo = k;
+    }
+    // live update for the question currently on the table (regular only)
+    if (snap.phase.stage === STAGE_ANSWER || snap.phase.stage === STAGE_REVIEW) {
+        const mine = snap.submissions.find((s) => s.player.toLowerCase() === myAddress);
+        if (mine?.submitted) wagerOutcomes.set(mine.wager, mine.correct);
+    }
+}
+
 async function poll(): Promise<void> {
-    if (gameId === null || !contract) return;
+    if (gameId === null || !game) return;
     try {
-        const phaseRes = await contract.getPhase.query(gameId);
+        const phaseRes = await game.getPhase.query(gameId);
         if (!phaseRes.success) return;
         const phase = phaseRes.value as PhaseView;
         const qkey = questionKeyFor(phase);
         const [gameRes, playersRes, scoresRes, subsRes] = await Promise.all([
-            contract.getGame.query(gameId),
-            contract.getPlayers.query(gameId),
-            contract.getScores.query(gameId),
-            contract.getSubmissions.query(gameId, qkey),
+            game.getGame.query(gameId),
+            game.getPlayers.query(gameId),
+            game.getScores.query(gameId),
+            game.getSubmissions.query(gameId, qkey),
         ]);
         if (!gameRes.success || !playersRes.success || !scoresRes.success || !subsRes.success) return;
+        const gameView = gameRes.value as GameView;
+
+        let qText = "";
+        let aText = "";
+        if (phase.slot !== NO_SLOT) {
+            qText = await questionText(gameView.pack_id, phase.slot);
+            if (phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW) {
+                aText = await canonicalAnswer(gameView.pack_id, phase.slot);
+            }
+        }
+
         latest = {
             phase,
-            game: gameRes.value as GameView,
+            game: gameView,
             players: (playersRes.value as string[]).map((p) => p.toLowerCase()),
             scores: (scoresRes.value as (number | bigint)[]).map(Number),
             submissions: subsRes.value as SubmissionView[],
+            questionText: qText,
+            answerText: aText,
         };
+        await syncWagerHistory(latest);
         // reset per-stage action guards when the stage changes
         const key = `${gameId}:${latest.phase.stage}:${latest.phase.cursor}`;
         if (key !== actionKey) {
@@ -577,7 +681,7 @@ function mySubmission(snap: Snapshot): SubmissionView | undefined {
 function render(snap: Snapshot): void {
     switch (snap.phase.stage) {
         case STAGE_LOBBY:
-            renderLobby(snap);
+            void renderLobby(snap);
             break;
         case STAGE_ANSWER:
         case STAGE_FINAL_ANSWER:
@@ -598,8 +702,9 @@ function render(snap: Snapshot): void {
 
 // ── Lobby ────────────────────────────────────────────────────────────
 
-function renderLobby(snap: Snapshot): void {
+async function renderLobby(snap: Snapshot): Promise<void> {
     getEl("lobby-game-id").textContent = String(gameId);
+    getEl("lobby-title").textContent = await packTitle(snap.game.pack_id);
     renderList(
         getEl("lobby-players"),
         snap.players.map((p, i) =>
@@ -619,7 +724,7 @@ getEl("btn-start-game").addEventListener("click", async () => {
     if (busy || gameId === null || !productAccount) return;
     busy = true;
     try {
-        await sendTx("startGame", gameId);
+        await sendTx(game, "startGame", gameId);
         void poll();
     } catch (e) {
         getEl("lobby-error").textContent = txError(e);
@@ -649,17 +754,33 @@ setInterval(() => {
 
 // ── Question screen ──────────────────────────────────────────────────
 
-const $wagerSlider = getEl<HTMLInputElement>("wager-slider");
-$wagerSlider.addEventListener("input", () => {
-    getEl("wager-value").textContent = $wagerSlider.value;
-});
+const $wagerButtons = [...document.querySelectorAll<HTMLButtonElement>(".wager-btn")];
+for (const btn of $wagerButtons) {
+    btn.addEventListener("click", () => {
+        const value = Number(btn.dataset.wager);
+        if (wagerOutcomes.has(value)) return; // already spent
+        selectedWager = value;
+        paintWagerGrid();
+    });
+}
+
+function paintWagerGrid(): void {
+    for (const btn of $wagerButtons) {
+        const value = Number(btn.dataset.wager);
+        const outcome = wagerOutcomes.get(value);
+        btn.classList.toggle("used-correct", outcome === true);
+        btn.classList.toggle("used-wrong", outcome === false);
+        btn.classList.toggle("selected", selectedWager === value && outcome === undefined);
+        btn.disabled = outcome !== undefined;
+    }
+}
 
 function renderQuestion(snap: Snapshot): void {
     const isFinal = snap.phase.stage === STAGE_FINAL_ANSWER;
     getEl("question-number").textContent = isFinal
         ? `Final question · ${DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? ""}`
-        : `Question ${snap.phase.cursor + 1} of ${snap.game.num_questions}`;
-    getEl("question-text").textContent = snap.phase.question;
+        : `${snap.phase.cursor + 1} of ${snap.game.num_questions}`;
+    getEl("question-text").textContent = snap.questionText;
     getEl("question-countdown").textContent = countdownText(snap);
 
     const mine = mySubmission(snap);
@@ -668,13 +789,15 @@ function renderQuestion(snap: Snapshot): void {
     getEl("submitted-card").style.display = answered ? "" : "none";
 
     if (!answered) {
-        getEl("wager-slider-row").style.display = isFinal ? "none" : "";
+        getEl("wager-grid-block").style.display = isFinal ? "none" : "";
         getEl("wager-final-row").style.display = isFinal ? "" : "none";
         if (isFinal) {
             const myIdx = snap.players.indexOf(myAddress);
             const myScore = myIdx >= 0 ? snap.scores[myIdx] : 0;
             getEl("wager-final-max").textContent = String(myScore);
             getEl<HTMLInputElement>("wager-final").max = String(myScore);
+        } else {
+            paintWagerGrid();
         }
     } else {
         // Others' answers, face-down until review: show submitted text for
@@ -701,14 +824,22 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
     $err.textContent = "";
     const isFinal = latest.phase.stage === STAGE_FINAL_ANSWER;
     const answer = normalizeAnswer(getEl<HTMLInputElement>("answer-input").value);
-    const wager = isFinal
-        ? Number(getEl<HTMLInputElement>("wager-final").value) || 0
-        : Number($wagerSlider.value);
+    let wager: number;
+    if (isFinal) {
+        wager = Number(getEl<HTMLInputElement>("wager-final").value) || 0;
+    } else {
+        if (selectedWager === null) {
+            $err.textContent = "Pick a wager first — each number can be used once per game.";
+            return;
+        }
+        wager = selectedWager;
+    }
     if (actionsSent.has("submit")) return;
     busy = true;
     try {
-        await sendTx("submitAnswer", gameId, answer, wager);
+        await sendTx(game, "submitAnswer", gameId, answer, wager);
         actionsSent.add("submit");
+        selectedWager = null;
         getEl<HTMLInputElement>("answer-input").value = "";
         void poll();
     } catch (e) {
@@ -720,20 +851,20 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
 
 // ── Review screen ────────────────────────────────────────────────────
 
-let reviewAnswerShown = ""; // cache the canonical answer per stage
-
 function renderReview(snap: Snapshot): void {
     const isFinal = snap.phase.stage === STAGE_FINAL_REVIEW;
     getEl("review-number").textContent = isFinal
         ? "Final question — results"
-        : `Question ${snap.phase.cursor + 1} — results`;
-    getEl("review-question").textContent = snap.phase.question;
+        : `${snap.phase.cursor + 1} of ${snap.game.num_questions} — results`;
+    getEl("review-question").textContent = snap.questionText;
     getEl("review-countdown").textContent = countdownText(snap);
 
-    // The canonical answer comes from the contract (revealed only during
+    // The canonical answer comes from the registry (fetched only during
     // review) — never inferred from players' submissions.
-    reviewAnswerShown = snap.phase.answer || "—";
-    getEl("review-answer").textContent = reviewAnswerShown;
+    getEl("review-answer").textContent = snap.answerText || "—";
+    getEl("review-difficulty").textContent = isFinal
+        ? `Difficulty: ${DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? ""}`
+        : "";
 
     const threshold = Math.floor((snap.players.length - 1) / 2) + 1;
     renderList(
@@ -743,13 +874,14 @@ function renderReview(snap: Snapshot): void {
             const row = li(span("", fmtAddr(s.player)));
             row.className = "answer-row";
             if (!s.submitted) {
-                row.append(span("sub", "no answer"), span("mark wrong right", "✗"));
+                row.append(
+                    span("player-answer wrong grow", "NO ANSWER GIVEN"),
+                    span("wager-badge wrong", "0"),
+                );
                 return row;
             }
-            const delta = s.correct ? `+${s.wager}` : isFinal ? `−${s.wager}` : "0";
             row.append(
-                span("sub", `“${s.answer}” · wagered ${s.wager}`),
-                span(`right pts mark ${s.correct ? "correct" : "wrong"}`, `${s.correct ? "✓" : "✗"} ${delta}`),
+                span(`player-answer ${s.correct ? "correct" : "wrong"} grow`, s.answer || "—"),
             );
             if (!s.correct && !isMe) {
                 const btn = document.createElement("button");
@@ -763,6 +895,7 @@ function renderReview(snap: Snapshot): void {
                 btn.addEventListener("click", () => void voteCorrect(s.player));
                 row.append(btn);
             }
+            row.append(span(`wager-badge ${s.correct ? "correct" : "wrong"}`, String(s.wager)));
             return row;
         }),
     );
@@ -785,7 +918,7 @@ async function voteCorrect(target: string): Promise<void> {
     if (actionsSent.has(key)) return;
     busy = true;
     try {
-        await sendTx("voteCorrect", gameId, target);
+        await sendTx(game, "voteCorrect", gameId, target);
         actionsSent.add(key);
         void poll();
     } catch (e) {
@@ -799,7 +932,7 @@ getEl("btn-continue").addEventListener("click", async () => {
     if (busy || gameId === null || !productAccount || actionsSent.has("continue")) return;
     busy = true;
     try {
-        await sendTx("readyContinue", gameId);
+        await sendTx(game, "readyContinue", gameId);
         actionsSent.add("continue");
         void poll();
     } catch (e) {
@@ -827,7 +960,7 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
         if (busy || gameId === null || !productAccount || actionsSent.has("difficulty")) return;
         busy = true;
         try {
-            await sendTx("voteDifficulty", gameId, Number(btn.dataset.difficulty));
+            await sendTx(game, "voteDifficulty", gameId, Number(btn.dataset.difficulty));
             actionsSent.add("difficulty");
             void poll();
         } catch (e) {

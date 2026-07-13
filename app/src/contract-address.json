@@ -1,5 +1,6 @@
 {
-    "address": "0x421f1972fdc8d5350ce4ad6b6d345b1346e523ba",
+    "registry": "0xdc32bff89423ec8c85fdd90d0d332c721a0a7ca5",
+    "game": "0xed353a20100275f941c33f2655dcafdcdd6958c9",
     "chain": "paseo-asset-hub",
-    "deployedAt": "2026-07-13T15:33:03.527Z"
+    "deployedAt": "2026-07-13T17:41:56.848Z"
 }
