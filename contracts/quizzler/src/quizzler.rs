@@ -1,9 +1,14 @@
 //! Quizzler — Sporcle Party-style social trivia, entirely on-chain.
 //!
+//! Quiz content lives in the separate registry contract (set at
+//! construction) so this game contract can be redeployed freely without
+//! re-uploading packs. Pack validation and answer matching read the
+//! registry cross-contract; clients read question text and the canonical
+//! answer from the registry directly.
+//!
 //! Casual trust model: answers are submitted in plaintext and scored at
-//! submission time; canonical answers live in storage in normalized
-//! plaintext. The client decides what to *display* per phase; the chain
-//! only enforces timing, scoring, and votes.
+//! submission time. The client decides what to *display* per phase; the
+//! chain only enforces timing, scoring, and votes.
 //!
 //! Phase pacing is a pure function of block number (see `quizzler-logic`):
 //! every mutating call first settles timeout transitions, then applies the
@@ -24,40 +29,21 @@ use logic::{
     STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE,
 };
 
-// ── Limits (storage values are capped at 416 SCALE-encoded bytes) ────
-const MAX_TITLE_BYTES: usize = 64;
-const MAX_TEXT_BYTES: usize = 256;
 const MAX_ANSWER_BYTES: usize = 64;
-const MAX_ANSWERS: usize = 5;
-// Regular questions occupy u8 slots 0..=0xef (finals live at 0xf0+),
-// sized for the ~200-question starter packs.
-const MAX_REGULAR_QUESTIONS: u8 = 200;
 const MAX_PLAYERS: u8 = 16;
 const MAX_STAGE_BLOCKS: u32 = 600;
 const MAX_WAGER: u32 = 10;
+/// Each wager value 1..=10 is usable once per game (Sporcle's system), so a
+/// game holds at most 10 regular questions.
+const MAX_GAME_QUESTIONS: u8 = 10;
 
-/// Storage slot for a final question of the given difficulty (regular
+/// Registry slot for a final question of the given difficulty (regular
 /// questions occupy slots 0..regular_count).
 const fn final_slot(difficulty: u8) -> u8 {
     0xf0 + difficulty
 }
 
 // ── Stored types (SCALE) ─────────────────────────────────────────────
-
-#[derive(Encode, Decode, Clone)]
-struct PackMeta {
-    creator: [u8; 20],
-    title: String,
-    regular_count: u8,
-    finals_set: [bool; 3],
-    sealed: bool,
-}
-
-#[derive(Encode, Decode, Clone)]
-struct Question {
-    text: String,
-    answer_count: u8,
-}
 
 #[derive(Encode, Decode, Clone)]
 struct GameMeta {
@@ -83,15 +69,6 @@ struct Submission {
 // ── ABI view types ───────────────────────────────────────────────────
 
 #[derive(pvm::SolAbi)]
-struct PackView {
-    creator: pvm::Address,
-    title: String,
-    regular_count: u8,
-    finals_set_count: u8,
-    sealed: bool,
-}
-
-#[derive(pvm::SolAbi)]
 struct GameView {
     pack_id: u32,
     creator: pvm::Address,
@@ -110,9 +87,10 @@ struct PhaseView {
     deadline: u64,
     current_block: u64,
     final_difficulty: u8,
-    question: String,
-    /// Canonical answer — revealed only during review stages, empty otherwise.
-    answer: String,
+    /// Registry slot of the active question (0xff when no question is live).
+    /// Clients read question text — and, during review, the canonical
+    /// answer — from the registry using (pack_id, slot).
+    slot: u8,
     submit_count: u32,
     continue_count: u32,
     player_count: u8,
@@ -129,17 +107,21 @@ struct SubmissionView {
     continue_ready: bool,
 }
 
+/// Mirror of the registry's PackStatus view (cross-contract decode target).
+#[derive(pvm::SolAbi)]
+struct PackStatus {
+    exists: bool,
+    sealed: bool,
+    regular_count: u8,
+}
+
 // ── Storage ──────────────────────────────────────────────────────────
 
 #[pvm::storage]
 struct Storage {
-    pack_count: u32,
+    // pack registry contract this game reads content from
+    registry: [u8; 20],
     game_count: u64,
-    pack_meta: pvm::storage::Mapping<u32, PackMeta>,
-    // (pack, slot) — regular slots 0.., finals at final_slot(d)
-    questions: pvm::storage::Mapping<(u32, u8), Question>,
-    // (pack, slot, i) — normalized accepted answers
-    accepted: pvm::storage::Mapping<(u32, u8, u8), String>,
     game_meta: pvm::storage::Mapping<u64, GameMeta>,
     players: pvm::storage::Mapping<u64, Vec<[u8; 20]>>,
     scores: pvm::storage::Mapping<(u64, [u8; 20]), u32>,
@@ -154,6 +136,11 @@ struct Storage {
     difficulty_voted: pvm::storage::Mapping<(u64, [u8; 20]), bool>,
     difficulty_counts: pvm::storage::Mapping<(u64, u8), u32>,
     difficulty_total: pvm::storage::Mapping<u64, u32>,
+    // bitmask of wager values (bits 1..=10) already spent by a player
+    used_wagers: pvm::storage::Mapping<(u64, [u8; 20]), u16>,
+    // creator → newest game they created (codes shift under reorgs, so
+    // clients resolve through this instead of scanning)
+    latest_game_of: pvm::storage::Mapping<[u8; 20], u64>,
 }
 
 // ── Host helpers ─────────────────────────────────────────────────────
@@ -173,6 +160,88 @@ fn current_block() -> u64 {
     let mut buf = [0u8; 32];
     pvm::api::block_number(&mut buf);
     u64::from_le_bytes(buf[0..8].try_into().unwrap())
+}
+
+/// A 6-digit join code that isn't enumerable like a sequential counter, so
+/// strangers don't stumble into (or grief) games by guessing ids. Derived
+/// from keccak(creator ‖ seq ‖ attempt), bumping `attempt` on collision.
+fn gen_game_code(creator: &[u8; 20], seq: u64) -> u64 {
+    let mut attempt: u8 = 0;
+    loop {
+        let mut input = [0u8; 29];
+        input[..20].copy_from_slice(creator);
+        input[20..28].copy_from_slice(&seq.to_le_bytes());
+        input[28] = attempt;
+        let mut h = [0u8; 32];
+        pvm::api::hash_keccak_256(&input, &mut h);
+        let code = 100_000 + (u64::from_le_bytes(h[..8].try_into().unwrap()) % 900_000);
+        if !Storage::game_meta().contains(&code) {
+            return code;
+        }
+        attempt = attempt.wrapping_add(1);
+    }
+}
+
+// ── Registry cross-contract calls ────────────────────────────────────
+
+fn abi_word_u32(v: u32) -> [u8; 32] {
+    let mut w = [0u8; 32];
+    w[28..].copy_from_slice(&v.to_be_bytes());
+    w
+}
+
+fn abi_word_u8(v: u8) -> [u8; 32] {
+    let mut w = [0u8; 32];
+    w[31] = v;
+    w
+}
+
+/// Call a registry view and ABI-decode its return. Mirrors the calling
+/// convention of the macro-generated cross-contract `Reference` methods.
+fn registry_call<T: pvm::SolAbi>(
+    name: &str,
+    types: &[&str],
+    words: &[[u8; 32]],
+    out_cap: usize,
+) -> T {
+    extern crate alloc;
+    let registry = Storage::registry().get().unwrap_or([0u8; 20]);
+    let selector = pvm::compute_selector(name, types);
+    let mut calldata = alloc::vec::Vec::with_capacity(4 + words.len() * 32);
+    calldata.extend_from_slice(&selector);
+    for w in words {
+        calldata.extend_from_slice(w);
+    }
+    let mut output_buf = alloc::vec![0u8; out_cap];
+    let mut output_ref: &mut [u8] = &mut output_buf[..];
+    let result = pvm::api::call_evm(
+        pvm::CallFlags::ALLOW_REENTRY,
+        &registry,
+        u64::MAX,
+        &[0u8; 32],
+        &calldata,
+        Some(&mut output_ref),
+    );
+    match result {
+        Ok(()) => {
+            let written = output_ref.len();
+            T::abi_decode(&output_buf[..written], 0)
+        }
+        Err(_) => fail("RegistryCallFailed"),
+    }
+}
+
+fn registry_pack_status(pack_id: u32) -> PackStatus {
+    registry_call("getPackStatus", &["uint32"], &[abi_word_u32(pack_id)], 128)
+}
+
+fn registry_answers(pack_id: u32, slot: u8) -> Vec<String> {
+    registry_call(
+        "getAnswers",
+        &["uint32", "uint8"],
+        &[abi_word_u32(pack_id), abi_word_u8(slot)],
+        1024,
+    )
 }
 
 // ── Game helpers ─────────────────────────────────────────────────────
@@ -243,8 +312,8 @@ fn save_game(game_id: u64, m: &GameMeta) {
     Storage::game_meta().insert(&game_id, m);
 }
 
-/// The pack slot answered during this stage. Only valid in answer/review
-/// stages (final difficulty must be resolved by then).
+/// The registry slot answered during this stage. Only valid in
+/// answer/review stages (final difficulty must be resolved by then).
 fn active_slot(m: &GameMeta) -> u8 {
     match m.stage {
         STAGE_ANSWER | STAGE_REVIEW => m.cursor,
@@ -258,20 +327,6 @@ fn active_slot(m: &GameMeta) -> u8 {
     }
 }
 
-fn load_accepted(pack_id: u32, slot: u8) -> Vec<String> {
-    let q = match Storage::questions().get(&(pack_id, slot)) {
-        Some(q) => q,
-        None => fail("NoSuchQuestion"),
-    };
-    let mut out = Vec::with_capacity(q.answer_count as usize);
-    for i in 0..q.answer_count {
-        if let Some(a) = Storage::accepted().get(&(pack_id, slot, i)) {
-            out.push(a);
-        }
-    }
-    out
-}
-
 // ── Contract ─────────────────────────────────────────────────────────
 
 #[pvm::contract]
@@ -279,152 +334,27 @@ mod quizzler {
     // NOTE: no glob import — #[pvm::contract] injects its own String/Vec
     // imports into the module, which a `use super::*` would collide with.
     use super::{
-        active_slot, caller20, cfg_of, clock_of, collapse, current_block, fail, final_slot,
-        load_accepted, load_game, load_players, logic, pvm, require_player, save_game, settle,
-        GameMeta, GameView, PackMeta, PackView, PhaseView, Question, Storage, Submission,
-        SubmissionView, DIFFICULTY_UNSET, MAX_ANSWERS, MAX_ANSWER_BYTES, MAX_PLAYERS,
-        MAX_REGULAR_QUESTIONS, MAX_STAGE_BLOCKS, MAX_TEXT_BYTES, MAX_TITLE_BYTES, MAX_WAGER,
-        STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW,
-        STAGE_VOTE,
+        active_slot, caller20, cfg_of, clock_of, collapse, current_block, fail, gen_game_code,
+        load_game, load_players, logic, pvm, registry_answers, registry_pack_status,
+        require_player, save_game, settle, GameMeta, GameView, PhaseView, Storage, Submission,
+        SubmissionView, DIFFICULTY_UNSET, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS, MAX_PLAYERS,
+        MAX_STAGE_BLOCKS, MAX_WAGER, STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW,
+        STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
 
     #[pvm::constructor]
-    pub fn new() -> Result<(), Error> {
-        Storage::pack_count().set(&0);
+    pub fn new(registry: pvm::Address) -> Result<(), Error> {
+        Storage::registry().set(&registry.to_fixed_bytes());
         Storage::game_count().set(&0);
         Ok(())
     }
 
-    // ── Packs ────────────────────────────────────────────────────
-
+    /// The pack registry this game reads content from.
     #[pvm::method]
-    pub fn create_pack(title: String) -> u32 {
-        if title.is_empty() || title.len() > MAX_TITLE_BYTES {
-            fail("BadTitle");
-        }
-        let id = Storage::pack_count().get().unwrap_or(0);
-        Storage::pack_meta().insert(
-            &id,
-            &PackMeta {
-                creator: caller20(),
-                title,
-                regular_count: 0,
-                finals_set: [false; 3],
-                sealed: false,
-            },
-        );
-        Storage::pack_count().set(&(id + 1));
-        id
-    }
-
-    #[pvm::method]
-    pub fn add_question(
-        pack_id: u32,
-        text: String,
-        answers: Vec<String>,
-        is_final: bool,
-        difficulty: u8,
-    ) {
-        let mut meta = match Storage::pack_meta().get(&pack_id) {
-            Some(m) => m,
-            None => fail("NoSuchPack"),
-        };
-        if meta.creator != caller20() {
-            fail("NotPackCreator");
-        }
-        if meta.sealed {
-            fail("PackSealed");
-        }
-        if text.is_empty() || text.len() > MAX_TEXT_BYTES {
-            fail("BadQuestionText");
-        }
-        if answers.is_empty() || answers.len() > MAX_ANSWERS {
-            fail("BadAnswerCount");
-        }
-
-        let slot = if is_final {
-            if difficulty > 2 {
-                fail("BadDifficulty");
-            }
-            if meta.finals_set[difficulty as usize] {
-                fail("FinalAlreadySet");
-            }
-            meta.finals_set[difficulty as usize] = true;
-            final_slot(difficulty)
-        } else {
-            if meta.regular_count >= MAX_REGULAR_QUESTIONS {
-                fail("PackFull");
-            }
-            let s = meta.regular_count;
-            meta.regular_count += 1;
-            s
-        };
-
-        let mut count: u8 = 0;
-        for raw in &answers {
-            let norm = logic::normalize(raw);
-            if norm.is_empty() || norm.len() > MAX_ANSWER_BYTES {
-                fail("BadAnswer");
-            }
-            Storage::accepted().insert(&(pack_id, slot, count), &norm);
-            count += 1;
-        }
-        Storage::questions().insert(&(pack_id, slot), &Question { text, answer_count: count });
-        Storage::pack_meta().insert(&pack_id, &meta);
-    }
-
-    #[pvm::method]
-    pub fn seal_pack(pack_id: u32) {
-        let mut meta = match Storage::pack_meta().get(&pack_id) {
-            Some(m) => m,
-            None => fail("NoSuchPack"),
-        };
-        if meta.creator != caller20() {
-            fail("NotPackCreator");
-        }
-        if meta.sealed {
-            fail("PackSealed");
-        }
-        if meta.regular_count == 0 {
-            fail("NoQuestions");
-        }
-        if !meta.finals_set.iter().all(|&s| s) {
-            fail("MissingFinalQuestions");
-        }
-        meta.sealed = true;
-        Storage::pack_meta().insert(&pack_id, &meta);
-    }
-
-    #[pvm::method]
-    pub fn pack_count() -> u32 {
-        Storage::pack_count().get().unwrap_or(0)
-    }
-
-    #[pvm::method]
-    pub fn get_pack(pack_id: u32) -> PackView {
-        let m = match Storage::pack_meta().get(&pack_id) {
-            Some(m) => m,
-            None => fail("NoSuchPack"),
-        };
-        PackView {
-            creator: pvm::Address::from(m.creator),
-            title: m.title,
-            regular_count: m.regular_count,
-            finals_set_count: m.finals_set.iter().filter(|&&s| s).count() as u8,
-            sealed: m.sealed,
-        }
-    }
-
-    /// Question text by pack slot: regular questions at 0..regular_count,
-    /// final questions at 0xf0 + difficulty.
-    #[pvm::method]
-    pub fn get_question(pack_id: u32, slot: u8) -> String {
-        match Storage::questions().get(&(pack_id, slot)) {
-            Some(q) => q.text,
-            None => fail("NoSuchQuestion"),
-        }
+    pub fn registry() -> pvm::Address {
+        pvm::Address::from(Storage::registry().get().unwrap_or([0u8; 20]))
     }
 
     // ── Game lifecycle ───────────────────────────────────────────
@@ -437,14 +367,14 @@ mod quizzler {
         review_blocks: u32,
         max_players: u8,
     ) -> u64 {
-        let pack = match Storage::pack_meta().get(&pack_id) {
-            Some(m) => m,
-            None => fail("NoSuchPack"),
-        };
-        if !pack.sealed {
+        let pack = registry_pack_status(pack_id);
+        if !pack.exists || !pack.sealed {
             fail("PackNotSealed");
         }
-        if num_questions == 0 || num_questions > pack.regular_count {
+        if num_questions == 0
+            || num_questions > pack.regular_count
+            || num_questions > MAX_GAME_QUESTIONS
+        {
             fail("BadQuestionCount");
         }
         if answer_blocks < 2 || answer_blocks > MAX_STAGE_BLOCKS {
@@ -458,7 +388,8 @@ mod quizzler {
         }
 
         let creator = caller20();
-        let id = Storage::game_count().get().unwrap_or(0);
+        let seq = Storage::game_count().get().unwrap_or(0);
+        let id = gen_game_code(&creator, seq);
         let meta = GameMeta {
             pack_id,
             creator,
@@ -475,7 +406,8 @@ mod quizzler {
         let players: Vec<[u8; 20]> = alloc::vec![creator];
         Storage::players().insert(&id, &players);
         Storage::scores().insert(&(id, creator), &0);
-        Storage::game_count().set(&(id + 1));
+        Storage::latest_game_of().insert(&creator, &id);
+        Storage::game_count().set(&(seq + 1));
         id
     }
 
@@ -536,15 +468,24 @@ mod quizzler {
             if wager > score {
                 fail("WagerExceedsScore");
             }
-        } else if wager == 0 || wager > MAX_WAGER {
-            fail("BadWager");
+        } else {
+            if wager == 0 || wager > MAX_WAGER {
+                fail("BadWager");
+            }
+            // Sporcle's wager system: each value 1..=10 is spent once per game
+            let mask = Storage::used_wagers().get(&(game_id, who)).unwrap_or(0);
+            let bit = 1u16 << wager;
+            if mask & bit != 0 {
+                fail("WagerAlreadyUsed");
+            }
+            Storage::used_wagers().insert(&(game_id, who), &(mask | bit));
         }
 
         let norm = logic::normalize(&answer);
         if norm.len() > MAX_ANSWER_BYTES {
             fail("AnswerTooLong");
         }
-        let accepted = load_accepted(meta.pack_id, active_slot(&meta));
+        let accepted = registry_answers(meta.pack_id, active_slot(&meta));
         let correct = !norm.is_empty() && logic::answer_matches(&norm, &accepted);
 
         if correct {
@@ -671,6 +612,14 @@ mod quizzler {
         Storage::game_count().get().unwrap_or(0)
     }
 
+    /// Newest game created by `who` (0 when none — codes are never 0).
+    /// Codes are assigned at execution time, so clients resolve their own
+    /// creations through this view.
+    #[pvm::method]
+    pub fn my_latest_game(who: pvm::Address) -> u64 {
+        Storage::latest_game_of().get(&who.to_fixed_bytes()).unwrap_or(0)
+    }
+
     #[pvm::method]
     pub fn get_game(game_id: u64) -> GameView {
         let m = load_game(game_id);
@@ -686,28 +635,20 @@ mod quizzler {
     }
 
     /// Everything the client needs each poll tick, settled to `current_block`
-    /// (read-only — storage is not updated here).
+    /// (read-only — storage is not updated here). Question text and the
+    /// review-time canonical answer are read from the registry by clients
+    /// using (get_game.pack_id, slot).
     #[pvm::method]
     pub fn get_phase(game_id: u64) -> PhaseView {
         let mut m = load_game(game_id);
         settle(game_id, &mut m);
         let clock = clock_of(&m);
         let qkey = logic::question_key(&clock);
-        let question = match m.stage {
+        let slot = match m.stage {
             STAGE_ANSWER | STAGE_REVIEW | STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => {
-                Storage::questions()
-                    .get(&(m.pack_id, active_slot(&m)))
-                    .map(|q| q.text)
-                    .unwrap_or_default()
+                active_slot(&m)
             }
-            _ => String::new(),
-        };
-        // The canonical answer is face-down until the table reaches review.
-        let answer = match m.stage {
-            STAGE_REVIEW | STAGE_FINAL_REVIEW => Storage::accepted()
-                .get(&(m.pack_id, active_slot(&m), 0))
-                .unwrap_or_default(),
-            _ => String::new(),
+            _ => 0xff,
         };
         // During the difficulty vote there is no per-question submit counter;
         // surface the vote tally in its place so the client sees progress.
@@ -722,8 +663,7 @@ mod quizzler {
             deadline: logic::stage_deadline(&clock, &cfg_of(&m)),
             current_block: current_block(),
             final_difficulty: m.final_difficulty,
-            question,
-            answer,
+            slot,
             submit_count,
             continue_count: Storage::continue_count().get(&(game_id, qkey)).unwrap_or(0),
             player_count: load_players(game_id).len() as u8,
