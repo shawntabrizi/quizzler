@@ -105,7 +105,7 @@ export class ScriptedPlayer {
         }) as T;
     }
 
-    async tx(functionName: string, args: unknown[]): Promise<void> {
+    async tx(functionName: string, args: unknown[], retried = false): Promise<void> {
         const { abi, dest } = route(functionName);
         const data = encodeFunctionData({ abi, functionName, args });
         const res: any = await (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
@@ -117,7 +117,11 @@ export class ScriptedPlayer {
         if (res.result.value.flags !== 0) {
             const raw = res.result.value.data;
             const bytes = typeof raw === "string" ? hexToBytes(raw as `0x${string}`) : raw;
-            throw new Error(`${functionName} reverted: ${new TextDecoder().decode(bytes)}`);
+            const reason = new TextDecoder().decode(bytes);
+            // After a reorg-retry, "Already*" means the original tx landed
+            // on the surviving fork — the operation is complete.
+            if (retried && /^Already/.test(reason)) return;
+            throw new Error(`${functionName} reverted: ${reason}`);
         }
         const tx = this.api.tx.Revive.call({
             dest,
@@ -133,7 +137,20 @@ export class ScriptedPlayer {
         // Resolve at best-block: awaiting finality (~15s/tx here) across the
         // ~15 txs a game takes would blow the test budget.
         const useNonce = this.nonce++;
-        await new Promise<void>((resolve, reject) => {
+        try {
+            await this.submitAt(functionName, tx, useNonce);
+        } catch (e) {
+            // Dispatch reverts after a clean dry-run are reorg races (state
+            // shifted between fork views) — settle and go through the dry-run
+            // again, which either confirms completion (Already*) or retries.
+            if (retried || !/ContractReverted/.test(String(e))) throw e;
+            await new Promise((r) => setTimeout(r, 4_000));
+            return this.tx(functionName, args, true);
+        }
+    }
+
+    private submitAt(functionName: string, tx: any, useNonce: number): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
             const timer = setTimeout(() => {
                 sub.unsubscribe();
                 reject(new Error(`${functionName} timed out waiting for best block`));
