@@ -29,7 +29,7 @@ import { createDevSigner, ensureAccountMapped, getDevPublicKey } from "@parity/p
 import { ss58ToH160 } from "@parity/product-sdk-address";
 import { encodeFunctionData, decodeFunctionResult, hexToBytes, type Abi } from "viem";
 
-import abiJson from "../src/abi.json";
+import abiJson from "../src/abi-registry.json";
 import contractInfo from "../src/contract-address.json";
 import { normalizeAnswer } from "../src/normalize";
 
@@ -78,11 +78,11 @@ function revertText(v: string | Uint8Array): string {
 }
 
 async function main(): Promise<void> {
-    if (!contractInfo.address) throw new Error("No contract address — run deploy:contract first");
+    if (!contractInfo.registry) throw new Error("No registry address — run deploy:contract first");
     // H160 dest must be a lowercase hex STRING for PAPI's dynamic codecs
     // (Uint8Array/FixedSizeBinary fails — see product-sdk wrap.ts); calldata
     // is raw bytes.
-    const dest = contractInfo.address.toLowerCase() as `0x${string}`;
+    const dest = contractInfo.registry.toLowerCase() as `0x${string}`;
 
     const files = (await readdir(PACKS_DIR)).filter((f) => f.endsWith(".json")).sort();
     const only = process.env.SEED_ONLY;
