@@ -118,6 +118,14 @@ let busy = false;
 let actionKey = "";
 const actionsSent = new Set<string>();
 
+// Poll ordering guards: polls are skipped while one is in flight, and a
+// snapshot that is BEHIND the one on screen is dropped unless it persists
+// (a stale read or transient fork view resolves out of order; a genuine
+// reorg keeps reporting the earlier phase and wins after a few polls).
+let pollInFlight = false;
+let lastRank = -1;
+let behindStreak = 0;
+
 // Once-per-game wager pool: value → correct? (undefined = still available)
 let wagerOutcomes = new Map<number, boolean>();
 let wagerHistoryLoadedUpTo = -1;
@@ -608,6 +616,8 @@ function enterGame(id: bigint): void {
     wagerHistoryLoadedUpTo = -1;
     selectedWager = null;
     optimisticAnswer = null;
+    lastRank = -1;
+    behindStreak = 0;
     if (pollTimer) clearInterval(pollTimer);
     void poll();
     pollTimer = setInterval(() => void poll(), POLL_MS);
@@ -628,6 +638,15 @@ function questionKeyFor(phase: PhaseView): number {
     return phase.stage === STAGE_ANSWER || phase.stage === STAGE_REVIEW
         ? phase.cursor
         : FINAL_QKEY;
+}
+
+/** Total order over a game's forward progression, for stale-poll detection. */
+function stageRank(phase: PhaseView): number {
+    if (phase.stage === STAGE_LOBBY) return 0;
+    if (phase.stage === STAGE_ANSWER || phase.stage === STAGE_REVIEW) {
+        return 1 + phase.cursor * 2 + (phase.stage === STAGE_REVIEW ? 1 : 0);
+    }
+    return 1_000 + phase.stage; // vote → final answer → final review → finished
 }
 
 /**
@@ -656,7 +675,8 @@ async function syncWagerHistory(snap: Snapshot): Promise<void> {
 }
 
 async function poll(): Promise<void> {
-    if (gameId === null || !game) return;
+    if (gameId === null || !game || pollInFlight) return;
+    pollInFlight = true;
     try {
         const phaseRes = await game.getPhase.query(gameId);
         if (!phaseRes.success) return;
@@ -669,6 +689,18 @@ async function poll(): Promise<void> {
             game.getSubmissions.query(gameId, qkey),
         ]);
         if (!gameRes.success || !playersRes.success || !scoresRes.success || !subsRes.success) return;
+
+        // Drop snapshots that move the game BACKWARDS unless they persist —
+        // a slow read resolving late must not yank the table back a round.
+        const rank = stageRank(phase);
+        if (rank < lastRank) {
+            behindStreak += 1;
+            if (behindStreak < 3) return;
+        } else {
+            behindStreak = 0;
+        }
+        lastRank = rank;
+
         const gameView = gameRes.value as GameView;
 
         let qText = "";
@@ -704,6 +736,8 @@ async function poll(): Promise<void> {
         render(latest);
     } catch (e) {
         console.warn("poll failed", e);
+    } finally {
+        pollInFlight = false;
     }
 }
 
