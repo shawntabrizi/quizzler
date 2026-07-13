@@ -16,12 +16,27 @@ import { decodeFunctionResult, encodeFunctionData, hexToBytes, type Abi } from "
 import { PASEO_AH } from "./fixtures";
 
 // Read as files: Playwright's ESM loader rejects bare JSON imports.
-const abi = JSON.parse(
-    readFileSync(new URL("../src/abi.json", import.meta.url), "utf8"),
+const registryAbi = JSON.parse(
+    readFileSync(new URL("../src/abi-registry.json", import.meta.url), "utf8"),
+) as Abi;
+const gameAbi = JSON.parse(
+    readFileSync(new URL("../src/abi-game.json", import.meta.url), "utf8"),
 ) as Abi;
 const contractInfo = JSON.parse(
     readFileSync(new URL("../src/contract-address.json", import.meta.url), "utf8"),
-) as { address: string };
+) as { registry: string; game: string };
+
+/** Methods served by the pack registry; everything else is the game. */
+const REGISTRY_METHODS = new Set([
+    "createPack", "addQuestion", "sealPack", "packCount", "getPack",
+    "getPackStatus", "getQuestion", "getAnswers", "myLatestPack",
+]);
+
+function route(functionName: string): { abi: Abi; dest: `0x${string}` } {
+    return REGISTRY_METHODS.has(functionName)
+        ? { abi: registryAbi, dest: contractInfo.registry.toLowerCase() as `0x${string}` }
+        : { abi: gameAbi, dest: contractInfo.game.toLowerCase() as `0x${string}` };
+}
 
 const STAGE = {
     LOBBY: 0, ANSWER: 1, REVIEW: 2, VOTE: 3,
@@ -54,7 +69,9 @@ export class ScriptedPlayer {
     ) {}
 
     static async connect(dev: Parameters<typeof createDevSigner>[0] = "Charlie"): Promise<ScriptedPlayer> {
-        if (!contractInfo.address) throw new Error("contract-address.json is empty — deploy first");
+        if (!contractInfo.registry || !contractInfo.game) {
+            throw new Error("contract-address.json is empty — deploy first");
+        }
         const client = createClient(getWsProvider(PASEO_AH.rpcUrl));
         const api = client.getTypedApi(paseo_asset_hub);
         const signer = createDevSigner(dev);
@@ -72,17 +89,12 @@ export class ScriptedPlayer {
         this.client.destroy();
     }
 
-    // H160 dest must be a lowercase hex STRING for PAPI's dynamic codecs;
-    // calldata is raw bytes (see product-sdk wrap.ts).
-    private get dest(): `0x${string}` {
-        return contractInfo.address.toLowerCase() as `0x${string}`;
-    }
-
     async query<T>(functionName: string, args: unknown[]): Promise<T> {
+        const { abi, dest } = route(functionName);
         const data = encodeFunctionData({ abi, functionName, args });
         // unsafe API: descriptor lags the live runtime for ReviveApi_call
         const res: any = await (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
-            this.ss58, this.dest, 0n, undefined, undefined, hexToBytes(data), { at: "best" },
+            this.ss58, dest, 0n, undefined, undefined, hexToBytes(data), { at: "best" },
         );
         if (!res.result.success || res.result.value.flags !== 0) {
             throw new Error(`query ${functionName} reverted`);
@@ -94,8 +106,8 @@ export class ScriptedPlayer {
     }
 
     async tx(functionName: string, args: unknown[]): Promise<void> {
+        const { abi, dest } = route(functionName);
         const data = encodeFunctionData({ abi, functionName, args });
-        const dest = this.dest;
         const res: any = await (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
             this.ss58, dest, 0n, undefined, undefined, hexToBytes(data), { at: "best" },
         );
@@ -147,14 +159,11 @@ export class ScriptedPlayer {
         });
     }
 
-    /** Newest unsealed pack this player owns (ids shift under reorgs). */
+    /** Newest pack this player created (ids shift under reorgs). */
     private async resolveMyPack(): Promise<number> {
-        const count = Number(await this.query<number | bigint>("packCount", []));
-        for (let id = count - 1; id >= Math.max(0, count - 30); id--) {
-            const pack = await this.query<{ creator: string; sealed: boolean }>("getPack", [id]);
-            if (pack.creator.toLowerCase() === this.h160 && !pack.sealed) return id;
-        }
-        throw new Error("could not locate created test pack");
+        const id = Number(await this.query<number | bigint>("myLatestPack", [this.h160]));
+        if (id === 0xffffffff) throw new Error("could not locate created test pack");
+        return id;
     }
 
     /** Create + seal a tiny pack this player knows the answers to. */

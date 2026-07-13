@@ -60,7 +60,7 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         await expect(frame.getByTestId("screen-question")).toBeVisible({ timeout: 120_000 });
         await expect(frame.getByTestId("question-text")).toHaveText("What is the capital of Japan?");
         await frame.getByTestId("answer-input").fill("Tokyo");
-        await frame.getByTestId("wager-slider").fill("7");
+        await frame.getByTestId("wager-7").click();
         await frame.getByTestId("btn-submit-answer").click();
 
         // After submitting, bob either sees the live answers card (charlie
@@ -79,8 +79,10 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         const voteBtn = frame.getByTestId(`btn-vote-${charlie.h160}`);
         await expect(voteBtn).toBeVisible();
         await voteBtn.click();
-        // 2 players → 1 vote is a majority of the others; charlie flips to +5
-        await expect(frame.getByTestId("review-rows").getByText("✓ +5")).toBeVisible({
+        // 2 players → 1 vote is a majority of the others; charlie's answer
+        // flips to correct and the vote button disappears from his row
+        await expect(voteBtn).toBeHidden({ timeout: 60_000 });
+        await expect(frame.getByTestId("review-rows").locator(".wager-badge.correct")).toHaveCount(2, {
             timeout: 60_000,
         });
         await frame.getByTestId("btn-continue").click();
