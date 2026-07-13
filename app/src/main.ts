@@ -158,6 +158,13 @@ function fmtAddr(addr: string): string {
     return addr.toLowerCase() === myAddress ? "You" : truncateAddress(addr);
 }
 
+/** In-flight tx feedback: spinner + disabled, cleared in the finally. */
+function setLoading(id: string, on: boolean): void {
+    const btn = getEl<HTMLButtonElement>(id);
+    btn.classList.toggle("loading", on);
+    btn.disabled = on;
+}
+
 function txError(e: unknown): string {
     const msg = e instanceof Error ? e.message : String(e);
     // contract reverts carry the raw revert string (e.g. "AlreadyJoined")
@@ -415,6 +422,7 @@ getEl("btn-create-game").addEventListener("click", async () => {
     const reviewBlocks = secondsToBlocks(Number(getEl<HTMLInputElement>("cfg-review-secs").value) || 45);
     const maxPlayers = Number(getEl<HTMLInputElement>("cfg-max-players").value) || 8;
     busy = true;
+    setLoading("btn-create-game", true);
     try {
         await sendTx(game, "createGame", selectedPackId, numQuestions, answerBlocks, reviewBlocks, maxPlayers);
         const id = await myLatestGameId();
@@ -424,6 +432,7 @@ getEl("btn-create-game").addEventListener("click", async () => {
         $homeError.textContent = txError(e);
     } finally {
         busy = false;
+        setLoading("btn-create-game", false);
     }
 });
 
@@ -437,6 +446,7 @@ getEl("btn-join-game").addEventListener("click", async () => {
     }
     const id = BigInt(raw);
     busy = true;
+    setLoading("btn-join-game", true);
     try {
         await sendTx(game, "joinGame", id);
         enterGame(id);
@@ -450,6 +460,7 @@ getEl("btn-join-game").addEventListener("click", async () => {
         }
     } finally {
         busy = false;
+        setLoading("btn-join-game", false);
     }
 });
 
@@ -480,6 +491,7 @@ getEl("btn-create-pack").addEventListener("click", async () => {
         return;
     }
     busy = true;
+    setLoading("btn-create-pack", true);
     try {
         await sendTx(registry, "createPack", title);
         const id = await myLatestPackId();
@@ -493,6 +505,7 @@ getEl("btn-create-pack").addEventListener("click", async () => {
         $builderError.textContent = txError(e);
     } finally {
         busy = false;
+        setLoading("btn-create-pack", false);
     }
 });
 
@@ -524,6 +537,7 @@ getEl("btn-add-question").addEventListener("click", async () => {
     const isFinal = kind !== "regular";
     const difficulty = isFinal ? Number(kind) : 0;
     busy = true;
+    setLoading("btn-add-question", true);
     try {
         try {
             await sendTx(registry, "addQuestion", builderPackId, text, answers, isFinal, difficulty);
@@ -550,12 +564,14 @@ getEl("btn-add-question").addEventListener("click", async () => {
         $builderError.textContent = txError(e);
     } finally {
         busy = false;
+        setLoading("btn-add-question", false);
     }
 });
 
 getEl("btn-seal-pack").addEventListener("click", async () => {
     if (busy || builderPackId === null || !productAccount) return;
     busy = true;
+    setLoading("btn-seal-pack", true);
     try {
         try {
             await sendTx(registry, "sealPack", builderPackId);
@@ -573,6 +589,7 @@ getEl("btn-seal-pack").addEventListener("click", async () => {
         $builderError.textContent = txError(e);
     } finally {
         busy = false;
+        setLoading("btn-seal-pack", false);
     }
 });
 
@@ -739,6 +756,7 @@ async function renderLobby(snap: Snapshot): Promise<void> {
 getEl("btn-start-game").addEventListener("click", async () => {
     if (busy || gameId === null || !productAccount) return;
     busy = true;
+    setLoading("btn-start-game", true);
     try {
         await sendTx(game, "startGame", gameId);
         void poll();
@@ -746,6 +764,7 @@ getEl("btn-start-game").addEventListener("click", async () => {
         getEl("lobby-error").textContent = txError(e);
     } finally {
         busy = false;
+        setLoading("btn-start-game", false);
     }
 });
 

@@ -129,6 +129,23 @@
         button:disabled:hover { background: var(--bg-action-secondary); }
         button.primary:disabled:hover { background: var(--bg-action-primary); }
 
+        /* In-flight transaction: spinner replaces the label */
+        button.loading { position: relative; color: transparent; pointer-events: none; opacity: 0.85; }
+        button.loading::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid rgba(128, 128, 128, 0.35);
+            border-top-color: var(--fg-primary);
+            animation: spin 0.6s linear infinite;
+        }
+        button.primary.loading::after { border-top-color: var(--fg-primary-inverted); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         ul.list { list-style: none; }
         ul.list li {
             background: var(--bg-surface-nested);
