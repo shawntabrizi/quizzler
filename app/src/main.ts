@@ -41,7 +41,7 @@ const FINAL_QKEY = 255;
 const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
 const SECONDS_PER_BLOCK = 2; // measured on Paseo Asset Hub Next (2026-07)
-const POLL_MS = 3_000;
+const POLL_MS = 2_000; // one poll per block
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
 
 // ── Chain-facing types (viem decodes named tuples to objects) ───────
@@ -122,6 +122,9 @@ const actionsSent = new Set<string>();
 let wagerOutcomes = new Map<number, boolean>();
 let wagerHistoryLoadedUpTo = -1;
 let selectedWager: number | null = null;
+// Optimistic local echo of my in-flight answer, shown until the chain
+// confirms it (rolled back if the tx fails).
+let optimisticAnswer: { qkey: number; answer: string; wager: number } | null = null;
 
 // Registry content caches (immutable once sealed)
 const questionCache = new Map<string, string>();
@@ -175,13 +178,20 @@ async function sendTx(handle: any, method: string, ...args: unknown[]): Promise<
             // the dry-run weight exactly, which OutOfGas-es methods that make
             // cross-contract registry calls. Query errors fall through — the
             // tx's own dry-run surfaces them with a proper revert reason.
-            let gasLimit: { ref_time: bigint; proof_size: bigint } | undefined;
+            let overrides: Record<string, unknown> = {};
             try {
                 const q = await handle[method].query(...args, { origin: productAccount.address });
                 if (q?.gasRequired) {
-                    gasLimit = {
-                        ref_time: (q.gasRequired.ref_time * 3n) / 2n,
-                        proof_size: (q.gasRequired.proof_size * 3n) / 2n,
+                    overrides = {
+                        gasLimit: {
+                            ref_time: (q.gasRequired.ref_time * 3n) / 2n,
+                            proof_size: (q.gasRequired.proof_size * 3n) / 2n,
+                        },
+                        // Providing both overrides makes the SDK skip its own
+                        // dry-run entirely (we just did one) — saves a full
+                        // RPC round-trip per tap. The deposit is a cap, not a
+                        // cost, so a generous constant is safe.
+                        storageDepositLimit: 20_000_000_000n,
                     };
                 }
             } catch {
@@ -189,7 +199,7 @@ async function sendTx(handle: any, method: string, ...args: unknown[]): Promise<
             }
             const result = await handle[method].tx(...args, {
                 signer: productAccount.getSigner(),
-                ...(gasLimit ? { gasLimit } : {}),
+                ...overrides,
             });
             if (!result.ok) throw new Error(JSON.stringify(result.dispatchError));
             return;
@@ -580,6 +590,7 @@ function enterGame(id: bigint): void {
     wagerOutcomes = new Map();
     wagerHistoryLoadedUpTo = -1;
     selectedWager = null;
+    optimisticAnswer = null;
     if (pollTimer) clearInterval(pollTimer);
     void poll();
     pollTimer = setInterval(() => void poll(), POLL_MS);
@@ -667,6 +678,11 @@ async function poll(): Promise<void> {
         if (key !== actionKey) {
             actionKey = key;
             actionsSent.clear();
+            optimisticAnswer = null;
+        }
+        // chain caught up with the optimistic echo
+        if (optimisticAnswer && mySubmission(latest)?.submitted) {
+            optimisticAnswer = null;
         }
         render(latest);
     } catch (e) {
@@ -784,7 +800,9 @@ function renderQuestion(snap: Snapshot): void {
     getEl("question-countdown").textContent = countdownText(snap);
 
     const mine = mySubmission(snap);
-    const answered = mine?.submitted ?? false;
+    const optimistic =
+        optimisticAnswer !== null && optimisticAnswer.qkey === questionKeyFor(snap.phase);
+    const answered = (mine?.submitted ?? false) || optimistic;
     getEl("answer-form").style.display = answered ? "none" : "";
     getEl("submitted-card").style.display = answered ? "" : "none";
 
@@ -804,15 +822,16 @@ function renderQuestion(snap: Snapshot): void {
         // everyone who locked in, "…" for players still thinking.
         renderList(
             getEl("live-answers"),
-            snap.submissions.map((s) =>
-                li(
-                    span("", fmtAddr(s.player)),
-                    span(
-                        "right sub",
-                        s.submitted ? `“${s.answer}” · wagered ${s.wager}` : "…",
-                    ),
-                ),
-            ),
+            snap.submissions.map((s) => {
+                const pendingMine =
+                    s.player.toLowerCase() === myAddress && !s.submitted && optimistic;
+                const text = s.submitted
+                    ? `“${s.answer}” · wagered ${s.wager}`
+                    : pendingMine
+                      ? `“${optimisticAnswer?.answer}” · wagered ${optimisticAnswer?.wager} · confirming…`
+                      : "…";
+                return li(span("", fmtAddr(s.player)), span("right sub", text));
+            }),
         );
     }
     showScreen("question");
@@ -835,15 +854,21 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
         wager = selectedWager;
     }
     if (actionsSent.has("submit")) return;
+    // Optimistic: flip to the submitted view immediately; roll back on error.
+    actionsSent.add("submit");
+    optimisticAnswer = { qkey: questionKeyFor(latest.phase), answer, wager };
+    render(latest);
     busy = true;
     try {
         await sendTx(game, "submitAnswer", gameId, answer, wager);
-        actionsSent.add("submit");
         selectedWager = null;
         getEl<HTMLInputElement>("answer-input").value = "";
         void poll();
     } catch (e) {
+        actionsSent.delete("submit");
+        optimisticAnswer = null;
         $err.textContent = txError(e);
+        if (latest) render(latest);
     } finally {
         busy = false;
     }
@@ -901,7 +926,7 @@ function renderReview(snap: Snapshot): void {
     );
 
     const mine = mySubmission(snap);
-    const continued = mine?.continue_ready ?? actionsSent.has("continue");
+    const continued = (mine?.continue_ready ?? false) || actionsSent.has("continue");
     const $btn = getEl<HTMLButtonElement>("btn-continue");
     $btn.disabled = continued;
     $btn.textContent = continued ? "Waiting for others…" : "Continue";
@@ -916,13 +941,17 @@ async function voteCorrect(target: string): Promise<void> {
     if (busy || gameId === null || !productAccount) return;
     const key = `vote:${target.toLowerCase()}`;
     if (actionsSent.has(key)) return;
+    // optimistic: mark the vote instantly, roll back on error
+    actionsSent.add(key);
+    if (latest) render(latest);
     busy = true;
     try {
         await sendTx(game, "voteCorrect", gameId, target);
-        actionsSent.add(key);
         void poll();
     } catch (e) {
+        actionsSent.delete(key);
         getEl("review-error").textContent = txError(e);
+        if (latest) render(latest);
     } finally {
         busy = false;
     }
@@ -930,13 +959,17 @@ async function voteCorrect(target: string): Promise<void> {
 
 getEl("btn-continue").addEventListener("click", async () => {
     if (busy || gameId === null || !productAccount || actionsSent.has("continue")) return;
+    // optimistic: show "Waiting for others…" instantly, roll back on error
+    actionsSent.add("continue");
+    if (latest) render(latest);
     busy = true;
     try {
         await sendTx(game, "readyContinue", gameId);
-        actionsSent.add("continue");
         void poll();
     } catch (e) {
+        actionsSent.delete("continue");
         getEl("review-error").textContent = txError(e);
+        if (latest) render(latest);
     } finally {
         busy = false;
     }
@@ -958,13 +991,17 @@ function renderVote(snap: Snapshot): void {
 for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty")) {
     btn.addEventListener("click", async () => {
         if (busy || gameId === null || !productAccount || actionsSent.has("difficulty")) return;
+        // optimistic: lock the vote in visually, roll back on error
+        actionsSent.add("difficulty");
+        if (latest) render(latest);
         busy = true;
         try {
             await sendTx(game, "voteDifficulty", gameId, Number(btn.dataset.difficulty));
-            actionsSent.add("difficulty");
             void poll();
         } catch (e) {
+            actionsSent.delete("difficulty");
             getEl("vote-error").textContent = txError(e);
+            if (latest) render(latest);
         } finally {
             busy = false;
         }
