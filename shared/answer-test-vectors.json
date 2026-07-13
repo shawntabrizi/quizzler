@@ -1,0 +1,33 @@
+{
+  "normalize": [
+    { "raw": "The Beatles", "normalized": "the beatles" },
+    { "raw": "  New   York  City ", "normalized": "new york city" },
+    { "raw": "O'Brien", "normalized": "obrien" },
+    { "raw": "don't-stop_me now!", "normalized": "dontstopme now" },
+    { "raw": "1912", "normalized": "1912" },
+    { "raw": "R2-D2", "normalized": "r2d2" },
+    { "raw": "  ", "normalized": "" },
+    { "raw": "café", "normalized": "caf", "clientNormalized": "cafe" },
+    { "raw": "A.D. 1066", "normalized": "ad 1066" },
+    { "raw": "MOUNT KILIMANJARO", "normalized": "mount kilimanjaro" }
+  ],
+  "matching": [
+    { "submitted": "the beatles", "accepted": ["the beatles", "beatles"], "match": true },
+    { "submitted": "beatles", "accepted": ["the beatles", "beatles"], "match": true },
+    { "submitted": "kilamanjaro", "accepted": ["kilimanjaro"], "match": true },
+    { "submitted": "kilimanjaro", "accepted": ["kilimanjaro"], "match": true },
+    { "submitted": "mount kilamanjaro", "accepted": ["mount kilimanjaro"], "match": true },
+    { "submitted": "1912", "accepted": ["1912"], "match": true },
+    { "submitted": "1913", "accepted": ["1912"], "match": false },
+    { "submitted": "cat", "accepted": ["car"], "match": false },
+    { "submitted": "car", "accepted": ["car"], "match": true },
+    { "submitted": "pariss", "accepted": ["paris"], "match": true },
+    { "submitted": "paris", "accepted": ["london"], "match": false },
+    { "submitted": "leonardo dicapro", "accepted": ["leonardo dicaprio"], "match": true },
+    { "submitted": "leo", "accepted": ["leonardo dicaprio"], "match": false },
+    { "submitted": "", "accepted": ["paris"], "match": false },
+    { "submitted": "mississipi", "accepted": ["mississippi"], "match": true },
+    { "submitted": "misisipi", "accepted": ["mississippi"], "match": false },
+    { "submitted": "missouri", "accepted": ["mississippi"], "match": false }
+  ]
+}
