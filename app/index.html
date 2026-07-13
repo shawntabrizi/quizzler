@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quizzler</title>
+    <style>
+        /* Polkadot design system — Dark Elevated tokens (from Figma Theme
+           collection). Surfaces separate through brightness, not borders. */
+        :root {
+            --fg-primary: #f5f5f5;
+            --fg-primary-inverted: #0a0a0a;
+            --fg-secondary: #a3a3a3;
+            --fg-secondary-hover: #ebebeb;
+            --fg-tertiary: #525252;
+            --fg-error: #ef4444;
+            --fg-warning: #f59e0b;
+            --fg-success: #22c55e;
+            --bg-surface-main: #0a0a0a;
+            --bg-surface-container: #141414;
+            --bg-surface-nested: #1f1f1f;
+            --bg-selection-container-hover: #1f1f1f;
+            --bg-selection-container-active: #262626;
+            --bg-action-primary: #ebebeb;
+            --bg-action-primary-hover: #e5e5e5;
+            --bg-action-secondary: #3d3d3d;
+            --bg-action-secondary-hover: #737373;
+            --bg-status-error: #ef4444;
+            --bg-status-error-hover: #dc2626;
+            --border-divider: #262626;
+            --border-divider-tint: #404040;
+            --focus-ring: #ffffff;
+            --focus-error: #dc2626;
+            --shadow-2: 0 8px 32px -4px rgba(0, 0, 0, 0.48);
+            --radius-container: 16px;
+            --radius-nested: 12px;
+            --radius-small: 8px;
+            --radius-full: 9999px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        *:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+            box-shadow: none;
+        }
+
+        body {
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-surface-main);
+            color: var(--fg-primary);
+            min-height: 100vh;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        main { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+
+        header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
+        header h1 {
+            font-family: Georgia, "Times New Roman", serif;
+            font-weight: 400;
+            font-size: 2rem;
+            line-height: 1.25;
+        }
+        header .tagline { color: var(--fg-secondary); font-size: 0.85rem; }
+        #conn-pill {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: var(--fg-secondary);
+            background: var(--bg-surface-container);
+            border-radius: var(--radius-full);
+            padding: 4px 12px;
+            white-space: nowrap;
+        }
+        #conn-pill.ok { color: var(--fg-success); }
+        #conn-pill.err { color: var(--fg-error); }
+
+        section.screen { display: none; }
+        section.screen.active { display: block; }
+
+        .card {
+            background: var(--bg-surface-container);
+            border-radius: var(--radius-container);
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-2);
+        }
+        .card h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.25; margin-bottom: 12px; }
+        .card .hint { color: var(--fg-secondary); font-size: 0.85rem; margin-bottom: 12px; }
+
+        .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .row + .row { margin-top: 8px; }
+        .grow { flex: 1; min-width: 120px; }
+
+        label { display: block; color: var(--fg-secondary); font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            background: var(--bg-surface-nested);
+            color: var(--fg-primary);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-nested);
+            padding: 10px 12px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            cursor: text;
+        }
+        select { cursor: pointer; }
+        input::placeholder { color: var(--fg-tertiary); }
+
+        button {
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-small);
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            background: var(--bg-action-secondary);
+            color: var(--fg-primary);
+        }
+        button:hover { background: var(--bg-action-secondary-hover); }
+        button.primary { background: var(--bg-action-primary); color: var(--fg-primary-inverted); }
+        button.primary:hover { background: var(--bg-action-primary-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button:disabled:hover { background: var(--bg-action-secondary); }
+        button.primary:disabled:hover { background: var(--bg-action-primary); }
+
+        ul.list { list-style: none; }
+        ul.list li {
+            background: var(--bg-surface-nested);
+            border-radius: var(--radius-nested);
+            padding: 10px 14px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        ul.list li.clickable { cursor: pointer; transition: background-color 0.15s ease; }
+        ul.list li.clickable:hover { background: var(--bg-selection-container-hover); }
+        ul.list li.selected { background: var(--bg-selection-container-active); }
+        ul.list li .sub { color: var(--fg-secondary); font-size: 0.8rem; }
+        ul.list li .right { margin-left: auto; text-align: right; }
+
+        .question-text { font-size: 1.3rem; font-weight: 600; line-height: 1.35; margin: 12px 0 20px; }
+
+        .countdown { color: var(--fg-secondary); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+        .countdown.urgent { color: var(--fg-warning); }
+
+        .wager-row { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+        input[type="range"] { flex: 1; accent-color: var(--bg-action-primary); cursor: pointer; }
+        .wager-value { font-size: 1.4rem; font-weight: 600; min-width: 2ch; text-align: center; }
+
+        .answer-row .mark { font-weight: 600; }
+        .answer-row .mark.correct { color: var(--fg-success); }
+        .answer-row .mark.wrong { color: var(--fg-error); }
+        .answer-row .pts { font-variant-numeric: tabular-nums; }
+        .vote-btn { font-size: 0.75rem; padding: 6px 10px; }
+
+        .banner { text-align: center; padding: 24px 0 8px; }
+        .banner .winner { font-size: 1.6rem; font-weight: 600; }
+
+        .muted { color: var(--fg-tertiary); }
+        .error-text { color: var(--fg-error); font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+
+        #boot-log { font-size: 0.85rem; color: var(--fg-secondary); }
+        #boot-log div { padding: 2px 0; }
+        #boot-log .err { color: var(--fg-error); }
+        #boot-log .ok { color: var(--fg-success); }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Quizzler</h1>
+            <span class="tagline">Proof of Knowledge</span>
+            <span id="conn-pill" data-testid="conn-pill">connecting…</span>
+        </header>
+
+        <!-- Boot -->
+        <section id="screen-boot" class="screen active" data-testid="screen-boot">
+            <div class="card">
+                <h2>Starting up</h2>
+                <div id="boot-log" data-testid="boot-log"></div>
+            </div>
+        </section>
+
+        <!-- Home -->
+        <section id="screen-home" class="screen" data-testid="screen-home">
+            <div class="card">
+                <h2>Play</h2>
+                <div class="row">
+                    <div class="grow">
+                        <label for="join-game-id">Game code</label>
+                        <input type="number" id="join-game-id" data-testid="join-game-id" placeholder="e.g. 3" min="0" />
+                    </div>
+                    <button id="btn-join-game" class="primary" data-testid="btn-join-game" style="align-self: end;">Join game</button>
+                </div>
+                <div class="error-text" id="home-error" data-testid="home-error"></div>
+            </div>
+
+            <div class="card">
+                <h2>Host a game</h2>
+                <p class="hint">Pick a quiz pack, set the pace, and share the game code.</p>
+                <ul class="list" id="pack-list" data-testid="pack-list"></ul>
+                <div class="row">
+                    <div class="grow">
+                        <label for="cfg-questions">Questions</label>
+                        <input type="number" id="cfg-questions" data-testid="cfg-questions" value="5" min="1" max="64" />
+                    </div>
+                    <div class="grow">
+                        <label for="cfg-answer-secs">Answer time (s)</label>
+                        <input type="number" id="cfg-answer-secs" data-testid="cfg-answer-secs" value="60" min="12" max="3600" />
+                    </div>
+                    <div class="grow">
+                        <label for="cfg-review-secs">Review time (s)</label>
+                        <input type="number" id="cfg-review-secs" data-testid="cfg-review-secs" value="45" min="12" max="3600" />
+                    </div>
+                    <div class="grow">
+                        <label for="cfg-max-players">Max players</label>
+                        <input type="number" id="cfg-max-players" data-testid="cfg-max-players" value="8" min="1" max="16" />
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 12px;">
+                    <button id="btn-create-game" class="primary" data-testid="btn-create-game" disabled>Create game</button>
+                    <button id="btn-new-pack" data-testid="btn-new-pack">New pack</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pack builder -->
+        <section id="screen-builder" class="screen" data-testid="screen-builder">
+            <div class="card">
+                <h2 id="builder-title">New pack</h2>
+                <div class="row" id="builder-create-row">
+                    <div class="grow">
+                        <label for="pack-title">Pack title</label>
+                        <input type="text" id="pack-title" data-testid="pack-title" placeholder="Friday night trivia" maxlength="64" />
+                    </div>
+                    <button id="btn-create-pack" class="primary" data-testid="btn-create-pack" style="align-self: end;">Create</button>
+                </div>
+                <div id="builder-question-form" style="display: none;">
+                    <div class="row">
+                        <div class="grow">
+                            <label for="q-text">Question</label>
+                            <input type="text" id="q-text" data-testid="q-text" placeholder="What is the capital of France?" maxlength="256" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="grow">
+                            <label for="q-answers">Accepted answers (comma-separated, up to 5)</label>
+                            <input type="text" id="q-answers" data-testid="q-answers" placeholder="Paris" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="grow">
+                            <label for="q-kind">Type</label>
+                            <select id="q-kind" data-testid="q-kind">
+                                <option value="regular">Regular question</option>
+                                <option value="0">Final — easy</option>
+                                <option value="1">Final — medium</option>
+                                <option value="2">Final — hard</option>
+                            </select>
+                        </div>
+                        <button id="btn-add-question" data-testid="btn-add-question" style="align-self: end;">Add question</button>
+                    </div>
+                    <ul class="list" id="builder-questions" data-testid="builder-questions" style="margin-top: 12px;"></ul>
+                    <p class="hint" id="builder-progress" data-testid="builder-progress"></p>
+                    <div class="row">
+                        <button id="btn-seal-pack" class="primary" data-testid="btn-seal-pack" disabled>Seal pack</button>
+                        <button id="btn-builder-done" data-testid="btn-builder-done">Back home</button>
+                    </div>
+                </div>
+                <div class="error-text" id="builder-error" data-testid="builder-error"></div>
+            </div>
+        </section>
+
+        <!-- Lobby -->
+        <section id="screen-lobby" class="screen" data-testid="screen-lobby">
+            <div class="card">
+                <h2>Lobby — game <span id="lobby-game-id" data-testid="lobby-game-id"></span></h2>
+                <p class="hint">Share the game code so friends can join.</p>
+                <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
+                <div class="row">
+                    <button id="btn-start-game" class="primary" data-testid="btn-start-game" style="display: none;">Start game</button>
+                    <span class="muted" id="lobby-waiting" data-testid="lobby-waiting">Waiting for the host to start…</span>
+                </div>
+                <div class="error-text" id="lobby-error"></div>
+            </div>
+        </section>
+
+        <!-- Question -->
+        <section id="screen-question" class="screen" data-testid="screen-question">
+            <div class="card">
+                <div class="row">
+                    <span class="muted" id="question-number" data-testid="question-number"></span>
+                    <span class="countdown right" id="question-countdown" data-testid="question-countdown" style="margin-left: auto;"></span>
+                </div>
+                <p class="question-text" id="question-text" data-testid="question-text"></p>
+                <div id="answer-form">
+                    <input type="text" id="answer-input" data-testid="answer-input" placeholder="Type your answer…" maxlength="64" autocomplete="off" />
+                    <div class="wager-row" id="wager-slider-row">
+                        <label for="wager-slider" style="margin: 0;">Wager</label>
+                        <input type="range" id="wager-slider" data-testid="wager-slider" min="1" max="10" value="5" />
+                        <span class="wager-value" id="wager-value" data-testid="wager-value">5</span>
+                    </div>
+                    <div class="wager-row" id="wager-final-row" style="display: none;">
+                        <label for="wager-final" style="margin: 0;">Final wager (0–<span id="wager-final-max"></span>)</label>
+                        <input type="number" id="wager-final" data-testid="wager-final" min="0" value="0" style="width: 100px;" />
+                    </div>
+                    <button id="btn-submit-answer" class="primary" data-testid="btn-submit-answer">Lock it in</button>
+                </div>
+                <div class="error-text" id="question-error" data-testid="question-error"></div>
+            </div>
+            <div class="card" id="submitted-card" style="display: none;" data-testid="submitted-card">
+                <h2>Answers so far</h2>
+                <p class="hint">Correct answers are revealed when everyone locks in.</p>
+                <ul class="list" id="live-answers" data-testid="live-answers"></ul>
+            </div>
+        </section>
+
+        <!-- Review -->
+        <section id="screen-review" class="screen" data-testid="screen-review">
+            <div class="card">
+                <div class="row">
+                    <span class="muted" id="review-number" data-testid="review-number"></span>
+                    <span class="countdown" id="review-countdown" data-testid="review-countdown" style="margin-left: auto;"></span>
+                </div>
+                <p class="question-text" id="review-question" data-testid="review-question"></p>
+                <p data-testid="review-answer-line">Answer: <strong id="review-answer" data-testid="review-answer"></strong></p>
+                <ul class="list" id="review-rows" data-testid="review-rows" style="margin-top: 12px;"></ul>
+                <div class="row" style="margin-top: 12px;">
+                    <button id="btn-continue" class="primary" data-testid="btn-continue">Continue</button>
+                    <span class="muted" id="continue-status" data-testid="continue-status"></span>
+                </div>
+                <div class="error-text" id="review-error"></div>
+            </div>
+            <div class="card">
+                <h2>Leaderboard</h2>
+                <ul class="list" id="review-leaderboard" data-testid="review-leaderboard"></ul>
+            </div>
+        </section>
+
+        <!-- Final difficulty vote -->
+        <section id="screen-vote" class="screen" data-testid="screen-vote">
+            <div class="card">
+                <div class="row">
+                    <h2>Final question — pick the stakes</h2>
+                    <span class="countdown" id="vote-countdown" data-testid="vote-countdown" style="margin-left: auto;"></span>
+                </div>
+                <p class="hint">Majority picks the difficulty of the final question. Ties break harder.</p>
+                <div class="row">
+                    <button data-difficulty="0" class="btn-difficulty" data-testid="btn-difficulty-easy">Easy</button>
+                    <button data-difficulty="1" class="btn-difficulty" data-testid="btn-difficulty-medium">Medium</button>
+                    <button data-difficulty="2" class="btn-difficulty" data-testid="btn-difficulty-hard">Hard</button>
+                </div>
+                <p class="hint" id="vote-status" data-testid="vote-status" style="margin-top: 12px;"></p>
+                <div class="error-text" id="vote-error"></div>
+            </div>
+        </section>
+
+        <!-- Results -->
+        <section id="screen-results" class="screen" data-testid="screen-results">
+            <div class="card">
+                <div class="banner">
+                    <div class="muted">Winner</div>
+                    <div class="winner" id="results-winner" data-testid="results-winner"></div>
+                </div>
+                <ul class="list" id="results-leaderboard" data-testid="results-leaderboard"></ul>
+                <div class="row" style="margin-top: 16px; justify-content: center;">
+                    <button id="btn-back-home" class="primary" data-testid="btn-back-home">Back home</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
