@@ -1,0 +1,1308 @@
+{
+  "title": "Science & Nature",
+  "questions": [
+    {
+      "text": "What gas do humans need to breathe to survive?",
+      "answers": [
+        "oxygen",
+        "O2"
+      ]
+    },
+    {
+      "text": "What is the closest star to Earth?",
+      "answers": [
+        "the Sun",
+        "Sun"
+      ]
+    },
+    {
+      "text": "What planet do we live on?",
+      "answers": [
+        "Earth"
+      ]
+    },
+    {
+      "text": "What is H2O more commonly known as?",
+      "answers": [
+        "water"
+      ]
+    },
+    {
+      "text": "What is the largest land animal on Earth?",
+      "answers": [
+        "African elephant",
+        "elephant"
+      ]
+    },
+    {
+      "text": "What organ pumps blood around the human body?",
+      "answers": [
+        "heart"
+      ]
+    },
+    {
+      "text": "What is the fastest land animal in the world?",
+      "answers": [
+        "cheetah"
+      ]
+    },
+    {
+      "text": "What color is chlorophyll, which makes plants green?",
+      "answers": [
+        "green"
+      ]
+    },
+    {
+      "text": "How many legs does an insect have?",
+      "answers": [
+        "6",
+        "six"
+      ]
+    },
+    {
+      "text": "What is the tallest animal in the world?",
+      "answers": [
+        "giraffe"
+      ]
+    },
+    {
+      "text": "What do bees collect from flowers to make honey?",
+      "answers": [
+        "nectar"
+      ]
+    },
+    {
+      "text": "What is the center of an atom called?",
+      "answers": [
+        "nucleus"
+      ]
+    },
+    {
+      "text": "What planet is known as the Red Planet?",
+      "answers": [
+        "Mars"
+      ]
+    },
+    {
+      "text": "How many bones does an adult human have?",
+      "answers": [
+        "206"
+      ]
+    },
+    {
+      "text": "What is the largest planet in our solar system?",
+      "answers": [
+        "Jupiter"
+      ]
+    },
+    {
+      "text": "What gas do plants absorb from the air for photosynthesis?",
+      "answers": [
+        "carbon dioxide",
+        "CO2"
+      ]
+    },
+    {
+      "text": "What is the hardest natural substance on Earth?",
+      "answers": [
+        "diamond"
+      ]
+    },
+    {
+      "text": "What is the largest ocean on Earth?",
+      "answers": [
+        "Pacific",
+        "Pacific Ocean"
+      ]
+    },
+    {
+      "text": "What do you call an animal that eats only plants?",
+      "answers": [
+        "herbivore"
+      ]
+    },
+    {
+      "text": "What is the process by which plants make food using sunlight?",
+      "answers": [
+        "photosynthesis"
+      ]
+    },
+    {
+      "text": "How many planets are in our solar system?",
+      "answers": [
+        "8",
+        "eight"
+      ]
+    },
+    {
+      "text": "What is the largest animal ever known to have lived?",
+      "answers": [
+        "blue whale"
+      ]
+    },
+    {
+      "text": "What part of the plant conducts photosynthesis mainly?",
+      "answers": [
+        "leaf",
+        "leaves"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for gold?",
+      "answers": [
+        "Au"
+      ]
+    },
+    {
+      "text": "What is the freezing point of water in degrees Celsius?",
+      "answers": [
+        "0"
+      ]
+    },
+    {
+      "text": "What is the boiling point of water in degrees Celsius at sea level?",
+      "answers": [
+        "100"
+      ]
+    },
+    {
+      "text": "What force pulls objects toward the center of the Earth?",
+      "answers": [
+        "gravity"
+      ]
+    },
+    {
+      "text": "What is the closest planet to the Sun?",
+      "answers": [
+        "Mercury"
+      ]
+    },
+    {
+      "text": "What do caterpillars turn into?",
+      "answers": [
+        "butterflies",
+        "butterfly",
+        "moths",
+        "moth"
+      ]
+    },
+    {
+      "text": "What is the name of Earth's only natural satellite?",
+      "answers": [
+        "the Moon",
+        "Moon"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for oxygen?",
+      "answers": [
+        "O"
+      ]
+    },
+    {
+      "text": "What is a baby dog called?",
+      "answers": [
+        "puppy"
+      ]
+    },
+    {
+      "text": "What is a baby cat called?",
+      "answers": [
+        "kitten"
+      ]
+    },
+    {
+      "text": "What gas makes up most of Earth's atmosphere?",
+      "answers": [
+        "nitrogen",
+        "N2"
+      ]
+    },
+    {
+      "text": "What is the study of living organisms called?",
+      "answers": [
+        "biology"
+      ]
+    },
+    {
+      "text": "What is the largest organ of the human body?",
+      "answers": [
+        "skin"
+      ]
+    },
+    {
+      "text": "What do we call animals that are active at night?",
+      "answers": [
+        "nocturnal"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for hydrogen?",
+      "answers": [
+        "H"
+      ]
+    },
+    {
+      "text": "What is frozen water called?",
+      "answers": [
+        "ice"
+      ]
+    },
+    {
+      "text": "What is the name of our galaxy?",
+      "answers": [
+        "Milky Way",
+        "the Milky Way"
+      ]
+    },
+    {
+      "text": "What is the largest big cat in the world?",
+      "answers": [
+        "tiger"
+      ]
+    },
+    {
+      "text": "What is the powerhouse of the cell often called?",
+      "answers": [
+        "mitochondria",
+        "mitochondrion"
+      ]
+    },
+    {
+      "text": "What planet is famous for its rings?",
+      "answers": [
+        "Saturn"
+      ]
+    },
+    {
+      "text": "What do you call molten rock that erupts from a volcano?",
+      "answers": [
+        "lava"
+      ]
+    },
+    {
+      "text": "What is the human body's largest artery?",
+      "answers": [
+        "aorta"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for sodium?",
+      "answers": [
+        "Na"
+      ]
+    },
+    {
+      "text": "What is the tallest type of tree in the world?",
+      "answers": [
+        "redwood",
+        "coast redwood",
+        "giant sequoia"
+      ]
+    },
+    {
+      "text": "What do you call an animal that eats both plants and meat?",
+      "answers": [
+        "omnivore"
+      ]
+    },
+    {
+      "text": "What is the fastest bird in the world in a dive?",
+      "answers": [
+        "peregrine falcon",
+        "falcon"
+      ]
+    },
+    {
+      "text": "What is the study of weather called?",
+      "answers": [
+        "meteorology"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for carbon?",
+      "answers": [
+        "C"
+      ]
+    },
+    {
+      "text": "How many chambers does the human heart have?",
+      "answers": [
+        "4",
+        "four"
+      ]
+    },
+    {
+      "text": "What is the largest reptile in the world?",
+      "answers": [
+        "saltwater crocodile",
+        "crocodile"
+      ]
+    },
+    {
+      "text": "What part of the eye controls how much light enters?",
+      "answers": [
+        "iris",
+        "pupil"
+      ]
+    },
+    {
+      "text": "What is the process of a liquid turning into a gas called?",
+      "answers": [
+        "evaporation"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for iron?",
+      "answers": [
+        "Fe"
+      ]
+    },
+    {
+      "text": "What is the only mammal capable of true flight?",
+      "answers": [
+        "bat"
+      ]
+    },
+    {
+      "text": "What planet is known as the Earth's twin due to similar size?",
+      "answers": [
+        "Venus"
+      ]
+    },
+    {
+      "text": "What is a group of wolves called?",
+      "answers": [
+        "pack"
+      ]
+    },
+    {
+      "text": "What is the largest bone in the human body?",
+      "answers": [
+        "femur",
+        "thigh bone"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for helium?",
+      "answers": [
+        "He"
+      ]
+    },
+    {
+      "text": "What is the study of rocks and the Earth called?",
+      "answers": [
+        "geology"
+      ]
+    },
+    {
+      "text": "What is the largest species of penguin?",
+      "answers": [
+        "emperor penguin",
+        "emperor"
+      ]
+    },
+    {
+      "text": "What is the smallest planet in our solar system?",
+      "answers": [
+        "Mercury"
+      ]
+    },
+    {
+      "text": "What organ in the body is responsible for filtering blood and making urine?",
+      "answers": [
+        "kidney",
+        "kidneys"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for potassium?",
+      "answers": [
+        "K"
+      ]
+    },
+    {
+      "text": "What type of animal is a Komodo dragon?",
+      "answers": [
+        "lizard",
+        "reptile"
+      ]
+    },
+    {
+      "text": "What is the process by which water vapor turns into liquid?",
+      "answers": [
+        "condensation"
+      ]
+    },
+    {
+      "text": "What is the name for animals with a backbone?",
+      "answers": [
+        "vertebrates",
+        "vertebrate"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for calcium?",
+      "answers": [
+        "Ca"
+      ]
+    },
+    {
+      "text": "What scientist proposed the theory of evolution by natural selection?",
+      "answers": [
+        "Charles Darwin",
+        "Darwin"
+      ]
+    },
+    {
+      "text": "What is the largest internal organ in the human body?",
+      "answers": [
+        "liver"
+      ]
+    },
+    {
+      "text": "What is the term for the variety of life in an ecosystem?",
+      "answers": [
+        "biodiversity"
+      ]
+    },
+    {
+      "text": "What gas is most responsible for the greenhouse effect from human activity?",
+      "answers": [
+        "carbon dioxide",
+        "CO2"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for nitrogen?",
+      "answers": [
+        "N"
+      ]
+    },
+    {
+      "text": "What is the powerhouse molecule that stores energy in cells?",
+      "answers": [
+        "ATP",
+        "adenosine triphosphate"
+      ]
+    },
+    {
+      "text": "What is the term for animals that have no backbone?",
+      "answers": [
+        "invertebrates",
+        "invertebrate"
+      ]
+    },
+    {
+      "text": "What scientist developed the three laws of motion?",
+      "answers": [
+        "Isaac Newton",
+        "Newton"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for silver?",
+      "answers": [
+        "Ag"
+      ]
+    },
+    {
+      "text": "What is the outermost layer of the Earth called?",
+      "answers": [
+        "crust"
+      ]
+    },
+    {
+      "text": "What is the study of the stars, planets, and universe called?",
+      "answers": [
+        "astronomy"
+      ]
+    },
+    {
+      "text": "What acid is found in the human stomach to aid digestion?",
+      "answers": [
+        "hydrochloric acid",
+        "HCl"
+      ]
+    },
+    {
+      "text": "What is the term for a group of similar organisms that can breed together?",
+      "answers": [
+        "species"
+      ]
+    },
+    {
+      "text": "What scientist is famous for the theory of relativity?",
+      "answers": [
+        "Albert Einstein",
+        "Einstein"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for lead?",
+      "answers": [
+        "Pb"
+      ]
+    },
+    {
+      "text": "What is the process by which cells divide to form two identical cells?",
+      "answers": [
+        "mitosis"
+      ]
+    },
+    {
+      "text": "What is the innermost part of the Earth called?",
+      "answers": [
+        "inner core",
+        "core"
+      ]
+    },
+    {
+      "text": "What is the term for the layer of gases surrounding a planet?",
+      "answers": [
+        "atmosphere"
+      ]
+    },
+    {
+      "text": "What element has the atomic number 1?",
+      "answers": [
+        "hydrogen",
+        "H"
+      ]
+    },
+    {
+      "text": "What scientist discovered penicillin?",
+      "answers": [
+        "Alexander Fleming",
+        "Fleming"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for chlorine?",
+      "answers": [
+        "Cl"
+      ]
+    },
+    {
+      "text": "What is the smallest unit of an element that retains its properties?",
+      "answers": [
+        "atom"
+      ]
+    },
+    {
+      "text": "What is the medical term for the windpipe?",
+      "answers": [
+        "trachea"
+      ]
+    },
+    {
+      "text": "What type of energy does a moving object possess?",
+      "answers": [
+        "kinetic energy",
+        "kinetic"
+      ]
+    },
+    {
+      "text": "What scientist is known as the father of genetics for his pea plant experiments?",
+      "answers": [
+        "Gregor Mendel",
+        "Mendel"
+      ]
+    },
+    {
+      "text": "What is the term for the pigment that gives skin and hair its color?",
+      "answers": [
+        "melanin"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for table salt?",
+      "answers": [
+        "NaCl",
+        "sodium chloride"
+      ]
+    },
+    {
+      "text": "What is the largest moon of Jupiter?",
+      "answers": [
+        "Ganymede"
+      ]
+    },
+    {
+      "text": "What is the term for an animal that hunts other animals for food?",
+      "answers": [
+        "predator"
+      ]
+    },
+    {
+      "text": "What is the SI unit of force?",
+      "answers": [
+        "newton",
+        "N"
+      ]
+    },
+    {
+      "text": "What scientist first proposed that the Sun is the center of the solar system?",
+      "answers": [
+        "Copernicus",
+        "Nicolaus Copernicus"
+      ]
+    },
+    {
+      "text": "What is the term for the resting stage of an insect between larva and adult?",
+      "answers": [
+        "pupa",
+        "chrysalis"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for copper?",
+      "answers": [
+        "Cu"
+      ]
+    },
+    {
+      "text": "What is the process by which plants lose water through their leaves?",
+      "answers": [
+        "transpiration"
+      ]
+    },
+    {
+      "text": "What is the SI unit of electric current?",
+      "answers": [
+        "ampere",
+        "amp",
+        "A"
+      ]
+    },
+    {
+      "text": "What is the term for an animal that is hunted by predators?",
+      "answers": [
+        "prey"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for zinc?",
+      "answers": [
+        "Zn"
+      ]
+    },
+    {
+      "text": "What is the layer of the atmosphere that protects us from UV radiation?",
+      "answers": [
+        "ozone layer",
+        "ozone"
+      ]
+    },
+    {
+      "text": "What is the SI unit of energy?",
+      "answers": [
+        "joule",
+        "J"
+      ]
+    },
+    {
+      "text": "What is the largest planet's most famous storm called?",
+      "answers": [
+        "Great Red Spot"
+      ]
+    },
+    {
+      "text": "What type of blood cell fights infection?",
+      "answers": [
+        "white blood cell",
+        "white blood cells",
+        "leukocyte"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for mercury the element?",
+      "answers": [
+        "Hg"
+      ]
+    },
+    {
+      "text": "What is the term for the study of fungi?",
+      "answers": [
+        "mycology"
+      ]
+    },
+    {
+      "text": "What is the process by which a solid turns directly into a gas?",
+      "answers": [
+        "sublimation"
+      ]
+    },
+    {
+      "text": "What is the powerhouse pigment in red blood cells that carries oxygen?",
+      "answers": [
+        "hemoglobin"
+      ]
+    },
+    {
+      "text": "What is the SI unit of power?",
+      "answers": [
+        "watt",
+        "W"
+      ]
+    },
+    {
+      "text": "What is the term for animals that maintain a constant body temperature?",
+      "answers": [
+        "warm-blooded",
+        "endothermic"
+      ]
+    },
+    {
+      "text": "What planet has the most moons in our solar system?",
+      "answers": [
+        "Saturn"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for tin?",
+      "answers": [
+        "Sn"
+      ]
+    },
+    {
+      "text": "What gland regulates metabolism and is located in the neck?",
+      "answers": [
+        "thyroid",
+        "thyroid gland"
+      ]
+    },
+    {
+      "text": "What is the term for the study of insects?",
+      "answers": [
+        "entomology"
+      ]
+    },
+    {
+      "text": "What is the name of the process by which sex cells are produced?",
+      "answers": [
+        "meiosis"
+      ]
+    },
+    {
+      "text": "What is the SI unit of frequency?",
+      "answers": [
+        "hertz",
+        "Hz"
+      ]
+    },
+    {
+      "text": "What is the term for a substance that speeds up a chemical reaction?",
+      "answers": [
+        "catalyst"
+      ]
+    },
+    {
+      "text": "What is the second most abundant gas in Earth's atmosphere?",
+      "answers": [
+        "oxygen",
+        "O2"
+      ]
+    },
+    {
+      "text": "What is the largest desert in the world by area?",
+      "answers": [
+        "Antarctic",
+        "Antarctic Desert",
+        "Antarctica"
+      ]
+    },
+    {
+      "text": "What is the term for a young frog before it develops legs?",
+      "answers": [
+        "tadpole"
+      ]
+    },
+    {
+      "text": "What is the pH value of a neutral solution?",
+      "answers": [
+        "7"
+      ]
+    },
+    {
+      "text": "What scientist is credited with discovering radioactivity elements polonium and radium?",
+      "answers": [
+        "Marie Curie",
+        "Curie"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for aluminum?",
+      "answers": [
+        "Al"
+      ]
+    },
+    {
+      "text": "What part of the brain controls balance and coordination?",
+      "answers": [
+        "cerebellum"
+      ]
+    },
+    {
+      "text": "What is the term for animals whose body temperature varies with the environment?",
+      "answers": [
+        "cold-blooded",
+        "ectothermic"
+      ]
+    },
+    {
+      "text": "What is the closest galaxy to the Milky Way that is a large spiral?",
+      "answers": [
+        "Andromeda",
+        "Andromeda Galaxy"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for methane?",
+      "answers": [
+        "CH4"
+      ]
+    },
+    {
+      "text": "What is the medical name for the collarbone?",
+      "answers": [
+        "clavicle"
+      ]
+    },
+    {
+      "text": "What is the term for the number of protons in an atom?",
+      "answers": [
+        "atomic number"
+      ]
+    },
+    {
+      "text": "What type of rock is formed from cooled magma or lava?",
+      "answers": [
+        "igneous",
+        "igneous rock"
+      ]
+    },
+    {
+      "text": "What scientist proposed the model of DNA as a double helix along with Francis Crick?",
+      "answers": [
+        "James Watson",
+        "Watson"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for phosphorus?",
+      "answers": [
+        "P"
+      ]
+    },
+    {
+      "text": "What is the term for a chemical that neutralizes an acid?",
+      "answers": [
+        "base",
+        "alkali"
+      ]
+    },
+    {
+      "text": "What is the outermost planet in our solar system?",
+      "answers": [
+        "Neptune"
+      ]
+    },
+    {
+      "text": "What is the medical term for the kneecap?",
+      "answers": [
+        "patella"
+      ]
+    },
+    {
+      "text": "What is the SI unit of temperature?",
+      "answers": [
+        "kelvin",
+        "K"
+      ]
+    },
+    {
+      "text": "What is the term for the process of an animal shedding its skin?",
+      "answers": [
+        "molting",
+        "moulting",
+        "molt"
+      ]
+    },
+    {
+      "text": "What is the most common blood type in humans?",
+      "answers": [
+        "O positive",
+        "O+"
+      ]
+    },
+    {
+      "text": "What scientist formulated the periodic table of elements?",
+      "answers": [
+        "Dmitri Mendeleev",
+        "Mendeleev"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element neon?",
+      "answers": [
+        "Ne"
+      ]
+    },
+    {
+      "text": "What is the term for the study of heredity and genes?",
+      "answers": [
+        "genetics"
+      ]
+    },
+    {
+      "text": "What is the largest type of shark?",
+      "answers": [
+        "whale shark"
+      ]
+    },
+    {
+      "text": "What type of rock forms from layers of sediment over time?",
+      "answers": [
+        "sedimentary",
+        "sedimentary rock"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for ammonia?",
+      "answers": [
+        "NH3"
+      ]
+    },
+    {
+      "text": "What is the medical term for high blood pressure?",
+      "answers": [
+        "hypertension"
+      ]
+    },
+    {
+      "text": "What is the fundamental particle with a negative electric charge?",
+      "answers": [
+        "electron"
+      ]
+    },
+    {
+      "text": "What scientist discovered that the Earth's continents move over time?",
+      "answers": [
+        "Alfred Wegener",
+        "Wegener"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element uranium?",
+      "answers": [
+        "U"
+      ]
+    },
+    {
+      "text": "What is the term for a symbiotic relationship where both organisms benefit?",
+      "answers": [
+        "mutualism"
+      ]
+    },
+    {
+      "text": "What is the layer of the Earth between the crust and the core?",
+      "answers": [
+        "mantle"
+      ]
+    },
+    {
+      "text": "What is the medical term for the voice box?",
+      "answers": [
+        "larynx"
+      ]
+    },
+    {
+      "text": "What is the brightest star in the night sky as seen from Earth?",
+      "answers": [
+        "Sirius"
+      ]
+    },
+    {
+      "text": "What type of rock is formed by heat and pressure changing existing rock?",
+      "answers": [
+        "metamorphic",
+        "metamorphic rock"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for glucose?",
+      "answers": [
+        "C6H12O6"
+      ]
+    },
+    {
+      "text": "What is the term for the maximum number of organisms an environment can support?",
+      "answers": [
+        "carrying capacity"
+      ]
+    },
+    {
+      "text": "What is the fundamental particle that carries the electromagnetic force?",
+      "answers": [
+        "photon"
+      ]
+    },
+    {
+      "text": "What scientist is known for the uncertainty principle in quantum mechanics?",
+      "answers": [
+        "Werner Heisenberg",
+        "Heisenberg"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element cobalt?",
+      "answers": [
+        "Co"
+      ]
+    },
+    {
+      "text": "What is the term for the study of the classification of living things?",
+      "answers": [
+        "taxonomy"
+      ]
+    },
+    {
+      "text": "What is the name of the boundary around a black hole beyond which nothing escapes?",
+      "answers": [
+        "event horizon"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for hydrogen peroxide?",
+      "answers": [
+        "H2O2"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element tungsten?",
+      "answers": [
+        "W"
+      ]
+    },
+    {
+      "text": "What is the term for a relationship where one organism benefits and the other is harmed?",
+      "answers": [
+        "parasitism"
+      ]
+    },
+    {
+      "text": "What is the term for the tendency of an object to resist changes in motion?",
+      "answers": [
+        "inertia"
+      ]
+    },
+    {
+      "text": "What is the name of the process where a star like the Sun fuses hydrogen into helium?",
+      "answers": [
+        "nuclear fusion",
+        "fusion"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for sulfuric acid?",
+      "answers": [
+        "H2SO4"
+      ]
+    },
+    {
+      "text": "What is the term for the study of the interactions between organisms and their environment?",
+      "answers": [
+        "ecology"
+      ]
+    },
+    {
+      "text": "What is the SI unit of electrical resistance?",
+      "answers": [
+        "ohm"
+      ]
+    },
+    {
+      "text": "What scientist developed the smallpox vaccine?",
+      "answers": [
+        "Edward Jenner",
+        "Jenner"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element nickel?",
+      "answers": [
+        "Ni"
+      ]
+    },
+    {
+      "text": "What is the term for the average weather conditions of a region over a long period?",
+      "answers": [
+        "climate"
+      ]
+    },
+    {
+      "text": "What is the name of the force that opposes motion between surfaces in contact?",
+      "answers": [
+        "friction"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for baking soda, sodium bicarbonate?",
+      "answers": [
+        "NaHCO3"
+      ]
+    },
+    {
+      "text": "What is the SI unit of electric charge?",
+      "answers": [
+        "coulomb",
+        "C"
+      ]
+    },
+    {
+      "text": "What scientist is credited with formulating the laws of planetary motion?",
+      "answers": [
+        "Johannes Kepler",
+        "Kepler"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element iodine?",
+      "answers": [
+        "I"
+      ]
+    },
+    {
+      "text": "What is the name of the phenomenon where light bends as it passes between materials?",
+      "answers": [
+        "refraction"
+      ]
+    },
+    {
+      "text": "What is the term for the star at the end of its life that has collapsed into an extremely dense point?",
+      "answers": [
+        "black hole"
+      ]
+    },
+    {
+      "text": "What is the chemical formula for nitric acid?",
+      "answers": [
+        "HNO3"
+      ]
+    },
+    {
+      "text": "What scientist proposed the Big Bang theory's expansion basis, discovering galaxies moving away?",
+      "answers": [
+        "Edwin Hubble",
+        "Hubble"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element bromine?",
+      "answers": [
+        "Br"
+      ]
+    },
+    {
+      "text": "What is the term for the process by which a species changes over generations?",
+      "answers": [
+        "evolution"
+      ]
+    },
+    {
+      "text": "What is the name of the theoretical particle thought to give mass to other particles?",
+      "answers": [
+        "Higgs boson",
+        "Higgs"
+      ]
+    },
+    {
+      "text": "What is the term for the amount of matter in an object?",
+      "answers": [
+        "mass"
+      ]
+    },
+    {
+      "text": "What is the SI unit of electric potential, or voltage?",
+      "answers": [
+        "volt",
+        "V"
+      ]
+    },
+    {
+      "text": "What is the term for the study of the nervous system?",
+      "answers": [
+        "neurology",
+        "neuroscience"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element argon?",
+      "answers": [
+        "Ar"
+      ]
+    },
+    {
+      "text": "What is the term for a substance that cannot be broken down into simpler substances by chemical means?",
+      "answers": [
+        "element"
+      ]
+    },
+    {
+      "text": "What is the name of the closest star to the Sun other than the Sun itself?",
+      "answers": [
+        "Proxima Centauri",
+        "Proxima"
+      ]
+    },
+    {
+      "text": "What scientist first observed cells using a microscope and coined the term cell?",
+      "answers": [
+        "Robert Hooke",
+        "Hooke"
+      ]
+    },
+    {
+      "text": "What is the chemical symbol for the element krypton?",
+      "answers": [
+        "Kr"
+      ]
+    },
+    {
+      "text": "What is the term for the branch of chemistry dealing with carbon compounds?",
+      "answers": [
+        "organic chemistry"
+      ]
+    },
+    {
+      "text": "What is the name of the effect where the frequency of a wave changes due to relative motion?",
+      "answers": [
+        "Doppler effect",
+        "Doppler shift"
+      ]
+    }
+  ],
+  "finals": {
+    "easy": {
+      "text": "What is the name of the star at the center of our solar system?",
+      "answers": [
+        "the Sun",
+        "Sun"
+      ]
+    },
+    "medium": {
+      "text": "What is the chemical process by which plants convert sunlight, water, and carbon dioxide into food?",
+      "answers": [
+        "photosynthesis"
+      ]
+    },
+    "hard": {
+      "text": "What is the name of the phenomenon where a quantum particle can be in multiple states at once until measured?",
+      "answers": [
+        "superposition",
+        "quantum superposition"
+      ]
+    }
+  }
+}

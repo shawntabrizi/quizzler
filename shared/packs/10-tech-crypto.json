@@ -1,0 +1,1360 @@
+{
+ "title": "Tech & Crypto",
+ "questions": [
+  {
+   "text": "Who is the pseudonymous creator of Bitcoin?",
+   "answers": [
+    "Satoshi Nakamoto",
+    "Satoshi",
+    "Nakamoto"
+   ]
+  },
+  {
+   "text": "What does 'WWW' stand for?",
+   "answers": [
+    "World Wide Web"
+   ]
+  },
+  {
+   "text": "Which company was founded by Steve Jobs and Steve Wozniak in 1976?",
+   "answers": [
+    "Apple",
+    "Apple Inc",
+    "Apple Computer"
+   ]
+  },
+  {
+   "text": "What does 'CPU' stand for?",
+   "answers": [
+    "Central Processing Unit"
+   ]
+  },
+  {
+   "text": "Which social media platform did Elon Musk buy in 2022?",
+   "answers": [
+    "Twitter",
+    "X"
+   ]
+  },
+  {
+   "text": "Which company develops the Windows operating system?",
+   "answers": [
+    "Microsoft"
+   ]
+  },
+  {
+   "text": "Who founded Facebook in his Harvard dorm room?",
+   "answers": [
+    "Mark Zuckerberg",
+    "Zuckerberg"
+   ]
+  },
+  {
+   "text": "What is the native cryptocurrency of the Ethereum network called?",
+   "answers": [
+    "Ether",
+    "ETH"
+   ]
+  },
+  {
+   "text": "What does 'HTTP' stand for?",
+   "answers": [
+    "Hypertext Transfer Protocol",
+    "HyperText Transfer Protocol"
+   ]
+  },
+  {
+   "text": "Which search engine company was founded by Larry Page and Sergey Brin?",
+   "answers": [
+    "Google"
+   ]
+  },
+  {
+   "text": "What does 'AI' stand for?",
+   "answers": [
+    "Artificial Intelligence"
+   ]
+  },
+  {
+   "text": "Which cryptocurrency has the ticker symbol BTC?",
+   "answers": [
+    "Bitcoin"
+   ]
+  },
+  {
+   "text": "Who founded Amazon?",
+   "answers": [
+    "Jeff Bezos",
+    "Bezos"
+   ]
+  },
+  {
+   "text": "Which video platform, launched in 2005, is owned by Google?",
+   "answers": [
+    "YouTube"
+   ]
+  },
+  {
+   "text": "What does 'USB' stand for?",
+   "answers": [
+    "Universal Serial Bus"
+   ]
+  },
+  {
+   "text": "Which popular programming language shares its name with a large snake?",
+   "answers": [
+    "Python"
+   ]
+  },
+  {
+   "text": "What is Google's mobile operating system called?",
+   "answers": [
+    "Android"
+   ]
+  },
+  {
+   "text": "What does 'PDF' stand for?",
+   "answers": [
+    "Portable Document Format"
+   ]
+  },
+  {
+   "text": "What is the ticker symbol of Polkadot's native token?",
+   "answers": [
+    "DOT"
+   ]
+  },
+  {
+   "text": "Who founded Microsoft together with Paul Allen?",
+   "answers": [
+    "Bill Gates",
+    "Gates"
+   ]
+  },
+  {
+   "text": "What does 'RAM' stand for?",
+   "answers": [
+    "Random Access Memory"
+   ]
+  },
+  {
+   "text": "Which company makes the PlayStation console?",
+   "answers": [
+    "Sony"
+   ]
+  },
+  {
+   "text": "Which short-video app is owned by ByteDance?",
+   "answers": [
+    "TikTok"
+   ]
+  },
+  {
+   "text": "What do you call the app or device that stores the keys to your cryptocurrency?",
+   "answers": [
+    "Wallet",
+    "Crypto wallet"
+   ]
+  },
+  {
+   "text": "Which electric car company is led by Elon Musk?",
+   "answers": [
+    "Tesla"
+   ]
+  },
+  {
+   "text": "What does 'URL' stand for?",
+   "answers": [
+    "Uniform Resource Locator"
+   ]
+  },
+  {
+   "text": "Which blockchain platform, launched in 2015, brought smart contracts to the mainstream?",
+   "answers": [
+    "Ethereum"
+   ]
+  },
+  {
+   "text": "Which messaging app did Facebook buy for about 19 billion dollars in 2014?",
+   "answers": [
+    "WhatsApp"
+   ]
+  },
+  {
+   "text": "What does 'PC' stand for?",
+   "answers": [
+    "Personal Computer"
+   ]
+  },
+  {
+   "text": "Which streaming giant started out by mailing DVDs to customers?",
+   "answers": [
+    "Netflix"
+   ]
+  },
+  {
+   "text": "What is the name of Polkadot's experimental 'canary' network?",
+   "answers": [
+    "Kusama"
+   ]
+  },
+  {
+   "text": "What does 'HTML' stand for?",
+   "answers": [
+    "Hypertext Markup Language",
+    "HyperText Markup Language"
+   ]
+  },
+  {
+   "text": "Which programmer wrote the Ethereum whitepaper as a teenager?",
+   "answers": [
+    "Vitalik Buterin",
+    "Vitalik",
+    "Buterin"
+   ]
+  },
+  {
+   "text": "What does 'GPU' stand for?",
+   "answers": [
+    "Graphics Processing Unit"
+   ]
+  },
+  {
+   "text": "Which company owns Instagram?",
+   "answers": [
+    "Meta",
+    "Facebook"
+   ]
+  },
+  {
+   "text": "How many million bitcoins will ever exist?",
+   "answers": [
+    "21"
+   ]
+  },
+  {
+   "text": "What does 'SMS' stand for?",
+   "answers": [
+    "Short Message Service"
+   ]
+  },
+  {
+   "text": "What is the name of Google's web browser?",
+   "answers": [
+    "Chrome",
+    "Google Chrome"
+   ]
+  },
+  {
+   "text": "What is the process of creating new bitcoins by solving computational puzzles called?",
+   "answers": [
+    "Mining",
+    "Bitcoin mining"
+   ]
+  },
+  {
+   "text": "Which Jimmy co-founded Wikipedia?",
+   "answers": [
+    "Jimmy Wales",
+    "Wales"
+   ]
+  },
+  {
+   "text": "What does 'OS' stand for in computing?",
+   "answers": [
+    "Operating System"
+   ]
+  },
+  {
+   "text": "What is the name of the voice assistant on Apple devices?",
+   "answers": [
+    "Siri"
+   ]
+  },
+  {
+   "text": "What is the name of Amazon's voice assistant?",
+   "answers": [
+    "Alexa"
+   ]
+  },
+  {
+   "text": "Which Japanese gaming company created Mario?",
+   "answers": [
+    "Nintendo"
+   ]
+  },
+  {
+   "text": "Which Ethereum co-founder went on to create Polkadot?",
+   "answers": [
+    "Gavin Wood",
+    "Gavin",
+    "Wood"
+   ]
+  },
+  {
+   "text": "What does 'IT' stand for?",
+   "answers": [
+    "Information Technology"
+   ]
+  },
+  {
+   "text": "In what year was the Bitcoin whitepaper published?",
+   "answers": [
+    "2008"
+   ]
+  },
+  {
+   "text": "Which symbol separates the username from the domain in an email address?",
+   "answers": [
+    "at sign",
+    "at symbol",
+    "at"
+   ]
+  },
+  {
+   "text": "What does 'VR' stand for?",
+   "answers": [
+    "Virtual Reality"
+   ]
+  },
+  {
+   "text": "What is the central coordinating chain of the Polkadot network called?",
+   "answers": [
+    "Relay Chain",
+    "The Relay Chain"
+   ]
+  },
+  {
+   "text": "Which professional networking site is owned by Microsoft?",
+   "answers": [
+    "LinkedIn"
+   ]
+  },
+  {
+   "text": "What do you call a funny image or idea that spreads rapidly across the internet?",
+   "answers": [
+    "Meme"
+   ]
+  },
+  {
+   "text": "What does 'GPS' stand for?",
+   "answers": [
+    "Global Positioning System"
+   ]
+  },
+  {
+   "text": "Which music streaming service was founded in Sweden?",
+   "answers": [
+    "Spotify"
+   ]
+  },
+  {
+   "text": "What is the smallest unit of Bitcoin called?",
+   "answers": [
+    "Satoshi",
+    "Sat"
+   ]
+  },
+  {
+   "text": "Which keyboard layout is named after the first six letters of its top row?",
+   "answers": [
+    "QWERTY"
+   ]
+  },
+  {
+   "text": "What does 'CD' stand for, as in the music disc?",
+   "answers": [
+    "Compact Disc",
+    "Compact Disk"
+   ]
+  },
+  {
+   "text": "Which cryptocurrency started in 2013 as a joke featuring a Shiba Inu dog?",
+   "answers": [
+    "Dogecoin",
+    "DOGE"
+   ]
+  },
+  {
+   "text": "Which three-letter acronym describes unique blockchain tokens often used for digital art?",
+   "answers": [
+    "NFT"
+   ]
+  },
+  {
+   "text": "Which company developed ChatGPT?",
+   "answers": [
+    "OpenAI"
+   ]
+  },
+  {
+   "text": "What does 'LOL' stand for?",
+   "answers": [
+    "Laughing Out Loud",
+    "Laugh Out Loud"
+   ]
+  },
+  {
+   "text": "Which code-hosting platform did Microsoft acquire in 2018?",
+   "answers": [
+    "GitHub"
+   ]
+  },
+  {
+   "text": "What are the blockchains that connect to Polkadot's Relay Chain called?",
+   "answers": [
+    "Parachains",
+    "Parachain"
+   ]
+  },
+  {
+   "text": "What does the 'IP' in IP address stand for?",
+   "answers": [
+    "Internet Protocol"
+   ]
+  },
+  {
+   "text": "What is the name of Apple's laptop line?",
+   "answers": [
+    "MacBook"
+   ]
+  },
+  {
+   "text": "What revolutionary smartphone did Apple release in 2007?",
+   "answers": [
+    "iPhone",
+    "the iPhone"
+   ]
+  },
+  {
+   "text": "The word 'app' is short for what?",
+   "answers": [
+    "Application"
+   ]
+  },
+  {
+   "text": "Bitcoin transactions are recorded on what kind of public ledger?",
+   "answers": [
+    "Blockchain",
+    "A blockchain",
+    "The blockchain"
+   ]
+  },
+  {
+   "text": "Which organization makes the Firefox browser?",
+   "answers": [
+    "Mozilla"
+   ]
+  },
+  {
+   "text": "What does 'FAQ' stand for?",
+   "answers": [
+    "Frequently Asked Questions"
+   ]
+  },
+  {
+   "text": "In what year did Tim Berners-Lee propose the World Wide Web?",
+   "answers": [
+    "1989"
+   ]
+  },
+  {
+   "text": "Who invented the World Wide Web?",
+   "answers": [
+    "Tim Berners-Lee",
+    "Berners-Lee",
+    "Tim Berners Lee"
+   ]
+  },
+  {
+   "text": "Which programming language was created by James Gosling at Sun Microsystems?",
+   "answers": [
+    "Java"
+   ]
+  },
+  {
+   "text": "What does 'SQL' stand for?",
+   "answers": [
+    "Structured Query Language"
+   ]
+  },
+  {
+   "text": "In what year was Bitcoin's genesis block mined?",
+   "answers": [
+    "2009"
+   ]
+  },
+  {
+   "text": "After the 2022 Merge, what consensus mechanism does Ethereum use?",
+   "answers": [
+    "Proof of Stake",
+    "PoS",
+    "Proof-of-Stake"
+   ]
+  },
+  {
+   "text": "Bitcoin's block reward halves every how many blocks?",
+   "answers": [
+    "210000"
+   ]
+  },
+  {
+   "text": "Who was the little-known third co-founder of Apple who sold his stake early?",
+   "answers": [
+    "Ronald Wayne",
+    "Wayne",
+    "Ron Wayne"
+   ]
+  },
+  {
+   "text": "What does 'DNS' stand for?",
+   "answers": [
+    "Domain Name System"
+   ]
+  },
+  {
+   "text": "Which organization originally created the Rust programming language?",
+   "answers": [
+    "Mozilla"
+   ]
+  },
+  {
+   "text": "What is the name of the framework built by Parity for creating custom blockchains in the Polkadot ecosystem?",
+   "answers": [
+    "Substrate"
+   ]
+  },
+  {
+   "text": "In Polkadot, what does the acronym XCM stand for?",
+   "answers": [
+    "Cross-Consensus Messaging",
+    "Cross Consensus Messaging",
+    "Cross-Consensus Message Format"
+   ]
+  },
+  {
+   "text": "Which video site did Google acquire for 1.65 billion dollars in 2006?",
+   "answers": [
+    "YouTube"
+   ]
+  },
+  {
+   "text": "What is the name of the virtual machine that executes Ethereum smart contracts?",
+   "answers": [
+    "EVM",
+    "Ethereum Virtual Machine"
+   ]
+  },
+  {
+   "text": "Which hash function does Bitcoin mining use?",
+   "answers": [
+    "SHA-256",
+    "SHA256",
+    "SHA 256"
+   ]
+  },
+  {
+   "text": "Who is the leather-jacket-wearing co-founder and CEO of NVIDIA?",
+   "answers": [
+    "Jensen Huang",
+    "Huang"
+   ]
+  },
+  {
+   "text": "In what year did the Ethereum network go live?",
+   "answers": [
+    "2015"
+   ]
+  },
+  {
+   "text": "What does 'API' stand for?",
+   "answers": [
+    "Application Programming Interface"
+   ]
+  },
+  {
+   "text": "Which Dutch programmer created Python?",
+   "answers": [
+    "Guido van Rossum",
+    "van Rossum",
+    "Guido"
+   ]
+  },
+  {
+   "text": "Which 1993 browser from NCSA popularized the early web?",
+   "answers": [
+    "Mosaic",
+    "NCSA Mosaic"
+   ]
+  },
+  {
+   "text": "What is the name of Polkadot's on-chain governance system launched in 2023?",
+   "answers": [
+    "OpenGov",
+    "Polkadot OpenGov",
+    "Gov2"
+   ]
+  },
+  {
+   "text": "The Web3 Foundation, which stewards Polkadot, is based in which Swiss town known as Crypto Valley?",
+   "answers": [
+    "Zug"
+   ]
+  },
+  {
+   "text": "Which company owns the game-streaming platform Twitch?",
+   "answers": [
+    "Amazon"
+   ]
+  },
+  {
+   "text": "What does the 'S' in HTTPS stand for?",
+   "answers": [
+    "Secure"
+   ]
+  },
+  {
+   "text": "What is the smallest denomination of Ether called?",
+   "answers": [
+    "Wei"
+   ]
+  },
+  {
+   "text": "Which crypto exchange founded by Sam Bankman-Fried collapsed in November 2022?",
+   "answers": [
+    "FTX"
+   ]
+  },
+  {
+   "text": "What is the very first block of a blockchain called?",
+   "answers": [
+    "Genesis block",
+    "Genesis",
+    "The genesis block"
+   ]
+  },
+  {
+   "text": "Polkadot's Substrate framework is primarily written in which programming language?",
+   "answers": [
+    "Rust"
+   ]
+  },
+  {
+   "text": "What does 'CSS' stand for?",
+   "answers": [
+    "Cascading Style Sheets"
+   ]
+  },
+  {
+   "text": "What does 'SaaS' stand for?",
+   "answers": [
+    "Software as a Service"
+   ]
+  },
+  {
+   "text": "In what year did Apple release the first iPad?",
+   "answers": [
+    "2010"
+   ]
+  },
+  {
+   "text": "Who created the Linux kernel?",
+   "answers": [
+    "Linus Torvalds",
+    "Torvalds"
+   ]
+  },
+  {
+   "text": "What does the recursive acronym 'GNU' stand for?",
+   "answers": [
+    "GNU's Not Unix",
+    "GNUs Not Unix",
+    "GNU is Not Unix"
+   ]
+  },
+  {
+   "text": "What is the ticker symbol of Kusama's native token?",
+   "answers": [
+    "KSM"
+   ]
+  },
+  {
+   "text": "In what year did the Polkadot mainnet launch?",
+   "answers": [
+    "2020"
+   ]
+  },
+  {
+   "text": "What does 'P2P' stand for?",
+   "answers": [
+    "Peer to Peer",
+    "Peer-to-Peer"
+   ]
+  },
+  {
+   "text": "Which online payments company did eBay acquire in 2002?",
+   "answers": [
+    "PayPal"
+   ]
+  },
+  {
+   "text": "What is the founding document describing a crypto project's design commonly called?",
+   "answers": [
+    "Whitepaper",
+    "White paper"
+   ]
+  },
+  {
+   "text": "Which 19th-century inventor designed the Analytical Engine and is called the father of the computer?",
+   "answers": [
+    "Charles Babbage",
+    "Babbage"
+   ]
+  },
+  {
+   "text": "Which mathematician is widely regarded as the first computer programmer?",
+   "answers": [
+    "Ada Lovelace",
+    "Lovelace",
+    "Ada"
+   ]
+  },
+  {
+   "text": "Which German cipher machine did Alan Turing help crack during World War II?",
+   "answers": [
+    "Enigma",
+    "The Enigma machine"
+   ]
+  },
+  {
+   "text": "What does 'IoT' stand for?",
+   "answers": [
+    "Internet of Things"
+   ]
+  },
+  {
+   "text": "What is the name of the stablecoin with the ticker USDT?",
+   "answers": [
+    "Tether"
+   ]
+  },
+  {
+   "text": "What is the act of locking up DOT to help secure Polkadot and earn rewards called?",
+   "answers": [
+    "Staking"
+   ]
+  },
+  {
+   "text": "What does '2FA' stand for?",
+   "answers": [
+    "Two-Factor Authentication",
+    "Two Factor Authentication"
+   ]
+  },
+  {
+   "text": "Which Finnish company dominated the mobile phone market in the late 1990s and 2000s?",
+   "answers": [
+    "Nokia"
+   ]
+  },
+  {
+   "text": "What is the name of Amazon's cloud computing platform?",
+   "answers": [
+    "AWS",
+    "Amazon Web Services"
+   ]
+  },
+  {
+   "text": "In what year was Google founded?",
+   "answers": [
+    "1998"
+   ]
+  },
+  {
+   "text": "What is a permanent blockchain split into two incompatible chains called?",
+   "answers": [
+    "Hard fork",
+    "Fork"
+   ]
+  },
+  {
+   "text": "What is the secret list of words that can restore a crypto wallet called?",
+   "answers": [
+    "Seed phrase",
+    "Recovery phrase",
+    "Mnemonic",
+    "Mnemonic phrase"
+   ]
+  },
+  {
+   "text": "What were the on-chain events used to allocate Polkadot parachain slots called?",
+   "answers": [
+    "Parachain auctions",
+    "Slot auctions",
+    "Auctions",
+    "Candle auctions"
+   ]
+  },
+  {
+   "text": "What does 'DAO' stand for?",
+   "answers": [
+    "Decentralized Autonomous Organization",
+    "Decentralised Autonomous Organisation"
+   ]
+  },
+  {
+   "text": "What scaling technique bundles many transactions together and posts them to Ethereum?",
+   "answers": [
+    "Rollup",
+    "Rollups"
+   ]
+  },
+  {
+   "text": "Which Ethereum co-founder went on to create Cardano?",
+   "answers": [
+    "Charles Hoskinson",
+    "Hoskinson"
+   ]
+  },
+  {
+   "text": "What is the ticker symbol of Cardano's native token?",
+   "answers": [
+    "ADA"
+   ]
+  },
+  {
+   "text": "What does 'DeFi' stand for?",
+   "answers": [
+    "Decentralized Finance",
+    "Decentralised Finance"
+   ]
+  },
+  {
+   "text": "In what year did Facebook launch?",
+   "answers": [
+    "2004"
+   ]
+  },
+  {
+   "text": "What is the name of Polkadot's on-chain pot of funds used to pay for ecosystem projects?",
+   "answers": [
+    "Treasury",
+    "The Treasury",
+    "Polkadot Treasury"
+   ]
+  },
+  {
+   "text": "Which crypto slang term for refusing to sell originated from a misspelling of 'hold'?",
+   "answers": [
+    "HODL",
+    "HODLing"
+   ]
+  },
+  {
+   "text": "Which company created the TypeScript language?",
+   "answers": [
+    "Microsoft"
+   ]
+  },
+  {
+   "text": "Which company created the Go programming language?",
+   "answers": [
+    "Google"
+   ]
+  },
+  {
+   "text": "What is the ticker of the dollar stablecoin issued by Circle?",
+   "answers": [
+    "USDC"
+   ]
+  },
+  {
+   "text": "Which US military research network of the late 1960s evolved into the internet?",
+   "answers": [
+    "ARPANET",
+    "ARPA NET",
+    "the ARPANET"
+   ]
+  },
+  {
+   "text": "Who sent the first networked email in 1971 and chose the @ symbol for addresses?",
+   "answers": [
+    "Ray Tomlinson",
+    "Tomlinson"
+   ]
+  },
+  {
+   "text": "What does 'ISP' stand for?",
+   "answers": [
+    "Internet Service Provider"
+   ]
+  },
+  {
+   "text": "What is the name of the browser extension wallet originally built for the Polkadot ecosystem by Parity?",
+   "answers": [
+    "Polkadot.js",
+    "Polkadot-js",
+    "Polkadot JS",
+    "polkadot{.js}"
+   ]
+  },
+  {
+   "text": "Which company did Gavin Wood found that builds Polkadot's core technology?",
+   "answers": [
+    "Parity",
+    "Parity Technologies"
+   ]
+  },
+  {
+   "text": "What is Ethereum's standard for fungible tokens called?",
+   "answers": [
+    "ERC-20",
+    "ERC20"
+   ]
+  },
+  {
+   "text": "What is Ethereum's original standard for non-fungible tokens called?",
+   "answers": [
+    "ERC-721",
+    "ERC721"
+   ]
+  },
+  {
+   "text": "How many bitcoins did Laszlo Hanyecz famously pay for two pizzas in 2010?",
+   "answers": [
+    "10000"
+   ]
+  },
+  {
+   "text": "The 'T' in CAPTCHA refers to which famous test from computer science?",
+   "answers": [
+    "Turing test",
+    "Turing",
+    "The Turing test"
+   ]
+  },
+  {
+   "text": "In what year did the dot-com bubble burst?",
+   "answers": [
+    "2000"
+   ]
+  },
+  {
+   "text": "Which Chinese e-commerce giant was founded by Jack Ma?",
+   "answers": [
+    "Alibaba"
+   ]
+  },
+  {
+   "text": "What is the name of Samsung's flagship smartphone line?",
+   "answers": [
+    "Galaxy",
+    "Samsung Galaxy"
+   ]
+  },
+  {
+   "text": "What does 'NPoS', Polkadot's consensus and staking model, stand for?",
+   "answers": [
+    "Nominated Proof of Stake",
+    "Nominated Proof-of-Stake"
+   ]
+  },
+  {
+   "text": "In Polkadot staking, what are the token holders who back validators with their stake called?",
+   "answers": [
+    "Nominators",
+    "Nominator"
+   ]
+  },
+  {
+   "text": "What does 'GIF' stand for?",
+   "answers": [
+    "Graphics Interchange Format"
+   ]
+  },
+  {
+   "text": "Which country made Bitcoin legal tender in 2021?",
+   "answers": [
+    "El Salvador"
+   ]
+  },
+  {
+   "text": "Which video-conferencing company founded by Eric Yuan boomed during the 2020 pandemic?",
+   "answers": [
+    "Zoom"
+   ]
+  },
+  {
+   "text": "What is it called when a project sends free tokens to many wallet addresses?",
+   "answers": [
+    "Airdrop",
+    "An airdrop"
+   ]
+  },
+  {
+   "text": "In Polkadot's OpenGov, what are the individual on-chain proposals that token holders vote on called?",
+   "answers": [
+    "Referenda",
+    "Referendums",
+    "Referendum",
+    "A referendum"
+   ]
+  },
+  {
+   "text": "What does 'VPN' stand for?",
+   "answers": [
+    "Virtual Private Network"
+   ]
+  },
+  {
+   "text": "What was Google's parent company renamed to in its 2015 restructuring?",
+   "answers": [
+    "Alphabet",
+    "Alphabet Inc"
+   ]
+  },
+  {
+   "text": "Who created JavaScript in about ten days while at Netscape?",
+   "answers": [
+    "Brendan Eich",
+    "Eich"
+   ]
+  },
+  {
+   "text": "What does 'WYSIWYG' stand for?",
+   "answers": [
+    "What You See Is What You Get"
+   ]
+  },
+  {
+   "text": "Which French company makes the Nano line of hardware crypto wallets?",
+   "answers": [
+    "Ledger"
+   ]
+  },
+  {
+   "text": "What is the fee paid to execute transactions on Ethereum called?",
+   "answers": [
+    "Gas",
+    "Gas fee",
+    "Gas fees"
+   ]
+  },
+  {
+   "text": "What is the name of the Polkadot system parachain used for issuing and managing tokens, formerly called Statemint?",
+   "answers": [
+    "Asset Hub",
+    "AssetHub",
+    "Statemint"
+   ]
+  },
+  {
+   "text": "In what year did the Kusama network launch?",
+   "answers": [
+    "2019"
+   ]
+  },
+  {
+   "text": "What does 'FTP' stand for?",
+   "answers": [
+    "File Transfer Protocol"
+   ]
+  },
+  {
+   "text": "Which mathematician founded information theory with a landmark 1948 paper?",
+   "answers": [
+    "Claude Shannon",
+    "Shannon"
+   ]
+  },
+  {
+   "text": "What was Apple's secret internal codename for the original iPhone project?",
+   "answers": [
+    "Project Purple",
+    "Purple"
+   ]
+  },
+  {
+   "text": "A headline from which newspaper is embedded in Bitcoin's genesis block?",
+   "answers": [
+    "The Times",
+    "Times",
+    "The Times of London"
+   ]
+  },
+  {
+   "text": "Which cryptographer proposed 'b-money', a precursor cited in the Bitcoin whitepaper?",
+   "answers": [
+    "Wei Dai",
+    "Dai"
+   ]
+  },
+  {
+   "text": "Which computer scientist designed 'Bit Gold', an early precursor to Bitcoin?",
+   "answers": [
+    "Nick Szabo",
+    "Szabo"
+   ]
+  },
+  {
+   "text": "In what year did the Mt. Gox exchange collapse after losing hundreds of thousands of bitcoins?",
+   "answers": [
+    "2014"
+   ]
+  },
+  {
+   "text": "In what year did The DAO hack occur, leading to the Ethereum chain split?",
+   "answers": [
+    "2016"
+   ]
+  },
+  {
+   "text": "What is the chain that kept the original, un-forked Ethereum history after the DAO bailout called?",
+   "answers": [
+    "Ethereum Classic",
+    "ETC"
+   ]
+  },
+  {
+   "text": "What is the address format used across Polkadot ecosystem chains called?",
+   "answers": [
+    "SS58"
+   ]
+  },
+  {
+   "text": "What is the name of Polkadot's block finality gadget, named after a large animal?",
+   "answers": [
+    "GRANDPA"
+   ]
+  },
+  {
+   "text": "What is the name of Polkadot's block production mechanism, whose acronym sounds like an infant?",
+   "answers": [
+    "BABE"
+   ]
+  },
+  {
+   "text": "In Gavin Wood's 2024 'JAM' proposal for Polkadot, what does JAM stand for?",
+   "answers": [
+    "Join-Accumulate Machine",
+    "Join Accumulate Machine"
+   ]
+  },
+  {
+   "text": "Which 2024 Polkadot upgrade replaced parachain slot auctions with flexible blockspace purchasing?",
+   "answers": [
+    "Agile Coretime",
+    "Coretime"
+   ]
+  },
+  {
+   "text": "In what year did Gavin Wood publish the original Polkadot whitepaper?",
+   "answers": [
+    "2016"
+   ]
+  },
+  {
+   "text": "What is the name of the compact serialization codec used throughout the Polkadot stack?",
+   "answers": [
+    "SCALE"
+   ]
+  },
+  {
+   "text": "What are the nodes that produce block candidates for a Polkadot parachain called?",
+   "answers": [
+    "Collators",
+    "Collator"
+   ]
+  },
+  {
+   "text": "Which Thiel Fellow co-founded Polkadot alongside Gavin Wood and Peter Czaban?",
+   "answers": [
+    "Robert Habermeier",
+    "Habermeier",
+    "Rob Habermeier"
+   ]
+  },
+  {
+   "text": "What is Parity's Rust-based embedded domain-specific language for writing WebAssembly smart contracts called?",
+   "answers": [
+    "ink!",
+    "ink"
+   ]
+  },
+  {
+   "text": "What does 'RISC' stand for in processor design?",
+   "answers": [
+    "Reduced Instruction Set Computer",
+    "Reduced Instruction Set Computing"
+   ]
+  },
+  {
+   "text": "Who created the C programming language at Bell Labs?",
+   "answers": [
+    "Dennis Ritchie",
+    "Ritchie"
+   ]
+  },
+  {
+   "text": "Who created the C++ programming language?",
+   "answers": [
+    "Bjarne Stroustrup",
+    "Stroustrup"
+   ]
+  },
+  {
+   "text": "What was the name of the first PC virus, written in Pakistan in 1986?",
+   "answers": [
+    "Brain",
+    "Brain virus"
+   ]
+  },
+  {
+   "text": "Which US Navy rear admiral and computing pioneer popularized the term 'debugging' and shaped COBOL?",
+   "answers": [
+    "Grace Hopper",
+    "Hopper"
+   ]
+  },
+  {
+   "text": "What was the first general-purpose electronic computer, completed in 1945 at the University of Pennsylvania?",
+   "answers": [
+    "ENIAC"
+   ]
+  },
+  {
+   "text": "What is the name of the first worm to spread widely across the internet in 1988?",
+   "answers": [
+    "Morris worm",
+    "The Morris worm",
+    "Morris"
+   ]
+  },
+  {
+   "text": "Who founded the crypto exchange Binance?",
+   "answers": [
+    "Changpeng Zhao",
+    "CZ",
+    "Zhao"
+   ]
+  },
+  {
+   "text": "Which cryptocurrency split from Bitcoin in 2017 over the block size debate?",
+   "answers": [
+    "Bitcoin Cash",
+    "BCH"
+   ]
+  },
+  {
+   "text": "What is the layer-2 payment network built on top of Bitcoin for fast, cheap transactions?",
+   "answers": [
+    "Lightning Network",
+    "Lightning",
+    "The Lightning Network"
+   ]
+  },
+  {
+   "text": "What darknet marketplace did Ross Ulbricht create and run?",
+   "answers": [
+    "Silk Road",
+    "The Silk Road"
+   ]
+  },
+  {
+   "text": "Under what pseudonym did Ross Ulbricht operate the Silk Road?",
+   "answers": [
+    "Dread Pirate Roberts",
+    "DPR"
+   ]
+  },
+  {
+   "text": "In the acronym zk-SNARK, what does the 'S' stand for?",
+   "answers": [
+    "Succinct"
+   ]
+  },
+  {
+   "text": "Who co-invented public-key cryptography with Martin Hellman in 1976?",
+   "answers": [
+    "Whitfield Diffie",
+    "Diffie"
+   ]
+  },
+  {
+   "text": "In the RSA cryptosystem, whose surname does the 'R' stand for?",
+   "answers": [
+    "Rivest",
+    "Ron Rivest",
+    "Ronald Rivest"
+   ]
+  },
+  {
+   "text": "Which German engineer built the Z3, an early programmable computer, in 1941?",
+   "answers": [
+    "Konrad Zuse",
+    "Zuse"
+   ]
+  },
+  {
+   "text": "What was the name of Xerox's research center that pioneered the mouse-driven graphical interface?",
+   "answers": [
+    "PARC",
+    "Xerox PARC",
+    "Palo Alto Research Center"
+   ]
+  },
+  {
+   "text": "Which 1972 Atari arcade game about table tennis kick-started the video game industry?",
+   "answers": [
+    "Pong"
+   ]
+  },
+  {
+   "text": "What is the name of Bitcoin's 2021 soft-fork upgrade that enabled Schnorr signatures?",
+   "answers": [
+    "Taproot"
+   ]
+  },
+  {
+   "text": "What is the smallest unit of DOT, equal to one ten-billionth, called?",
+   "answers": [
+    "Planck"
+   ]
+  },
+  {
+   "text": "What is the name of Parity's lightweight client that lets apps connect to Polkadot without full nodes?",
+   "answers": [
+    "Smoldot"
+   ]
+  },
+  {
+   "text": "Douglas Engelbart's famous 1968 demo of the mouse and hypertext is popularly known by what name?",
+   "answers": [
+    "The Mother of All Demos",
+    "Mother of All Demos"
+   ]
+  }
+ ],
+ "finals": {
+  "easy": {
+   "text": "What does the 'e' in 'email' stand for?",
+   "answers": [
+    "Electronic"
+   ]
+  },
+  "medium": {
+   "text": "What animal is the mascot of the Linux operating system?",
+   "answers": [
+    "Penguin",
+    "Tux"
+   ]
+  },
+  "hard": {
+   "text": "Which cryptographer received the first-ever Bitcoin transaction, sent by Satoshi Nakamoto in 2009?",
+   "answers": [
+    "Hal Finney",
+    "Finney"
+   ]
+  }
+ }
+}
