@@ -31,47 +31,28 @@ import { encodeFunctionData, decodeFunctionResult, hexToBytes, type Abi } from "
 
 import abiJson from "../src/abi-registry.json";
 import contractInfo from "../src/contract-address.json";
-import { normalizeAnswer } from "../src/normalize";
+import { normalizeAcceptedAnswers, validatePack, type PackFile } from "../src/pack-validation";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKS_DIR = join(__dirname, "..", "..", "shared", "packs");
 const RPC = process.env.PASEO_AH_RPC ?? "wss://paseo-asset-hub-next-rpc.polkadot.io";
 const DEV_ACCOUNT = (process.env.DEPLOY_DEV_ACCOUNT ?? "Alice") as Parameters<typeof createDevSigner>[0];
-const BATCH = Number(process.env.SEED_BATCH ?? 8);
+const BATCH = positiveEnvInt("SEED_BATCH", 8, 32);
 /** addQuestion calls packed into one Utility.batch_all extrinsic. */
-const INNER = Number(process.env.SEED_INNER ?? 16);
+const INNER = positiveEnvInt("SEED_INNER", 16, 32);
 const TX_TIMEOUT_MS = 120_000;
 
 const abi = abiJson as Abi;
 
-interface PackQuestion {
-    text: string;
-    answers: string[];
-}
-interface PackFile {
-    title: string;
-    questions: PackQuestion[];
-    finals: Record<"easy" | "medium" | "hard", PackQuestion>;
-}
-
-function validateQuestion(q: PackQuestion, where: string): void {
-    if (!q.text || q.text.length > 256) throw new Error(`${where}: bad text length`);
-    if (q.answers.length < 1 || q.answers.length > 5) throw new Error(`${where}: bad answer count`);
-    for (const a of q.answers) {
-        const norm = normalizeAnswer(a);
-        if (!norm || norm.length > 64) throw new Error(`${where}: answer ${JSON.stringify(a)} normalizes to ${JSON.stringify(norm)}`);
+function positiveEnvInt(name: string, fallback: number, max: number): number {
+    const raw = process.env[name];
+    if (raw === undefined) return fallback;
+    if (!/^\d+$/.test(raw)) throw new Error(`${name} must be a whole number from 1 to ${max}`);
+    const value = Number(raw);
+    if (!Number.isSafeInteger(value) || value < 1 || value > max) {
+        throw new Error(`${name} must be a whole number from 1 to ${max}`);
     }
-}
-
-/** Match the builder: registry entries must be in the same folded form that
- * the app sends as player submissions. */
-function normalizedAnswers(answers: string[]): string[] {
-    const unique = new Set<string>();
-    for (const answer of answers) {
-        const normalized = normalizeAnswer(answer);
-        if (normalized) unique.add(normalized);
-    }
-    return [...unique];
+    return value;
 }
 
 function bigintReplacer(_k: string, v: unknown): unknown {
@@ -108,6 +89,7 @@ async function main(): Promise<void> {
     const unsafeApi = client.getUnsafeApi();
     const signer = createDevSigner(DEV_ACCOUNT);
     const address = AccountId(0).dec(getDevPublicKey(DEV_ACCOUNT));
+    const accountH160 = ss58ToH160(address).toLowerCase();
     console.log(`Signing as //${DEV_ACCOUNT} (${address}) on ${RPC}`);
 
     await ensureAccountMapped(address, signer, {
@@ -190,22 +172,34 @@ async function main(): Promise<void> {
         }) as T;
     }
 
+    async function myLatestPack(): Promise<number> {
+        const id = Number(await query<number | bigint>("myLatestPack", [accountH160]));
+        if (id === 0xffffffff) throw new Error("could not locate the pack just created");
+        return id;
+    }
+
     // ── seed each pack ───────────────────────────────────────────
 
     for (const file of selected) {
-        const pack: PackFile = JSON.parse(await readFile(join(PACKS_DIR, file), "utf8"));
+        const pack: PackFile = validatePack(
+            JSON.parse(await readFile(join(PACKS_DIR, file), "utf8")),
+            file,
+        );
         console.log(`\n── ${file}: "${pack.title}" — ${pack.questions.length} questions + finals`);
 
-        pack.questions.forEach((q, i) => validateQuestion(q, `${file} q${i}`));
-        (["easy", "medium", "hard"] as const).forEach((d) => validateQuestion(pack.finals[d], `${file} final ${d}`));
-
-        // Find or create the pack on-chain (resume support).
+        // Find or create this account's pack by title (resume support). A
+        // stranger's same-titled pack must never make us skip or mutate data.
         const packCount = Number(await query<number | bigint>("packCount", []));
         let packId: number | null = null;
         let resumeFrom = 0;
         for (let id = 0; id < packCount; id++) {
-            const meta = await query<{ title: string; sealed: boolean; regular_count: number }>("getPack", [id]);
-            if (meta.title === pack.title) {
+            const meta = await query<{
+                creator: string;
+                title: string;
+                sealed: boolean;
+                regular_count: number;
+            }>("getPack", [id]);
+            if (meta.creator.toLowerCase() === accountH160 && meta.title === pack.title) {
                 if (meta.sealed) {
                     packId = -1; // sentinel: fully done
                 } else {
@@ -223,7 +217,11 @@ async function main(): Promise<void> {
             const data = encodeFunctionData({ abi, functionName: "createPack", args: [pack.title] });
             const { gas, deposit } = await dryRun(data);
             await submitAt(reviveCall(data, gas, deposit), nonce++);
-            packId = packCount;
+            packId = await myLatestPack();
+            const created = await query<{ creator: string; title: string; sealed: boolean }>("getPack", [packId]);
+            if (created.creator.toLowerCase() !== accountH160 || created.title !== pack.title || created.sealed) {
+                throw new Error(`created pack #${packId} could not be verified`);
+            }
             console.log(`  created pack #${packId}`);
         } else {
             console.log(`  resuming pack #${packId} from question ${resumeFrom}`);
@@ -233,7 +231,7 @@ async function main(): Promise<void> {
         const regular: `0x${string}`[] = pack.questions.slice(resumeFrom).map((q) =>
             encodeFunctionData({
                 abi, functionName: "addQuestion",
-                args: [packId, q.text, normalizedAnswers(q.answers), false, 0],
+                args: [packId, q.text, normalizeAcceptedAnswers(q.answers), false, 0],
             }),
         );
 
@@ -278,13 +276,13 @@ async function main(): Promise<void> {
         for (const [d, name] of (["easy", "medium", "hard"] as const).entries()) {
             const data = encodeFunctionData({
                 abi, functionName: "addQuestion",
-                args: [packId, pack.finals[name].text, normalizedAnswers(pack.finals[name].answers), true, d],
+                args: [packId, pack.finals[name].text, normalizeAcceptedAnswers(pack.finals[name].answers), true, d],
             });
             try {
                 const price = await dryRun(data);
                 await submitAt(reviveCall(data, price.gas, price.deposit), nonce++);
             } catch (e) {
-                if (!/FinalAlreadySet|ContractReverted/.test(String(e))) throw e;
+                if (!String(e).includes("FinalAlreadySet")) throw e;
                 console.log(`  final:${name} already set — skipping`);
             }
         }
@@ -292,7 +290,14 @@ async function main(): Promise<void> {
         const sealData = encodeFunctionData({ abi, functionName: "sealPack", args: [packId] });
         const sealPrice = await dryRun(sealData);
         await submitAt(reviveCall(sealData, sealPrice.gas, sealPrice.deposit), nonce++);
-        const sealed = await query<{ sealed: boolean; regular_count: number }>("getPack", [packId]);
+        const sealed = await query<{
+            sealed: boolean;
+            regular_count: number;
+            finals_set_count: number;
+        }>("getPack", [packId]);
+        if (!sealed.sealed || sealed.regular_count !== pack.questions.length || sealed.finals_set_count !== 3) {
+            throw new Error(`pack #${packId} did not seal with the expected content`);
+        }
         console.log(`  sealed=${sealed.sealed} regular_count=${sealed.regular_count} ✓`);
     }
 

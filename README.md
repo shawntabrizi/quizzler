@@ -46,14 +46,17 @@ App (needs Node ≥ 22, pnpm):
 cd app
 pnpm install
 pnpm test                 # normalize-parity unit tests
+pnpm validate:packs       # validate all starter-pack files offline
 pnpm deploy:contract      # deploy to Paseo Asset Hub (dev //Alice; writes src/contract-address.json)
 pnpm seed:packs           # seed shared/packs/*.json on-chain (resume-safe)
 pnpm dev                  # vite dev server on :5301
-pnpm test:e2e             # Playwright against a simulated Triangle host
+LIVE_E2E=1 pnpm test:e2e  # destructive Playwright run against public Paseo
 ```
 
 The e2e suite (`app/e2e/`) runs the app inside `@parity/host-api-test-sdk`'s test host
 against public Paseo — `game.spec.ts` plays a complete two-player game (one player through
-the UI, one scripted straight against the contract).
+the UI, one scripted straight against the contract). It creates permanent testnet packs and
+games, so it requires the explicit `LIVE_E2E=1` opt-in. Set `REUSE_E2E_SERVER=1` only when
+you deliberately want it to use an already-running local Vite server.
 
 Current deployment: see `app/src/contract-address.json`.

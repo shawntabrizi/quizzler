@@ -1,5 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// These tests create real contracts, packs, and games on public Paseo using
+// shared dev accounts. Make that side effect deliberate rather than a default
+// test command someone might run locally or in CI by accident.
+if (process.env.LIVE_E2E !== "1") {
+    throw new Error("Live E2E targets public Paseo. Re-run with LIVE_E2E=1 to opt in.");
+}
+
 export default defineConfig({
     testDir: "./e2e",
     fullyParallel: false,
@@ -27,7 +34,9 @@ export default defineConfig({
     webServer: {
         command: "pnpm vite --port 5301",
         port: 5301,
-        reuseExistingServer: !process.env.CI,
+        // A stale server may be serving a different checkout. Reuse is useful
+        // for deliberate local debugging only, never as the implicit default.
+        reuseExistingServer: process.env.REUSE_E2E_SERVER === "1",
         timeout: 30_000,
     },
 });

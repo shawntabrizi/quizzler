@@ -9,6 +9,7 @@
         "build": "tsc && vite build",
         "preview": "vite preview",
         "test": "vitest run",
+        "validate:packs": "tsx scripts/validate-packs.ts",
         "deploy:contract": "tsx scripts/deploy.ts",
         "seed:packs": "tsx scripts/seed-packs.ts",
         "test:e2e": "playwright test",
