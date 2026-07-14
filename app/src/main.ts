@@ -1253,8 +1253,15 @@ async function voteCorrect(target: string): Promise<void> {
         await sendTx(game, "voteCorrect", gameId, target);
         void poll();
     } catch (e) {
-        actionsSent.delete(key);
-        getEl("review-error").textContent = txError(e);
+        const message = txError(e);
+        if (message.includes("AlreadyVoted")) {
+            // A rejoined player has no local vote history, but this revert is
+            // authoritative confirmation that their earlier vote is on-chain.
+            getEl("review-error").textContent = "Your vote is already recorded.";
+        } else {
+            actionsSent.delete(key);
+            getEl("review-error").textContent = message;
+        }
         if (latest) render(latest);
     } finally {
         busy = false;
@@ -1303,8 +1310,13 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
             await sendTx(game, "voteDifficulty", gameId, Number(btn.dataset.difficulty));
             void poll();
         } catch (e) {
-            actionsSent.delete("difficulty");
-            getEl("vote-error").textContent = txError(e);
+            const message = txError(e);
+            if (message.includes("AlreadyVoted")) {
+                getEl("vote-error").textContent = "Your vote is already recorded.";
+            } else {
+                actionsSent.delete("difficulty");
+                getEl("vote-error").textContent = message;
+            }
             if (latest) render(latest);
         } finally {
             busy = false;
