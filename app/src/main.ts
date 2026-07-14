@@ -38,6 +38,7 @@ const STAGE_FINAL_ANSWER = 4;
 const STAGE_FINAL_REVIEW = 5;
 const STAGE_FINISHED = 6;
 const FINAL_QKEY = 255;
+const FINAL_SLOT_BASE = 0xf0;
 const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
 const MAX_STAGE_BLOCKS = 600;
@@ -48,7 +49,8 @@ const MAX_TITLE_BYTES = 64;
 const MAX_QUESTION_BYTES = 256;
 const MAX_ANSWER_BYTES = 64;
 const SECONDS_PER_BLOCK = 2; // measured on Paseo Asset Hub Next (2026-07)
-const POLL_MS = 2_000; // one poll per block
+const POLL_FALLBACK_MS = 8_000;
+const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
 
 // ── Chain-facing types (viem decodes named tuples to objects) ───────
@@ -105,6 +107,28 @@ interface Snapshot {
     answerText: string;
 }
 
+interface TxOverrides {
+    gasLimit: {
+        ref_time: bigint;
+        proof_size: bigint;
+    };
+    storageDepositLimit: bigint;
+}
+
+interface TxPreflight {
+    expiresAt: number;
+    overrides: TxOverrides | null;
+    pending: Promise<TxOverrides | null>;
+}
+
+interface CreatedGameConfig {
+    packId: number;
+    numQuestions: number;
+    answerBlocks: number;
+    reviewBlocks: number;
+    maxPlayers: number;
+}
+
 // ── App state ────────────────────────────────────────────────────────
 
 const manager = new SignerManager({ ss58Prefix: 0, dappName: "quizzler" });
@@ -112,10 +136,16 @@ const manager = new SignerManager({ ss58Prefix: 0, dappName: "quizzler" });
 let productAccount: SignerAccount | null = null;
 let registry: any = null;
 let game: any = null;
+let assetHub: any = null;
 let myAddress = ""; // lowercase H160
+let nextTxNonce: number | null = null;
+let nonceSync: Promise<number | null> | null = null;
 let gameId: bigint | null = null;
 let latest: Snapshot | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
+let blockPollSubscription: { unsubscribe(): void } | null = null;
+let bestBlocks: { subscribe: (next: () => void) => { unsubscribe(): void } } | null = null;
+let lastBlockSignalAt = 0;
 let selectedPackId: number | null = null;
 let selectedPack: PackView | null = null;
 let busy = false;
@@ -130,8 +160,10 @@ const actionsSent = new Set<string>();
 // (a stale read or transient fork view resolves out of order; a genuine
 // reorg keeps reporting the earlier phase and wins after a few polls).
 let pollInFlight = false;
+let pollQueued = false;
 let lastRank = -1;
 let behindStreak = 0;
+let latestObservedAt = 0;
 // Incremented whenever a game is entered or left. This distinguishes a new
 // session from a stale request even when the player re-enters the same game.
 let gameSession = 0;
@@ -151,6 +183,21 @@ const answerCache = new Map<string, string>();
 const packTitleCache = new Map<number, string>();
 // A sealed pack is immutable, so its metadata never needs another RPC read.
 const sealedPackCache = new Map<number, PackView>();
+const questionRequests = new Map<string, Promise<string>>();
+const answerRequests = new Map<string, Promise<string>>();
+const packTitleRequests = new Map<number, Promise<string>>();
+
+// A dry-run is needed to size each contract call. Most game actions have
+// plenty of think time, so warm the estimate in the background and let the
+// wallet open immediately when the player taps the button.
+const txPreflights = new Map<string, TxPreflight>();
+let createGamePreflightTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Game configuration and player membership are immutable once the game has
+// started. Keeping those values avoids two contract reads on every block.
+let cachedGame: GameView | null = null;
+let cachedPlayers: string[] | null = null;
+let preferredQuestionKey: number | null = null;
 
 // Pack-builder state
 let builderPackId: number | null = null;
@@ -193,46 +240,168 @@ function txError(e: unknown): string {
     return msg.length > 200 ? `${msg.slice(0, 200)}…` : msg;
 }
 
+/** Transaction sizing, nonce handling, and submission helpers. */
+function preflightKey(method: string, args: readonly unknown[]): string {
+    return `${myAddress}:${method}:${args.map((arg) => String(arg)).join(":")}`;
+}
+
+/** Dry-run once to validate a call and produce the safely padded gas limit. */
+async function estimateTx(handle: any, method: string, args: readonly unknown[]): Promise<TxOverrides | null> {
+    if (!productAccount) return null;
+    try {
+        const q = await handle[method].query(...args, { origin: productAccount.address });
+        // Do not turn a failed dry-run into a paid transaction. Leaving the
+        // overrides empty lets the SDK surface the contract's revert reason.
+        if (!q?.success || !q.gasRequired) return null;
+        return {
+            gasLimit: {
+                ref_time: (q.gasRequired.ref_time * 3n) / 2n,
+                proof_size: (q.gasRequired.proof_size * 3n) / 2n,
+            },
+            // This is a cap rather than a cost. Supplying both values tells
+            // the SDK not to repeat this exact dry-run before signing.
+            storageDepositLimit: 20_000_000_000n,
+        };
+    } catch {
+        return null;
+    }
+}
+
+/** Start a best-effort preflight without making the UI wait for it. */
+function warmTx(handle: any, method: string, args: readonly unknown[]): string {
+    const key = preflightKey(method, args);
+    const existing = txPreflights.get(key);
+    if (existing && existing.expiresAt > Date.now()) return key;
+    const preflight: TxPreflight = {
+        expiresAt: Date.now() + PREFLIGHT_TTL_MS,
+        overrides: null,
+        pending: Promise.resolve(null),
+    };
+    preflight.pending = estimateTx(handle, method, args).then((overrides) => {
+        preflight.overrides = overrides;
+        return overrides;
+    });
+    txPreflights.set(key, preflight);
+    return key;
+}
+
+async function warmedOverrides(handle: any, method: string, args: readonly unknown[]): Promise<TxOverrides | null> {
+    const key = warmTx(handle, method, args);
+    const preflight = txPreflights.get(key);
+    if (!preflight) return estimateTx(handle, method, args);
+    const overrides = preflight.overrides ?? await preflight.pending;
+    txPreflights.delete(key); // estimates are one-use and state-sensitive
+    return overrides;
+}
+
+async function reserveTxNonce(): Promise<number | null> {
+    if (!productAccount || !assetHub) return null;
+    if (nextTxNonce === null) {
+        await syncNextTxNonce();
+    }
+    if (nextTxNonce === null) return null;
+    const nonce = nextTxNonce;
+    nextTxNonce += 1;
+    return nonce;
+}
+
+/** Fetch best-block nonce once, shared by boot and the first transaction. */
+function syncNextTxNonce(): Promise<number | null> {
+    if (!productAccount || !assetHub) return Promise.resolve(null);
+    if (nonceSync) return nonceSync;
+    const request: Promise<number | null> = assetHub.apis.AccountNonceApi.account_nonce(productAccount.address, { at: "best" })
+        .then((nonce: number | bigint) => {
+            nextTxNonce = Number(nonce);
+            return nextTxNonce;
+        })
+        .catch(() => null)
+        .finally(() => {
+            nonceSync = null;
+        });
+    nonceSync = request;
+    return request;
+}
+
 /**
- * Submit a contract tx, retrying once on `Invalid: Stale`. PAPI derives
- * nonces from finalized state, so a tap that closely follows the player's
- * previous transaction (vote → continue) can race finality and pick an
- * already-spent nonce; a short pause and one retry absorbs it.
+ * The contracts helper deliberately hides nonce selection. For interactive
+ * games, however, finalized-state nonces turn Create → Start into a frequent
+ * stale transaction. Submit its prepared Revive call with our best-block
+ * nonce, resolving at inclusion just like the helper does.
  */
-async function sendTx(handle: any, method: string, ...args: unknown[]): Promise<void> {
+async function submitPreparedTx(transaction: any, nonce: number): Promise<void> {
+    if (!productAccount) throw new Error("Account not ready");
+    const signer = productAccount.getSigner();
+    await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        let subscription: { unsubscribe(): void } | null = null;
+        const finish = (error?: Error) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            subscription?.unsubscribe();
+            if (error) reject(error);
+            else resolve();
+        };
+        const timer = setTimeout(() => finish(new Error("Transaction timed out waiting for a block.")), 90_000);
+        try {
+            const nextSubscription = transaction.signSubmitAndWatch(signer, {
+                nonce,
+                mortality: { mortal: true, period: 256 },
+            }).subscribe({
+                next: (event: any) => {
+                    if (event.type !== "txBestBlocksState" || !event.found || event.ok === undefined) return;
+                    if (!event.ok) {
+                        finish(new Error(JSON.stringify(event.dispatchError)));
+                    } else {
+                        finish();
+                    }
+                },
+                error: (error: unknown) => finish(error instanceof Error ? error : new Error(String(error))),
+            });
+            subscription = nextSubscription;
+            if (settled) nextSubscription.unsubscribe();
+        } catch (error) {
+            finish(error instanceof Error ? error : new Error(String(error)));
+        }
+    });
+}
+
+async function submitTx(
+    handle: any,
+    method: string,
+    args: readonly unknown[],
+    initialOverrides: TxOverrides | null = null,
+): Promise<void> {
     if (!productAccount) throw new Error("Account not ready");
     for (let attempt = 0; ; attempt++) {
         try {
-            // Pre-size the weight with our own margin: the SDK submits with
-            // the dry-run weight exactly, which OutOfGas-es methods that make
-            // cross-contract registry calls. Query errors fall through — the
-            // tx's own dry-run surfaces them with a proper revert reason.
-            let overrides: Record<string, unknown> = {};
-            try {
-                const q = await handle[method].query(...args, { origin: productAccount.address });
-                if (q?.gasRequired) {
-                    overrides = {
-                        gasLimit: {
-                            ref_time: (q.gasRequired.ref_time * 3n) / 2n,
-                            proof_size: (q.gasRequired.proof_size * 3n) / 2n,
-                        },
-                        // Providing both overrides makes the SDK skip its own
-                        // dry-run entirely (we just did one) — saves a full
-                        // RPC round-trip per tap. The deposit is a cap, not a
-                        // cost, so a generous constant is safe.
-                        storageDepositLimit: 20_000_000_000n,
-                    };
-                }
-            } catch {
-                // ignored — see above
+            // A warmed estimate avoids an RPC on the tap path. On retries we
+            // intentionally estimate again against current chain state.
+            const overrides = attempt === 0 && initialOverrides !== null
+                ? initialOverrides
+                : await estimateTx(handle, method, args);
+            const nonce = await reserveTxNonce();
+            if (nonce === null) {
+                // Degrade safely to the SDK's submission path if the account
+                // nonce API is unavailable in a host implementation.
+                const result = await handle[method].tx(...args, {
+                    signer: productAccount.getSigner(),
+                    ...(overrides ?? {}),
+                });
+                if (!result.ok) throw new Error(JSON.stringify(result.dispatchError));
+            } else {
+                const transaction = await handle[method].prepare(...args, {
+                    origin: productAccount.address,
+                    ...(overrides ?? {}),
+                });
+                await submitPreparedTx(transaction, nonce);
             }
-            const result = await handle[method].tx(...args, {
-                signer: productAccount.getSigner(),
-                ...overrides,
-            });
-            if (!result.ok) throw new Error(JSON.stringify(result.dispatchError));
             return;
         } catch (e) {
+            // The tx may or may not have reached a best block. Re-read before
+            // another action/retry instead of assuming a nonce is still free.
+            nextTxNonce = null;
+            nonceSync = null;
             const msg = e instanceof Error ? e.message : String(e);
             if (attempt === 0 && msg.includes("Stale")) {
                 await new Promise((r) => setTimeout(r, 5_000));
@@ -243,28 +412,49 @@ async function sendTx(handle: any, method: string, ...args: unknown[]): Promise<
     }
 }
 
+async function sendTx(handle: any, method: string, ...args: unknown[]): Promise<void> {
+    await submitTx(handle, method, args);
+}
+
+async function sendWarmedTx(handle: any, method: string, args: readonly unknown[]): Promise<void> {
+    await submitTx(handle, method, args, await warmedOverrides(handle, method, args));
+}
+
 // ── Registry content lookups (cached) ────────────────────────────────
 
 async function questionText(packId: number, slot: number): Promise<string> {
     const key = `${packId}:${slot}`;
     const cached = questionCache.get(key);
     if (cached !== undefined) return cached;
-    const res = await registry.getQuestion.query(packId, slot);
-    if (!res.success) return "";
-    questionCache.set(key, res.value as string);
-    return res.value as string;
+    const pending = questionRequests.get(key);
+    if (pending) return pending;
+    const request = (async () => {
+        const res = await registry.getQuestion.query(packId, slot);
+        if (!res.success) return "";
+        const text = res.value as string;
+        questionCache.set(key, text);
+        return text;
+    })().finally(() => questionRequests.delete(key));
+    questionRequests.set(key, request);
+    return request;
 }
 
 async function canonicalAnswer(packId: number, slot: number): Promise<string> {
     const key = `${packId}:${slot}`;
     const cached = answerCache.get(key);
     if (cached !== undefined) return cached;
-    const res = await registry.getAnswers.query(packId, slot);
-    if (!res.success) return "";
-    const answers = res.value as string[];
-    const canonical = answers[0] ?? "";
-    answerCache.set(key, canonical);
-    return canonical;
+    const pending = answerRequests.get(key);
+    if (pending) return pending;
+    const request = (async () => {
+        const res = await registry.getAnswers.query(packId, slot);
+        if (!res.success) return "";
+        const answers = res.value as string[];
+        const canonical = answers[0] ?? "";
+        answerCache.set(key, canonical);
+        return canonical;
+    })().finally(() => answerRequests.delete(key));
+    answerRequests.set(key, request);
+    return request;
 }
 
 async function packTitle(packId: number): Promise<string> {
@@ -272,13 +462,19 @@ async function packTitle(packId: number): Promise<string> {
     if (sealedPack) return sealedPack.title;
     const cached = packTitleCache.get(packId);
     if (cached !== undefined) return cached;
-    const res = await registry.getPack.query(packId);
-    if (!res.success) return `pack #${packId}`;
-    const pack = res.value as PackView;
-    if (pack.sealed) sealedPackCache.set(packId, pack);
-    const title = pack.title;
-    packTitleCache.set(packId, title);
-    return title;
+    const pending = packTitleRequests.get(packId);
+    if (pending) return pending;
+    const request = (async () => {
+        const res = await registry.getPack.query(packId);
+        if (!res.success) return `pack #${packId}`;
+        const pack = res.value as PackView;
+        if (pack.sealed) sealedPackCache.set(packId, pack);
+        const title = pack.title;
+        packTitleCache.set(packId, title);
+        return title;
+    })().finally(() => packTitleRequests.delete(packId));
+    packTitleRequests.set(packId, request);
+    return request;
 }
 
 async function sealedPack(packId: number): Promise<PackView | null> {
@@ -337,6 +533,8 @@ async function init(): Promise<void> {
     // blocked by parsing it with the rest of the app bundle.
     const { paseo_asset_hub } = await import("@parity/product-sdk-descriptors/paseo-asset-hub");
     const client = await createChainClient({ chains: { assetHub: paseo_asset_hub } });
+    assetHub = client.assetHub;
+    bestBlocks = client.raw.assetHub.bestBlocks$;
     bootLog("Chain client ready", "ok");
 
     registry = createContractFromClient(
@@ -370,6 +568,10 @@ async function init(): Promise<void> {
         bootLog(`Account mapping failed: ${txError(e)}`, "err");
         return;
     }
+
+    // Prime the best-block nonce without holding up the home screen. It is
+    // shared with the first action if the player gets there before it returns.
+    void syncNextTxNonce();
 
     $connPill.textContent = "connected";
     $connPill.className = "ok";
@@ -460,6 +662,7 @@ async function refreshPacksInner(): Promise<void> {
             }
             row.classList.add("selected");
             row.setAttribute("aria-pressed", "true");
+            scheduleCreateGamePreflight();
         };
         row.addEventListener("click", select);
         row.addEventListener("keydown", (event) => {
@@ -488,6 +691,79 @@ function secondsToBlocks(seconds: number): number {
     return Math.max(2, Math.round(seconds / SECONDS_PER_BLOCK));
 }
 
+function readCreatedGameConfig(showErrors = false): CreatedGameConfig | null {
+    if (selectedPackId === null || selectedPack === null) return null;
+    const maxQuestions = Math.min(selectedPack.regular_count, MAX_GAME_QUESTIONS);
+    const numQuestions = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-questions").value,
+        1,
+        maxQuestions,
+    );
+    if (numQuestions === null) {
+        if (showErrors) $homeError.textContent = `Choose between 1 and ${maxQuestions} questions.`;
+        return null;
+    }
+    const answerSeconds = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-answer-secs").value,
+        12,
+        MAX_STAGE_SECONDS,
+    );
+    if (answerSeconds === null) {
+        if (showErrors) {
+            $homeError.textContent = `Answer time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
+        }
+        return null;
+    }
+    const reviewSeconds = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-review-secs").value,
+        12,
+        MAX_STAGE_SECONDS,
+    );
+    if (reviewSeconds === null) {
+        if (showErrors) {
+            $homeError.textContent = `Review time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
+        }
+        return null;
+    }
+    const maxPlayers = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-max-players").value,
+        1,
+        MAX_PLAYERS,
+    );
+    if (maxPlayers === null) {
+        if (showErrors) $homeError.textContent = `Max players must be a whole number from 1 to ${MAX_PLAYERS}.`;
+        return null;
+    }
+    return {
+        packId: selectedPackId,
+        numQuestions,
+        answerBlocks: secondsToBlocks(answerSeconds),
+        reviewBlocks: secondsToBlocks(reviewSeconds),
+        maxPlayers,
+    };
+}
+
+function gameConfigArgs(config: CreatedGameConfig): readonly unknown[] {
+    return [
+        config.packId,
+        config.numQuestions,
+        config.answerBlocks,
+        config.reviewBlocks,
+        config.maxPlayers,
+    ];
+}
+
+/** Debounce form edits, then use the player's think time to size createGame. */
+function scheduleCreateGamePreflight(): void {
+    if (createGamePreflightTimer) clearTimeout(createGamePreflightTimer);
+    createGamePreflightTimer = setTimeout(() => {
+        createGamePreflightTimer = null;
+        if (!game || !productAccount) return;
+        const config = readCreatedGameConfig();
+        if (config) void warmTx(game, "createGame", gameConfigArgs(config));
+    }, 250);
+}
+
 async function myLatestPackId(): Promise<number | null> {
     const res = await registry.myLatestPack.query(myAddress);
     if (!res.success) return null;
@@ -514,53 +790,21 @@ async function amPlayerInGame(id: bigint): Promise<boolean> {
 
 getEl("btn-create-game").addEventListener("click", async () => {
     if (busy || selectedPackId === null || selectedPack === null || !productAccount) return;
+    if (createGamePreflightTimer) {
+        clearTimeout(createGamePreflightTimer);
+        createGamePreflightTimer = null;
+    }
     $homeError.textContent = "";
-    const maxQuestions = Math.min(selectedPack.regular_count, MAX_GAME_QUESTIONS);
-    const numQuestions = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-questions").value,
-        1,
-        maxQuestions,
-    );
-    if (numQuestions === null) {
-        $homeError.textContent = `Choose between 1 and ${maxQuestions} questions.`;
-        return;
-    }
-    const answerSeconds = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-answer-secs").value,
-        12,
-        MAX_STAGE_SECONDS,
-    );
-    if (answerSeconds === null) {
-        $homeError.textContent = `Answer time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
-        return;
-    }
-    const reviewSeconds = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-review-secs").value,
-        12,
-        MAX_STAGE_SECONDS,
-    );
-    if (reviewSeconds === null) {
-        $homeError.textContent = `Review time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
-        return;
-    }
-    const maxPlayers = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-max-players").value,
-        1,
-        MAX_PLAYERS,
-    );
-    if (maxPlayers === null) {
-        $homeError.textContent = `Max players must be a whole number from 1 to ${MAX_PLAYERS}.`;
-        return;
-    }
-    const answerBlocks = secondsToBlocks(answerSeconds);
-    const reviewBlocks = secondsToBlocks(reviewSeconds);
+    const config = readCreatedGameConfig(true);
+    if (!config) return;
     busy = true;
     setLoading("btn-create-game", true);
     try {
-        await sendTx(game, "createGame", selectedPackId, numQuestions, answerBlocks, reviewBlocks, maxPlayers);
+        await sendWarmedTx(game, "createGame", gameConfigArgs(config));
+        $homeError.textContent = "Game created — opening your lobby…";
         const id = await myLatestGameId();
         if (id === null) throw new Error("could not locate the created game");
-        enterGame(id);
+        enterGame(id, createdLobbySnapshot(config));
     } catch (e) {
         $homeError.textContent = txError(e);
     } finally {
@@ -568,6 +812,10 @@ getEl("btn-create-game").addEventListener("click", async () => {
         setLoading("btn-create-game", false);
     }
 });
+
+for (const id of ["cfg-questions", "cfg-answer-secs", "cfg-review-secs", "cfg-max-players"]) {
+    getEl<HTMLInputElement>(id).addEventListener("input", scheduleCreateGamePreflight);
+}
 
 getEl("btn-join-game").addEventListener("click", async () => {
     if (busy || !productAccount) return;
@@ -780,10 +1028,70 @@ getEl("btn-builder-done").addEventListener("click", async () => {
 
 // ── Game loop ────────────────────────────────────────────────────────
 
-function enterGame(id: bigint): void {
+function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
+    return {
+        phase: {
+            stage: STAGE_LOBBY,
+            cursor: 0,
+            deadline: 2n ** 64n - 1n,
+            current_block: 0n,
+            final_difficulty: 255,
+            slot: NO_SLOT,
+            submit_count: 0,
+            continue_count: 0,
+            player_count: 1,
+        },
+        game: {
+            pack_id: config.packId,
+            creator: myAddress,
+            num_questions: config.numQuestions,
+            answer_blocks: config.answerBlocks,
+            review_blocks: config.reviewBlocks,
+            max_players: config.maxPlayers,
+            player_count: 1,
+        },
+        players: [myAddress],
+        scores: [0],
+        submissions: [],
+        questionText: "",
+        answerText: "",
+    };
+}
+
+function stopGamePolling(): void {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+    blockPollSubscription?.unsubscribe();
+    blockPollSubscription = null;
+    lastBlockSignalAt = 0;
+}
+
+/**
+ * Best-block notifications get a refresh underway as soon as the chain moves,
+ * instead of waiting for the next arbitrary two-second interval. A low-rate
+ * fallback keeps the table live if the host's block subscription drops.
+ */
+function startGamePolling(): void {
+    stopGamePolling();
+    if (bestBlocks) {
+        blockPollSubscription = bestBlocks.subscribe(() => {
+            lastBlockSignalAt = Date.now();
+            if (document.visibilityState === "visible") void poll();
+        });
+    } else {
+        void poll();
+    }
+    pollTimer = setInterval(() => {
+        if (document.visibilityState === "visible" && Date.now() - lastBlockSignalAt >= POLL_FALLBACK_MS) {
+            void poll();
+        }
+    }, POLL_FALLBACK_MS);
+}
+
+function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     gameSession += 1;
     gameId = id;
-    latest = null;
+    latest = initialSnapshot;
     actionKey = "";
     actionsSent.clear();
     wagerOutcomes = new Map();
@@ -793,11 +1101,14 @@ function enterGame(id: bigint): void {
     optimisticAnswer = null;
     lastRank = -1;
     behindStreak = 0;
+    latestObservedAt = initialSnapshot ? Date.now() : 0;
+    cachedGame = initialSnapshot?.game ?? null;
+    cachedPlayers = initialSnapshot?.players ?? null;
+    preferredQuestionKey = null;
     getEl<HTMLInputElement>("answer-input").value = "";
     getEl<HTMLInputElement>("wager-final").value = "0";
-    if (pollTimer) clearInterval(pollTimer);
-    void poll();
-    pollTimer = setInterval(() => void poll(), POLL_MS);
+    if (initialSnapshot) render(initialSnapshot);
+    startGamePolling();
 }
 
 function leaveGame(): void {
@@ -807,8 +1118,11 @@ function leaveGame(): void {
     selectedWager = null;
     activeAnswerKey = "";
     optimisticAnswer = null;
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = null;
+    cachedGame = null;
+    cachedPlayers = null;
+    preferredQuestionKey = null;
+    latestObservedAt = 0;
+    stopGamePolling();
     void refreshPacks();
     showScreen("home");
 }
@@ -818,6 +1132,10 @@ function isCurrentGame(id: bigint, session: number): boolean {
 }
 
 getEl("btn-back-home").addEventListener("click", leaveGame);
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && gameId !== null) void poll();
+});
 
 function questionKeyFor(phase: PhaseView): number {
     return phase.stage === STAGE_ANSWER || phase.stage === STAGE_REVIEW
@@ -840,45 +1158,115 @@ function stageRank(phase: PhaseView): number {
  * current question's outcome during review).
  */
 async function syncWagerHistory(snap: Snapshot, id: bigint, session: number): Promise<void> {
-    if (!isCurrentGame(id, session)) return;
-    const uptoCursor =
-        snap.phase.stage === STAGE_ANSWER ? snap.phase.cursor : snap.phase.cursor + 1;
-    for (let k = wagerHistoryLoadedUpTo + 1; k < Math.min(uptoCursor, snap.game.num_questions); k++) {
-        const res = await game.getSubmissions.query(id, k);
-        if (!isCurrentGame(id, session)) return;
+    if (!isCurrentGame(id, session) || latest !== snap) return;
+    const completedRegular = snap.phase.stage === STAGE_LOBBY
+        ? 0
+        : snap.phase.stage === STAGE_ANSWER
+          ? snap.phase.cursor
+          : snap.phase.stage === STAGE_REVIEW
+            ? snap.phase.cursor + 1
+            : snap.game.num_questions;
+    const keys = Array.from(
+        { length: Math.max(0, Math.min(completedRegular, snap.game.num_questions) - wagerHistoryLoadedUpTo - 1) },
+        (_, i) => wagerHistoryLoadedUpTo + 1 + i,
+    );
+    const results = await Promise.all(keys.map((key) => game.getSubmissions.query(id, key)));
+    for (let i = 0; i < results.length; i++) {
+        if (!isCurrentGame(id, session) || latest !== snap) return;
+        const res = results[i];
         if (!res.success) return;
         const mine = (res.value as SubmissionView[]).find(
             (s) => s.player.toLowerCase() === myAddress,
         );
         if (mine?.submitted) wagerOutcomes.set(mine.wager, mine.correct);
-        wagerHistoryLoadedUpTo = k;
+        wagerHistoryLoadedUpTo = keys[i];
     }
     // live update for the question currently on the table (regular only)
-    if (isCurrentGame(id, session) && (snap.phase.stage === STAGE_ANSWER || snap.phase.stage === STAGE_REVIEW)) {
+    if (isCurrentGame(id, session) && latest === snap && (snap.phase.stage === STAGE_ANSWER || snap.phase.stage === STAGE_REVIEW)) {
         const mine = snap.submissions.find((s) => s.player.toLowerCase() === myAddress);
         if (mine?.submitted) wagerOutcomes.set(mine.wager, mine.correct);
     }
 }
 
 async function poll(): Promise<void> {
-    if (gameId === null || !game || pollInFlight) return;
+    if (gameId === null || !game) return;
+    if (pollInFlight) {
+        // A tx inclusion or best-block notification that arrives while a
+        // slower read is in flight must not be lost. Run one fresh poll as
+        // soon as the old response has been discarded/applied.
+        pollQueued = true;
+        return;
+    }
     const polledGameId = gameId;
     const polledSession = gameSession;
     pollInFlight = true;
     try {
-        const phaseRes = await game.getPhase.query(polledGameId);
+        const wasLobby = latest?.phase.stage === STAGE_LOBBY;
+        const needGame = cachedGame === null || wasLobby;
+        const needPlayers = cachedPlayers === null || wasLobby;
+        // On the normal path the active slot is unchanged, so all five reads
+        // can start together. A stage transition only needs one corrective
+        // submissions read, rather than forcing every poll into two waves.
+        const expectedQuestionKey = preferredQuestionKey ?? (latest ? questionKeyFor(latest.phase) : FINAL_QKEY);
+        const [phaseRes, maybeGameRes, maybePlayersRes, scoresRes, initialSubsRes] = await Promise.all([
+            game.getPhase.query(polledGameId),
+            needGame ? game.getGame.query(polledGameId) : Promise.resolve(null),
+            needPlayers ? game.getPlayers.query(polledGameId) : Promise.resolve(null),
+            game.getScores.query(polledGameId),
+            game.getSubmissions.query(polledGameId, expectedQuestionKey),
+        ]);
         if (!isCurrentGame(polledGameId, polledSession)) return;
         if (!phaseRes.success) return;
         const phase = phaseRes.value as PhaseView;
         const qkey = questionKeyFor(phase);
-        const [gameRes, playersRes, scoresRes, subsRes] = await Promise.all([
-            game.getGame.query(polledGameId),
-            game.getPlayers.query(polledGameId),
-            game.getScores.query(polledGameId),
-            game.getSubmissions.query(polledGameId, qkey),
-        ]);
+
+        let gameRes = maybeGameRes;
+        let playersRes = maybePlayersRes;
+        // A reorg can be the one case where our previous non-lobby cache is
+        // no longer valid. Fall back to fresh lobby membership in that case.
+        if (phase.stage === STAGE_LOBBY && !needGame) {
+            [gameRes, playersRes] = await Promise.all([
+                game.getGame.query(polledGameId),
+                game.getPlayers.query(polledGameId),
+            ]);
+        }
         if (!isCurrentGame(polledGameId, polledSession)) return;
-        if (!gameRes.success || !playersRes.success || !scoresRes.success || !subsRes.success) return;
+        if (!scoresRes.success || !initialSubsRes.success) return;
+
+        let gameView: GameView;
+        if (gameRes) {
+            if (!gameRes.success) return;
+            gameView = gameRes.value as GameView;
+        } else if (cachedGame) {
+            gameView = cachedGame;
+        } else {
+            return;
+        }
+
+        let players: string[];
+        const needFreshPlayers = cachedPlayers === null || cachedPlayers.length !== phase.player_count;
+        if (needFreshPlayers && !playersRes) {
+            playersRes = await game.getPlayers.query(polledGameId);
+            if (!isCurrentGame(polledGameId, polledSession)) return;
+        }
+        if (playersRes) {
+            if (!playersRes.success) return;
+            players = (playersRes.value as string[]).map((p) => p.toLowerCase());
+        } else if (cachedPlayers) {
+            players = cachedPlayers;
+        } else {
+            return;
+        }
+
+        let subsRes = initialSubsRes;
+        if (qkey !== expectedQuestionKey) {
+            subsRes = await game.getSubmissions.query(polledGameId, qkey);
+            if (!isCurrentGame(polledGameId, polledSession)) return;
+            if (!subsRes.success) return;
+        }
+        if (qkey === expectedQuestionKey || phase.stage !== STAGE_LOBBY) {
+            preferredQuestionKey = null;
+        }
 
         // Drop snapshots that move the game BACKWARDS unless they persist —
         // a slow read resolving late must not yank the table back a round.
@@ -891,31 +1279,36 @@ async function poll(): Promise<void> {
         }
         lastRank = rank;
 
-        const gameView = gameRes.value as GameView;
+        // `getGame` and `getPlayers` only mutate while a lobby is open. Once
+        // play starts this saves two RPCs per block for every player.
+        cachedGame = gameView;
+        cachedPlayers = players;
 
         let qText = "";
         let aText = "";
         if (phase.slot !== NO_SLOT) {
-            qText = await questionText(gameView.pack_id, phase.slot);
+            const [question, answer] = await Promise.all([
+                questionText(gameView.pack_id, phase.slot),
+                phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW
+                    ? canonicalAnswer(gameView.pack_id, phase.slot)
+                    : Promise.resolve(""),
+            ]);
+            qText = question;
+            aText = answer;
             if (!isCurrentGame(polledGameId, polledSession)) return;
-            if (phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW) {
-                aText = await canonicalAnswer(gameView.pack_id, phase.slot);
-                if (!isCurrentGame(polledGameId, polledSession)) return;
-            }
         }
 
         const snap: Snapshot = {
             phase,
             game: gameView,
-            players: (playersRes.value as string[]).map((p) => p.toLowerCase()),
+            players,
             scores: (scoresRes.value as (number | bigint)[]).map(Number),
             submissions: subsRes.value as SubmissionView[],
             questionText: qText,
             answerText: aText,
         };
-        await syncWagerHistory(snap, polledGameId, polledSession);
-        if (!isCurrentGame(polledGameId, polledSession)) return;
         latest = snap;
+        latestObservedAt = Date.now();
         // reset per-stage action guards when the stage changes
         const key = `${polledGameId}:${latest.phase.stage}:${latest.phase.cursor}`;
         if (key !== actionKey) {
@@ -937,13 +1330,23 @@ async function poll(): Promise<void> {
             optimisticAnswer = null;
         }
         render(latest);
+        // Historic wagers matter for controls, not for the first paint. On a
+        // rejoin this used to delay the whole table by one serial RPC per
+        // completed question.
+        void syncWagerHistory(snap, polledGameId, polledSession).then(() => {
+            if (isCurrentGame(polledGameId, polledSession) && latest === snap) render(snap);
+        });
     } catch (e) {
         console.warn("poll failed", e);
     } finally {
         pollInFlight = false;
         // A new session may have started while this request was in flight.
-        // Start its first poll immediately instead of waiting for its interval.
-        if (gameId !== null && gameSession !== polledSession) void poll();
+        // Start its first/queued poll immediately instead of waiting for the
+        // next block notification.
+        if (gameId !== null && (gameSession !== polledSession || pollQueued)) {
+            pollQueued = false;
+            void poll();
+        }
     }
 }
 
@@ -975,23 +1378,23 @@ function render(snap: Snapshot): void {
 
 // ── Lobby ────────────────────────────────────────────────────────────
 
-async function renderLobby(snap: Snapshot): Promise<void> {
+function prefetchQuestion(packId: number, slot: number): void {
+    const key = `${packId}:${slot}`;
+    if (questionCache.has(key)) return;
+    void questionText(packId, slot).catch(() => {
+        // The normal poll remains the source of truth and will retry later.
+    });
+}
+
+function renderLobby(snap: Snapshot): void {
     const lobbyGameId = gameId;
     const lobbySession = gameSession;
     if (lobbyGameId === null) return;
-    let title: string;
-    try {
-        title = await packTitle(snap.game.pack_id);
-    } catch {
-        title = `pack #${snap.game.pack_id}`;
-    }
-    // A title fetch can finish after the game advances or the player leaves.
-    // Do not let that old asynchronous render take the UI back to the lobby.
-    if (!isCurrentGame(lobbyGameId, lobbySession) || latest !== snap || snap.phase.stage !== STAGE_LOBBY) {
-        return;
-    }
     getEl("lobby-game-id").textContent = String(lobbyGameId);
-    getEl("lobby-title").textContent = title;
+    // Never make the room wait on a cosmetic title lookup. Hosts normally
+    // have it cached from the pack picker; joiners see a stable fallback for
+    // one RPC round-trip and then the real title replaces it.
+    getEl("lobby-title").textContent = packTitleCache.get(snap.game.pack_id) ?? `pack #${snap.game.pack_id}`;
     renderList(
         getEl("lobby-players"),
         snap.players.map((p, i) =>
@@ -1005,6 +1408,60 @@ async function renderLobby(snap: Snapshot): Promise<void> {
     getEl("btn-start-game").style.display = isCreator ? "" : "none";
     getEl("lobby-waiting").style.display = isCreator ? "none" : "";
     showScreen("lobby");
+
+    // First regular question is always slot zero. Fetch it while everyone is
+    // joining so the answer screen does not need another network round-trip.
+    prefetchQuestion(snap.game.pack_id, 0);
+    if (isCreator) void warmTx(game, "startGame", [lobbyGameId]);
+
+    void packTitle(snap.game.pack_id).then((title) => {
+        // A title fetch can finish after the game advances or the player
+        // leaves. Update only the still-current lobby, never regress screens.
+        if (isCurrentGame(lobbyGameId, lobbySession) && latest === snap && snap.phase.stage === STAGE_LOBBY) {
+            getEl("lobby-title").textContent = title;
+        }
+    }).catch(() => {
+        // The fallback title is intentionally sufficient.
+    });
+}
+
+/**
+ * `startGame` has just landed in a best block. The lobby snapshot already
+ * contains every immutable value needed for the first card, so switch screens
+ * now instead of waiting for the reconciliation poll. Controls remain locked
+ * until its real question text arrives.
+ */
+function showStartedGame(): void {
+    if (gameId === null || latest?.phase.stage !== STAGE_LOBBY) return;
+    const previous = latest;
+    const phase: PhaseView = {
+        ...previous.phase,
+        stage: STAGE_ANSWER,
+        cursor: 0,
+        deadline: previous.phase.current_block + BigInt(previous.game.answer_blocks),
+        slot: 0,
+        submit_count: 0,
+        continue_count: 0,
+    };
+    const snap: Snapshot = {
+        ...previous,
+        phase,
+        submissions: previous.players.map((player) => ({
+            player,
+            submitted: false,
+            answer: "",
+            wager: 0,
+            correct: false,
+            overturn_votes: 0,
+            continue_ready: false,
+        })),
+        questionText: questionCache.get(`${previous.game.pack_id}:0`) ?? "",
+        answerText: "",
+    };
+    latest = snap;
+    latestObservedAt = Date.now();
+    lastRank = Math.max(lastRank, stageRank(phase));
+    render(snap);
 }
 
 getEl("btn-start-game").addEventListener("click", async () => {
@@ -1012,9 +1469,12 @@ getEl("btn-start-game").addEventListener("click", async () => {
     busy = true;
     setLoading("btn-start-game", true);
     try {
-        await sendTx(game, "startGame", gameId);
+        preferredQuestionKey = 0;
+        await sendWarmedTx(game, "startGame", [gameId]);
+        showStartedGame();
         void poll();
     } catch (e) {
+        preferredQuestionKey = null;
         getEl("lobby-error").textContent = txError(e);
     } finally {
         busy = false;
@@ -1026,7 +1486,12 @@ getEl("btn-start-game").addEventListener("click", async () => {
 
 function countdownText(snap: Snapshot): string {
     if (snap.phase.deadline >= 2n ** 63n) return "";
-    const blocksLeft = Number(snap.phase.deadline - snap.phase.current_block);
+    // `current_block` is a snapshot, not a live clock. Estimate intervening
+    // blocks locally so the countdown feels continuous between RPC updates.
+    const elapsedBlocks = latestObservedAt > 0
+        ? Math.floor((Date.now() - latestObservedAt) / (SECONDS_PER_BLOCK * 1_000))
+        : 0;
+    const blocksLeft = Number(snap.phase.deadline - snap.phase.current_block) - elapsedBlocks;
     if (blocksLeft <= 0) return "time's up";
     return `~${blocksLeft * SECONDS_PER_BLOCK}s`;
 }
@@ -1074,17 +1539,18 @@ function paintWagerGrid(): void {
 
 function renderQuestion(snap: Snapshot): void {
     const isFinal = snap.phase.stage === STAGE_FINAL_ANSWER;
+    const questionReady = snap.questionText.length > 0;
     getEl("question-number").textContent = isFinal
         ? `Final question · ${DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? ""}`
         : `${snap.phase.cursor + 1} of ${snap.game.num_questions}`;
-    getEl("question-text").textContent = snap.questionText;
+    getEl("question-text").textContent = questionReady ? snap.questionText : "Loading question…";
     getEl("question-countdown").textContent = countdownText(snap);
 
     const mine = mySubmission(snap);
     const optimistic =
         optimisticAnswer !== null && optimisticAnswer.qkey === questionKeyFor(snap.phase);
     const answered = (mine?.submitted ?? false) || optimistic;
-    getEl("answer-form").style.display = answered ? "none" : "";
+    getEl("answer-form").style.display = answered || !questionReady ? "none" : "";
     getEl("submitted-card").style.display = answered ? "" : "none";
 
     if (!answered) {
@@ -1114,6 +1580,9 @@ function renderQuestion(snap: Snapshot): void {
                 return li(span("", fmtAddr(s.player)), span("right sub", text));
             }),
         );
+    }
+    if (!isFinal && snap.phase.cursor + 1 < snap.game.num_questions) {
+        prefetchQuestion(snap.game.pack_id, snap.phase.cursor + 1);
     }
     showScreen("question");
 }
@@ -1296,6 +1765,12 @@ function renderVote(snap: Snapshot): void {
     for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty")) {
         btn.disabled = actionsSent.has("difficulty");
     }
+    // The winning difficulty is not known yet, but all three final cards are
+    // immutable and tiny. Fetching them during the vote removes a visible
+    // delay from the final reveal without exposing any canonical answer.
+    for (let difficulty = 0; difficulty < 3; difficulty++) {
+        prefetchQuestion(snap.game.pack_id, FINAL_SLOT_BASE + difficulty);
+    }
     showScreen("vote");
 }
 
@@ -1347,10 +1822,7 @@ function renderResults(snap: Snapshot): void {
     const winners = snap.players.filter((_, i) => snap.scores[i] === top);
     getEl("results-winner").textContent = winners.map(fmtAddr).join(" & ");
     renderLeaderboard(getEl("results-leaderboard"), snap);
-    if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-    }
+    stopGamePolling();
     showScreen("results");
 }
 
