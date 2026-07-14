@@ -6,7 +6,10 @@ import {
     type TestHost,
 } from "@parity/host-api-test-sdk/playwright";
 
-const PRODUCT_URL = "http://localhost:5301";
+// The normal picker hides disposable E2E content. The test host opts in so
+// it can select the pack it just created without exposing that namespace to
+// players in production.
+const PRODUCT_URL = "http://localhost:5302?show-test-packs=1";
 
 /**
  * Paseo Asset Hub with a configurable RPC endpoint. An override via

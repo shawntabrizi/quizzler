@@ -13,6 +13,7 @@ import { ss58ToH160 } from "@parity/product-sdk-address";
 import { readFileSync } from "node:fs";
 import { decodeFunctionResult, encodeFunctionData, hexToBytes, type Abi } from "viem";
 
+import { getE2EContracts } from "./contracts";
 import { PASEO_AH } from "./fixtures";
 
 // Read as files: Playwright's ESM loader rejects bare JSON imports.
@@ -22,20 +23,21 @@ const registryAbi = JSON.parse(
 const gameAbi = JSON.parse(
     readFileSync(new URL("../src/abi-game.json", import.meta.url), "utf8"),
 ) as Abi;
-const contractInfo = JSON.parse(
-    readFileSync(new URL("../src/contract-address.json", import.meta.url), "utf8"),
-) as { registry: string; game: string };
-
 /** Methods served by the pack registry; everything else is the game. */
 const REGISTRY_METHODS = new Set([
     "createPack", "addQuestion", "sealPack", "packCount", "getPack",
     "getPackStatus", "getQuestion", "getAnswers", "myLatestPack",
 ]);
 
+const registrySupportsPackEmoji = registryAbi.some(
+    (entry) => entry.type === "function" && entry.name === "createPack" && entry.inputs.length === 2,
+);
+
 function route(functionName: string): { abi: Abi; dest: `0x${string}` } {
+    const e2eContracts = getE2EContracts();
     return REGISTRY_METHODS.has(functionName)
-        ? { abi: registryAbi, dest: contractInfo.registry.toLowerCase() as `0x${string}` }
-        : { abi: gameAbi, dest: contractInfo.game.toLowerCase() as `0x${string}` };
+        ? { abi: registryAbi, dest: e2eContracts.registry.toLowerCase() as `0x${string}` }
+        : { abi: gameAbi, dest: e2eContracts.game.toLowerCase() as `0x${string}` };
 }
 
 const STAGE = {
@@ -69,9 +71,6 @@ export class ScriptedPlayer {
     ) {}
 
     static async connect(dev: Parameters<typeof createDevSigner>[0] = "Charlie"): Promise<ScriptedPlayer> {
-        if (!contractInfo.registry || !contractInfo.game) {
-            throw new Error("contract-address.json is empty — deploy first");
-        }
         const client = createClient(getWsProvider(PASEO_AH.rpcUrl));
         const api = client.getTypedApi(paseo_asset_hub);
         const signer = createDevSigner(dev);
@@ -185,7 +184,7 @@ export class ScriptedPlayer {
 
     /** Create + seal a tiny pack this player knows the answers to. */
     async createTestPack(title: string, question: { text: string; answers: string[] }): Promise<number> {
-        await this.tx("createPack", [title]);
+        await this.tx("createPack", registrySupportsPackEmoji ? [title, "🧪"] : [title]);
         // Resolve the id AFTER creation (pre-reading the counter races with
         // concurrent creators), and re-resolve + retry when a best-block
         // reorg shifts the id under us mid-flow (surfaces as a revert).

@@ -97,7 +97,7 @@
         label { display: block; color: var(--fg-secondary); font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
         .answer-inputs { display: grid; gap: 8px; }
 
-        input[type="text"], input[type="number"], select {
+        input[type="text"], input[type="number"], input[type="search"], select {
             width: 100%;
             background: var(--bg-surface-nested);
             color: var(--fg-primary);
@@ -162,6 +162,166 @@
         ul.list li.selected { background: var(--bg-selection-container-active); }
         ul.list li .sub { color: var(--fg-secondary); font-size: 0.8rem; }
         ul.list li .right { margin-left: auto; text-align: right; }
+
+        /* Pack catalog — cards make a pick feel like choosing a game night,
+           while native radios retain the correct single-choice semantics. */
+        .pack-picker { margin: 16px 0 12px; }
+        .pack-catalog-status {
+            min-height: 1.3em;
+            color: var(--fg-tertiary);
+            font-size: 0.78rem;
+            margin: 8px 0 10px;
+        }
+        .pack-section h3 {
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin: 0 0 8px;
+        }
+        ul.pack-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            list-style: none;
+        }
+        ul.pack-grid li { position: relative; min-width: 0; }
+        .pack-card-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+        .pack-card {
+            display: flex;
+            min-height: 130px;
+            overflow: hidden;
+            color: var(--fg-primary);
+            background: var(--bg-surface-nested);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-nested);
+            cursor: pointer;
+            font-size: inherit;
+            font-weight: 400;
+            margin: 0;
+            transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+        }
+        .pack-card:hover {
+            background: var(--bg-selection-container-hover);
+            border-color: var(--border-divider-tint);
+            transform: translateY(-1px);
+        }
+        .pack-card.selected {
+            background: var(--bg-selection-container-active);
+            border-color: var(--fg-primary);
+            box-shadow: 0 0 0 1px var(--fg-primary);
+        }
+        .pack-card-input:focus-visible + .pack-card {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+        }
+        .pack-art {
+            display: grid;
+            flex: 0 0 72px;
+            place-items: center;
+            color: #fff;
+            font-size: 2.15rem;
+            line-height: 1;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        }
+        .tone-violet .pack-art { background: linear-gradient(145deg, #7c3aed, #4c1d95); }
+        .tone-rose .pack-art { background: linear-gradient(145deg, #f43f5e, #881337); }
+        .tone-pink .pack-art { background: linear-gradient(145deg, #db2777, #831843); }
+        .tone-green .pack-art { background: linear-gradient(145deg, #16a34a, #14532d); }
+        .tone-blue .pack-art { background: linear-gradient(145deg, #2563eb, #172554); }
+        .tone-amber .pack-art { background: linear-gradient(145deg, #d97706, #78350f); }
+        .tone-orange .pack-art { background: linear-gradient(145deg, #ea580c, #7c2d12); }
+        .tone-red .pack-art { background: linear-gradient(145deg, #dc2626, #7f1d1d); }
+        .tone-cyan .pack-art { background: linear-gradient(145deg, #0891b2, #164e63); }
+        .tone-indigo .pack-art { background: linear-gradient(145deg, #4f46e5, #312e81); }
+        .pack-card-copy {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-width: 0;
+            padding: 11px 12px 10px;
+        }
+        .pack-card-heading { display: flex; align-items: center; gap: 8px; min-height: 16px; }
+        .pack-card-category {
+            color: var(--fg-secondary);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .pack-card-check {
+            display: grid;
+            width: 18px;
+            height: 18px;
+            place-items: center;
+            margin-left: auto;
+            color: var(--fg-primary-inverted);
+            background: var(--fg-primary);
+            border-radius: var(--radius-full);
+            font-size: 0.72rem;
+            font-weight: 800;
+            opacity: 0;
+            transform: scale(0.7);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        .pack-card.selected .pack-card-check { opacity: 1; transform: scale(1); }
+        .pack-card-title {
+            overflow: hidden;
+            margin-top: 4px;
+            font-size: 0.96rem;
+            font-weight: 650;
+            line-height: 1.2;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .pack-card-description {
+            display: -webkit-box;
+            overflow: hidden;
+            margin-top: 4px;
+            color: var(--fg-secondary);
+            font-size: 0.76rem;
+            line-height: 1.25;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+        .pack-card-meta {
+            margin-top: auto;
+            padding-top: 7px;
+            color: var(--fg-tertiary);
+            font-size: 0.72rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .community-packs { margin-top: 14px; }
+        .community-packs summary {
+            color: var(--fg-secondary);
+            cursor: pointer;
+            font-size: 0.84rem;
+            font-weight: 600;
+            list-style-position: inside;
+        }
+        .community-packs[open] summary { margin-bottom: 10px; }
+        .pack-empty {
+            padding: 18px 12px;
+            color: var(--fg-secondary);
+            background: var(--bg-surface-nested);
+            border-radius: var(--radius-nested);
+            font-size: 0.88rem;
+            text-align: center;
+        }
+        .pack-selection-summary {
+            min-height: 1.3em;
+            margin: 0 0 14px;
+            color: var(--fg-secondary);
+            font-size: 0.84rem;
+        }
+        .pack-emoji-field { width: 106px; }
+        #pack-emoji { text-align: center; }
 
         .question-text { font-size: 1.3rem; font-weight: 600; line-height: 1.35; margin: 12px 0 20px; }
 
@@ -253,6 +413,14 @@
             *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
 
+        @media (max-width: 480px) {
+            .card { padding: 18px; }
+            ul.pack-grid { grid-template-columns: 1fr; }
+            .pack-card { min-height: 104px; }
+            .pack-art { flex-basis: 66px; }
+            .pack-emoji-field { width: 88px; }
+        }
+
         #boot-log { font-size: 0.85rem; color: var(--fg-secondary); }
         #boot-log div { padding: 2px 0; }
         #boot-log .err { color: var(--fg-error); }
@@ -291,8 +459,14 @@
 
             <div class="card">
                 <h2>Host a game</h2>
-                <p class="hint">Pick a quiz pack, set the pace, and share the game code.</p>
-                <ul class="list" id="pack-list" data-testid="pack-list"></ul>
+                <p class="hint">Pick a pack, set the pace, and share the game code.</p>
+                <div class="pack-picker">
+                    <label class="sr-only" for="pack-search">Find a quiz pack</label>
+                    <input type="search" id="pack-search" data-testid="pack-search" placeholder="Find a pack" autocomplete="off" />
+                    <p class="pack-catalog-status" id="pack-catalog-status" role="status" aria-live="polite"></p>
+                    <div id="pack-list" data-testid="pack-list"></div>
+                </div>
+                <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to set up your game.</p>
                 <div class="row">
                     <div class="grow">
                         <label for="cfg-questions">Questions (max 10)</label>
@@ -327,8 +501,13 @@
                         <label for="pack-title">Pack title</label>
                         <input type="text" id="pack-title" data-testid="pack-title" placeholder="Friday night trivia" maxlength="64" />
                     </div>
+                    <div class="pack-emoji-field">
+                        <label for="pack-emoji">Pack emoji</label>
+                        <input type="text" id="pack-emoji" data-testid="pack-emoji" value="✨" maxlength="32" autocomplete="off" aria-describedby="pack-emoji-hint" />
+                    </div>
                     <button id="btn-create-pack" class="primary" data-testid="btn-create-pack" style="align-self: end;">Create</button>
                 </div>
+                <p class="hint" id="pack-emoji-hint">Choose an emoji for this pack’s cover. It becomes part of the pack when published.</p>
                 <div id="builder-question-form" style="display: none;">
                     <div class="row">
                         <div class="grow">

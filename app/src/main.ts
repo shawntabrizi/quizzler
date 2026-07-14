@@ -26,7 +26,26 @@ import gameAbi from "./abi-game.json";
 import contractInfo from "./contract-address.json";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { normalizeAnswer } from "./normalize";
+import {
+    packPresentation,
+    sectionPacks,
+    STARTER_PACK_COUNT,
+    type PackListItem,
+} from "./pack-presentation";
 import { appendLog, getEl, li, renderList, span } from "./ui";
+
+function isContractAddress(value: unknown): value is `0x${string}` {
+    return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
+}
+
+const configuredRegistry = import.meta.env.VITE_QUIZZLER_REGISTRY;
+const configuredGame = import.meta.env.VITE_QUIZZLER_GAME;
+// A test host may inject an isolated registry/game pair at build time. Normal
+// players always use the tracked deployment, and a partial/malformed override
+// is rejected during boot rather than mixing contracts from different pairs.
+const activeContracts = configuredRegistry || configuredGame
+    ? { registry: configuredRegistry, game: configuredGame }
+    : contractInfo;
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -46,12 +65,19 @@ const MAX_STAGE_SECONDS = MAX_STAGE_BLOCKS * 2;
 const MAX_GAME_QUESTIONS = 10;
 const MAX_PLAYERS = 16;
 const MAX_TITLE_BYTES = 64;
+const MAX_EMOJI_BYTES = 32;
 const MAX_QUESTION_BYTES = 256;
 const MAX_ANSWER_BYTES = 64;
 const SECONDS_PER_BLOCK = 2; // measured on Paseo Asset Hub Next (2026-07)
 const POLL_FALLBACK_MS = 8_000;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
+
+const registrySupportsPackEmoji = (registryAbi as Array<{
+    type?: string;
+    name?: string;
+    inputs?: unknown[];
+}>).some((entry) => entry.type === "function" && entry.name === "createPack" && entry.inputs?.length === 2);
 
 // ── Chain-facing types (viem decodes named tuples to objects) ───────
 
@@ -91,6 +117,8 @@ interface GameView {
 interface PackView {
     creator: string;
     title: string;
+    /** Present on the fresh registry; optional while a staged migration is live. */
+    emoji?: string;
     regular_count: number;
     finals_set_count: number;
     sealed: boolean;
@@ -499,7 +527,7 @@ async function sealedPack(packId: number): Promise<PackView | null> {
 
 async function init(): Promise<void> {
     showScreen("boot");
-    if (!contractInfo.registry || !contractInfo.game) {
+    if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
         $connPill.textContent = "no contract";
         $connPill.className = "err";
         bootLog("Contract addresses not configured.", "err");
@@ -540,14 +568,14 @@ async function init(): Promise<void> {
     registry = createContractFromClient(
         client.raw.assetHub,
         paseo_asset_hub,
-        contractInfo.registry as `0x${string}`,
+        activeContracts.registry,
         registryAbi as never,
         { signerManager: manager },
     );
     game = createContractFromClient(
         client.raw.assetHub,
         paseo_asset_hub,
-        contractInfo.game as `0x${string}`,
+        activeContracts.game,
         gameAbi as never,
         { signerManager: manager },
     );
@@ -582,12 +610,25 @@ async function init(): Promise<void> {
 // ── Home: packs & games ──────────────────────────────────────────────
 
 const $packList = getEl("pack-list");
+const $packSearch = getEl<HTMLInputElement>("pack-search");
+const $packCatalogStatus = getEl("pack-catalog-status");
+const $selectedPackSummary = getEl("selected-pack-summary");
 const $homeError = getEl("home-error");
 const $btnCreateGame = getEl<HTMLButtonElement>("btn-create-game");
 
+type CatalogPack = PackView & PackListItem;
+
 let refreshingPacks = false;
 let lastPackListSignature: string | null = null;
-const PACK_LIST_LIMIT = 50;
+let catalogPacks: CatalogPack[] = [];
+let packSearch = "";
+// E2E runs can opt in to their disposable packs without exposing them to
+// players on the normal home screen.
+const showE2ETestPacks = new URLSearchParams(window.location.search).get("show-test-packs") === "1";
+// Fetch the stable starter IDs as well as recent community packs. This keeps
+// the curated catalog available even after a long-lived registry accumulates
+// lots of new packs, without making home-screen refreshes unbounded.
+const PACK_RECENT_LIST_LIMIT = 100;
 const PACK_FETCH_CONCURRENCY = 6;
 
 async function mapWithConcurrency<T, U>(
@@ -625,59 +666,171 @@ async function refreshPacksInner(): Promise<void> {
     const countRes = await registry.packCount.query();
     if (!countRes.success) throw new Error("pack count query failed");
     const count = Number(countRes.value);
-    const from = Math.max(0, count - PACK_LIST_LIMIT);
-    const ids = Array.from({ length: count - from }, (_, offset) => count - 1 - offset);
+    const starterIds = Array.from({ length: Math.min(count, STARTER_PACK_COUNT) }, (_, id) => id);
+    const recentIds = Array.from(
+        { length: Math.min(count, PACK_RECENT_LIST_LIMIT) },
+        (_, offset) => count - 1 - offset,
+    );
+    const ids = [...new Set([...starterIds, ...recentIds])];
     const packs = await mapWithConcurrency(ids, PACK_FETCH_CONCURRENCY, sealedPack);
-    const visible = packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], pack }]);
+    catalogPacks = packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]);
+    renderPackList();
+}
+
+function questionCountLabel(pack: Pick<PackView, "regular_count">): string {
+    return `${pack.regular_count} ${pack.regular_count === 1 ? "question" : "questions"}`;
+}
+
+function finalCountLabel(pack: Pick<PackView, "finals_set_count">): string {
+    const count = pack.finals_set_count;
+    if (count === 0) return "";
+    return ` · ${count} ${count === 1 ? "final" : "finals"}`;
+}
+
+function updateSelectedPackSummary(): void {
+    if (selectedPackId === null || selectedPack === null) {
+        $selectedPackSummary.textContent = "Choose a pack to set up your game.";
+        return;
+    }
+    const presentation = packPresentation({ id: selectedPackId, ...selectedPack });
+    $selectedPackSummary.textContent = `Selected: ${presentation.emoji} ${selectedPack.title} · ${questionCountLabel(selectedPack)}`;
+}
+
+function selectPack(id: number, pack: CatalogPack): void {
+    selectedPackId = id;
+    selectedPack = pack;
+    $btnCreateGame.disabled = false;
+    const qInput = getEl<HTMLInputElement>("cfg-questions");
+    const maxQ = Math.min(pack.regular_count, MAX_GAME_QUESTIONS);
+    qInput.max = String(maxQ);
+    if (Number(qInput.value) > maxQ) qInput.value = String(maxQ);
+    for (const input of $packList.querySelectorAll<HTMLInputElement>('input[name="pack-choice"]')) {
+        input.checked = Number(input.value) === id;
+    }
+    for (const card of $packList.querySelectorAll<HTMLLabelElement>(".pack-card")) {
+        card.classList.toggle("selected", card.htmlFor === `pack-${id}-choice`);
+    }
+    updateSelectedPackSummary();
+    scheduleCreateGamePreflight();
+}
+
+function packCard(pack: CatalogPack): HTMLLIElement {
+    const presentation = packPresentation(pack);
+    const item = document.createElement("li");
+    const choice = document.createElement("input");
+    choice.className = "pack-card-input";
+    choice.type = "radio";
+    choice.name = "pack-choice";
+    choice.id = `pack-${pack.id}-choice`;
+    choice.value = String(pack.id);
+    choice.checked = selectedPackId === pack.id;
+    choice.setAttribute(
+        "aria-label",
+        `${pack.title}, ${questionCountLabel(pack)}${finalCountLabel(pack)}. ${presentation.category} pack.`,
+    );
+    choice.addEventListener("change", () => selectPack(pack.id, pack));
+
+    const card = document.createElement("label");
+    card.className = `pack-card tone-${presentation.tone}`;
+    card.htmlFor = choice.id;
+    card.dataset.testid = `pack-${pack.id}`;
+    card.classList.toggle("selected", choice.checked);
+
+    const art = span("pack-art", presentation.emoji);
+    art.setAttribute("aria-hidden", "true");
+    const copy = document.createElement("span");
+    copy.className = "pack-card-copy";
+    const heading = document.createElement("span");
+    heading.className = "pack-card-heading";
+    heading.append(
+        span("pack-card-category", presentation.category),
+        span("pack-card-check", "✓"),
+    );
+    copy.append(
+        heading,
+        span("pack-card-title", pack.title),
+        span("pack-card-description", presentation.description),
+        span("pack-card-meta", `${questionCountLabel(pack)}${finalCountLabel(pack)}`),
+    );
+    card.append(art, copy);
+    item.append(choice, card);
+    return item;
+}
+
+function packGrid(packs: readonly CatalogPack[]): HTMLUListElement {
+    const grid = document.createElement("ul");
+    grid.className = "pack-grid";
+    grid.append(...packs.map(packCard));
+    return grid;
+}
+
+function packSection(title: string, packs: readonly CatalogPack[]): HTMLElement {
+    const section = document.createElement("section");
+    section.className = "pack-section";
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    section.append(heading, packGrid(packs));
+    return section;
+}
+
+function renderPackList(): void {
     const signature = JSON.stringify(
-        visible.map(({ id, pack }) => [id, pack.title, pack.regular_count]),
+        {
+            packs: catalogPacks.map((pack) => [
+                pack.id,
+                pack.title,
+                pack.emoji ?? "",
+                pack.regular_count,
+                pack.finals_set_count,
+            ]),
+            search: packSearch,
+            showE2ETestPacks,
+        },
     );
     // Avoid replacing identical DOM nodes every five seconds: it preserves
-    // keyboard focus and prevents needless layout work on a static list.
+    // keyboard focus and prevents needless layout work on a static catalog.
     if (signature === lastPackListSignature) return;
+    const communityWasOpen = $packList.querySelector<HTMLDetailsElement>(".community-packs")?.open ?? false;
     lastPackListSignature = signature;
-    const rows: HTMLLIElement[] = [];
-    for (const { id, pack } of visible) {
-        const row = li(
-            span("", `${pack.title}`),
-            span("sub", `#${id} · ${pack.regular_count} questions`),
-        );
-        row.className = "clickable";
-        row.dataset.testid = `pack-${id}`;
-        row.tabIndex = 0;
-        row.setAttribute("role", "button");
-        row.setAttribute("aria-pressed", String(selectedPackId === id));
-        if (selectedPackId === id) row.classList.add("selected");
-        const select = () => {
-            selectedPackId = id;
-            selectedPack = pack;
-            $btnCreateGame.disabled = false;
-            const qInput = getEl<HTMLInputElement>("cfg-questions");
-            const maxQ = Math.min(pack.regular_count, MAX_GAME_QUESTIONS);
-            qInput.max = String(maxQ);
-            if (Number(qInput.value) > maxQ) qInput.value = String(maxQ);
-            for (const el of $packList.querySelectorAll<HTMLElement>('[role="button"]')) {
-                el.classList.remove("selected");
-                el.setAttribute("aria-pressed", "false");
-            }
-            row.classList.add("selected");
-            row.setAttribute("aria-pressed", "true");
-            scheduleCreateGamePreflight();
-        };
-        row.addEventListener("click", select);
-        row.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                select();
-            }
-        });
-        rows.push(row);
+    const { featured, community } = sectionPacks(catalogPacks, packSearch, showE2ETestPacks);
+    const total = featured.length + community.length;
+    if (total === 0) {
+        const empty = document.createElement("p");
+        empty.className = "pack-empty";
+        empty.textContent = packSearch.trim()
+            ? `No packs match “${packSearch.trim()}”.`
+            : "No sealed packs yet — create one!";
+        $packList.replaceChildren(empty);
+        $packCatalogStatus.textContent = "";
+        return;
     }
-    if (rows.length === 0) {
-        rows.push(li(span("sub", "No sealed packs yet — create one!")));
+
+    const content = document.createDocumentFragment();
+    if (featured.length > 0) content.append(packSection("Featured packs", featured));
+    if (community.length > 0) {
+        const details = document.createElement("details");
+        details.className = "community-packs";
+        // Test hosts opt into a disposable namespace and need its newly
+        // created pack immediately visible; players still see community
+        // content as an intentional secondary section.
+        details.open = communityWasOpen || packSearch.trim() !== "" || showE2ETestPacks;
+        const summary = document.createElement("summary");
+        summary.textContent = `Community packs (${community.length})`;
+        details.append(summary, packGrid(community));
+        content.append(details);
     }
-    renderList($packList, rows);
+    $packList.replaceChildren(content);
+
+    const parts: string[] = [];
+    if (featured.length > 0) parts.push(`${featured.length} featured`);
+    if (community.length > 0) parts.push(`${community.length} community`);
+    $packCatalogStatus.textContent = `${parts.join(" · ")} ${total === 1 ? "pack" : "packs"}`;
 }
+
+$packSearch.addEventListener("input", () => {
+    packSearch = $packSearch.value;
+    renderPackList();
+});
 
 // Keep the browse list fresh while the player sits on the home screen —
 // packs published by others should show up without a reload.
@@ -874,6 +1027,7 @@ getEl("btn-new-pack").addEventListener("click", () => {
     builderRegular = 0;
     builderFinals.fill(false);
     getEl<HTMLInputElement>("pack-title").value = "";
+    getEl<HTMLInputElement>("pack-emoji").value = "✨";
     getEl<HTMLInputElement>("q-text").value = "";
     for (const input of $builderAnswerInputs) input.value = "";
     getEl<HTMLSelectElement>("q-kind").value = "regular";
@@ -889,6 +1043,7 @@ getEl("btn-create-pack").addEventListener("click", async () => {
     if (busy || !productAccount) return;
     $builderError.textContent = "";
     const title = getEl<HTMLInputElement>("pack-title").value.trim();
+    const emoji = getEl<HTMLInputElement>("pack-emoji").value.trim();
     if (!title) {
         $builderError.textContent = "Give the pack a title.";
         return;
@@ -897,14 +1052,24 @@ getEl("btn-create-pack").addEventListener("click", async () => {
         $builderError.textContent = `Pack titles can be at most ${MAX_TITLE_BYTES} bytes.`;
         return;
     }
+    if (!emoji) {
+        $builderError.textContent = "Choose an emoji for the pack cover.";
+        return;
+    }
+    if (utf8ByteLength(emoji) > MAX_EMOJI_BYTES) {
+        $builderError.textContent = `Pack emojis can be at most ${MAX_EMOJI_BYTES} bytes.`;
+        return;
+    }
     busy = true;
     setLoading("btn-create-pack", true);
     try {
-        await sendTx(registry, "createPack", title);
+        // Keep the staged migration non-breaking: the old registry ABI has no
+        // emoji argument, while the promoted fresh registry stores it forever.
+        await sendTx(registry, "createPack", ...(registrySupportsPackEmoji ? [title, emoji] : [title]));
         const id = await myLatestPackId();
         if (id === null) throw new Error("could not locate the created pack");
         builderPackId = id;
-        getEl("builder-title").textContent = `${title} (pack #${builderPackId})`;
+        getEl("builder-title").textContent = `${registrySupportsPackEmoji ? `${emoji} ` : ""}${title} (pack #${builderPackId})`;
         getEl("builder-create-row").style.display = "none";
         getEl("builder-question-form").style.display = "";
         updateBuilderProgress();

@@ -10,6 +10,7 @@ test("creates, fills, and seals a pack through the builder UI", async ({ testHos
     await frame.getByTestId("btn-new-pack").click();
     await expect(frame.getByTestId("screen-builder")).toBeVisible();
     await frame.getByTestId("pack-title").fill(title);
+    await frame.getByTestId("pack-emoji").fill("🧪");
     await frame.getByTestId("btn-create-pack").click();
 
     // question form appears once the createPack tx lands
