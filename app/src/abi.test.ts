@@ -41,4 +41,47 @@ describe("transaction ABI", () => {
         expect(createGame.stateMutability).toBe("nonpayable");
         expect(createGame.outputs).toEqual([]);
     });
+
+    it("exposes the lobby and forfeit lifecycle boundary", () => {
+        for (const name of ["leaveLobby", "forfeitGame"]) {
+            const lifecycle = method(gameAbi as AbiItem[], name);
+            expect(lifecycle.stateMutability).toBe("nonpayable");
+            expect(lifecycle.inputs).toEqual([{ name: "game_id", type: "uint64" }]);
+        }
+
+        const isPlayerActive = method(gameAbi as AbiItem[], "isPlayerActive");
+        expect(isPlayerActive.stateMutability).toBe("view");
+        expect(isPlayerActive.outputs).toEqual([{ name: "", type: "bool" }]);
+
+        const getGame = method(gameAbi as AbiItem[], "getGame");
+        expect(getGame.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: expect.arrayContaining([
+                    { name: "active_player_count", type: "uint8" },
+                ]),
+            },
+        ]);
+
+        const getPhase = method(gameAbi as AbiItem[], "getPhase");
+        expect(getPhase.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: expect.arrayContaining([
+                    { name: "active_player_count", type: "uint8" },
+                ]),
+            },
+        ]);
+
+        const getSubmissions = method(gameAbi as AbiItem[], "getSubmissions");
+        expect(getSubmissions.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple[]",
+                components: expect.arrayContaining([{ name: "active", type: "bool" }]),
+            },
+        ]);
+    });
 });

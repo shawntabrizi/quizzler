@@ -2,7 +2,7 @@
 
 **Proof of Knowledge** — a social trivia party game on Polkadot, inspired by Sporcle Party.
 
-One player hosts a game from a quiz pack, friends join with a game code, everyone answers
+One player opens a lobby from a quiz pack, friends join with a game code, everyone answers
 typed questions on their own device and wagers 1–10 points on their confidence. When time
 runs out (or everyone has locked in), the table reviews the answers together — wrong
 answers can be voted "close enough" by the other players — and a difficulty-voted final
@@ -30,6 +30,20 @@ scoring, votes — runs as a smart contract on Paseo Asset Hub.
 The trust model is deliberately casual: answers are public on-chain the moment they land,
 and the client simply doesn't show them before the review phase — like cards face-down on
 a table. Don't play for money with block explorers open.
+
+## Rooms, refreshes, and leaving
+
+The first lobby participant is the temporary **starter**. If they leave before play begins,
+the next-longest-waiting participant automatically becomes the starter; the original creator
+has no special authority once the quiz starts. A lobby departure frees its seat, and an empty
+lobby becomes `Abandoned`.
+
+During a running quiz, **Leave screen** is local navigation: the browser remembers the current
+game (scoped to the account and game-contract address) and restores it after a refresh only
+after the contract confirms that the account is still active. **Forfeit quiz** is different: it
+is an explicit, permanent on-chain action. The player remains on the historical scorecard, but
+does not block future answer, review, or difficulty-vote quorums. If the last active player
+forfeits, the room becomes `Abandoned`; it is not recorded as a normal finished result.
 
 ## Development
 

@@ -33,6 +33,9 @@ pub fn valid_pack_emoji(emoji: &str) -> bool {
 // A game moves through stages paced purely by block number:
 //   Lobby → [Answer → Review] × num_questions → Vote → FinalAnswer →
 //   FinalReview → Finished
+//
+// An explicit lobby departure can also reach Abandoned (empty lobby), as can
+// the last active participant forfeiting a running quiz.
 // Early collapse (everyone submitted / voted / continued) is applied by the
 // contract by resetting `anchor` and advancing the stage; `roll` only applies
 // timeout transitions.

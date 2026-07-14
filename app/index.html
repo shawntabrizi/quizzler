@@ -76,6 +76,21 @@
         }
         #conn-pill.ok { color: var(--fg-success); }
         #conn-pill.err { color: var(--fg-error); }
+        #game-actions { display: none; gap: 6px; }
+        button.quiet {
+            padding: 7px 10px;
+            color: var(--fg-secondary);
+            background: transparent;
+            border: 1px solid var(--border-divider);
+            font-size: 0.78rem;
+        }
+        button.quiet:hover { color: var(--fg-primary); background: var(--bg-selection-container-hover); }
+        button.danger {
+            color: #fecaca;
+            background: rgba(239, 68, 68, 0.13);
+            border: 1px solid rgba(239, 68, 68, 0.45);
+        }
+        button.danger:hover { background: rgba(239, 68, 68, 0.24); }
 
         section.screen { display: none; }
         section.screen.active { display: block; }
@@ -93,6 +108,22 @@
         .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .row + .row { margin-top: 8px; }
         .grow { flex: 1; min-width: 120px; }
+
+        .resume-card {
+            border: 1px solid var(--border-divider-tint);
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), var(--bg-surface-container));
+        }
+        dialog {
+            width: min(420px, calc(100vw - 32px));
+            color: var(--fg-primary);
+            background: var(--bg-surface-container);
+            border: 1px solid var(--border-divider-tint);
+            border-radius: var(--radius-container);
+            box-shadow: var(--shadow-2);
+            padding: 24px;
+        }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+        dialog p { color: var(--fg-secondary); margin: 10px 0 18px; }
 
         label { display: block; color: var(--fg-secondary); font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
         .answer-inputs { display: grid; gap: 8px; }
@@ -433,6 +464,10 @@
             <h1>Quizzler</h1>
             <span class="tagline">Proof of Knowledge</span>
             <span id="conn-pill" data-testid="conn-pill">connecting…</span>
+            <div id="game-actions" class="row" data-testid="game-actions">
+                <button id="btn-leave-screen" class="quiet" data-testid="btn-leave-screen">Leave screen</button>
+                <button id="btn-forfeit-game" class="danger" data-testid="btn-forfeit-game" style="display: none;">Forfeit quiz</button>
+            </div>
         </header>
 
         <!-- Boot -->
@@ -445,6 +480,14 @@
 
         <!-- Home -->
         <section id="screen-home" class="screen" data-testid="screen-home">
+            <div id="resume-game-card" class="card resume-card" data-testid="resume-game-card" style="display: none;">
+                <h2>Your quiz is still in progress</h2>
+                <p class="hint">Game <strong id="resume-game-code" data-testid="resume-game-code"></strong> is saved in this browser session.</p>
+                <div class="row">
+                    <button id="btn-resume-game" class="primary" data-testid="btn-resume-game">Resume quiz</button>
+                    <button id="btn-forget-saved-game" class="quiet" data-testid="btn-forget-saved-game">Forget on this device</button>
+                </div>
+            </div>
             <div class="card">
                 <h2>Play</h2>
                 <div class="row">
@@ -558,7 +601,8 @@
                 <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
                 <div class="row">
                     <button id="btn-start-game" class="primary" data-testid="btn-start-game" style="display: none;">Start game</button>
-                    <span class="muted" id="lobby-waiting" data-testid="lobby-waiting">Waiting for the host to start…</span>
+                    <span class="muted" id="lobby-waiting" data-testid="lobby-waiting">Waiting for the lobby starter…</span>
+                    <button id="btn-leave-lobby" class="quiet" data-testid="btn-leave-lobby">Leave lobby</button>
                 </div>
                 <div class="error-text" id="lobby-error" role="alert"></div>
             </div>
@@ -661,7 +705,27 @@
                 </div>
             </div>
         </section>
+
+        <!-- Abandoned -->
+        <section id="screen-abandoned" class="screen" data-testid="screen-abandoned">
+            <div class="card">
+                <h2>Quiz ended</h2>
+                <p id="abandoned-message" class="hint" data-testid="abandoned-message">Everyone left this quiz before it finished.</p>
+                <div class="row" style="margin-top: 16px; justify-content: center;">
+                    <button id="btn-abandoned-home" class="primary" data-testid="btn-abandoned-home">Back home</button>
+                </div>
+            </div>
+        </section>
     </main>
+    <dialog id="forfeit-dialog" data-testid="forfeit-dialog" aria-labelledby="forfeit-title">
+        <h2 id="forfeit-title">Forfeit this quiz?</h2>
+        <p>You will leave the active roster immediately and cannot rejoin this quiz. Your answers and score so far remain on the scorecard.</p>
+        <div class="row">
+            <button id="btn-confirm-forfeit" class="danger" data-testid="btn-confirm-forfeit">Forfeit quiz</button>
+            <button id="btn-cancel-forfeit" class="quiet" data-testid="btn-cancel-forfeit">Keep playing</button>
+        </div>
+        <div class="error-text" id="forfeit-error" role="alert"></div>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

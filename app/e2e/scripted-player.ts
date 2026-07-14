@@ -42,7 +42,7 @@ function route(functionName: string): { abi: Abi; dest: `0x${string}` } {
 
 const STAGE = {
     LOBBY: 0, ANSWER: 1, REVIEW: 2, VOTE: 3,
-    FINAL_ANSWER: 4, FINAL_REVIEW: 5, FINISHED: 6,
+    FINAL_ANSWER: 4, FINAL_REVIEW: 5, FINISHED: 6, ABANDONED: 7,
 } as const;
 
 export interface PhaseView {
@@ -50,6 +50,7 @@ export interface PhaseView {
     cursor: number;
     final_difficulty: number;
     player_count: number;
+    active_player_count: number;
     submit_count: number;
     continue_count: number;
 }
@@ -232,6 +233,7 @@ export class ScriptedPlayer {
             try {
                 switch (phase.stage) {
                     case STAGE.FINISHED:
+                    case STAGE.ABANDONED:
                         return;
                     case STAGE.ANSWER:
                         if (!done.has(key)) {

@@ -24,6 +24,7 @@ import { ss58ToH160, truncateAddress } from "@parity/product-sdk-address";
 import registryAbi from "./abi-registry.json";
 import gameAbi from "./abi-game.json";
 import contractInfo from "./contract-address.json";
+import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { normalizeAnswer } from "./normalize";
 import {
@@ -56,6 +57,7 @@ const STAGE_VOTE = 3;
 const STAGE_FINAL_ANSWER = 4;
 const STAGE_FINAL_REVIEW = 5;
 const STAGE_FINISHED = 6;
+const STAGE_ABANDONED = 7;
 const FINAL_QKEY = 255;
 const FINAL_SLOT_BASE = 0xf0;
 const NO_SLOT = 255;
@@ -91,7 +93,9 @@ interface PhaseView {
     slot: number;
     submit_count: number;
     continue_count: number;
+    /** Historical roster size; use active_player_count for action progress. */
     player_count: number;
+    active_player_count: number;
 }
 
 interface SubmissionView {
@@ -102,6 +106,7 @@ interface SubmissionView {
     correct: boolean;
     overturn_votes: number;
     continue_ready: boolean;
+    active: boolean;
 }
 
 interface GameView {
@@ -112,6 +117,7 @@ interface GameView {
     review_blocks: number;
     max_players: number;
     player_count: number;
+    active_player_count: number;
 }
 
 interface PackView {
@@ -166,6 +172,7 @@ let registry: any = null;
 let game: any = null;
 let assetHub: any = null;
 let myAddress = ""; // lowercase H160
+let savedGameId: bigint | null = null;
 let nextTxNonce: number | null = null;
 let nonceSync: Promise<number | null> | null = null;
 let gameId: bigint | null = null;
@@ -234,7 +241,7 @@ const builderFinals = [false, false, false];
 
 // ── Screen switching ─────────────────────────────────────────────────
 
-const SCREENS = ["boot", "home", "builder", "lobby", "question", "review", "vote", "results"] as const;
+const SCREENS = ["boot", "home", "builder", "lobby", "question", "review", "vote", "results", "abandoned"] as const;
 type Screen = (typeof SCREENS)[number];
 
 function showScreen(name: Screen): void {
@@ -243,8 +250,60 @@ function showScreen(name: Screen): void {
     }
 }
 
+function gameSessionKey(): string | null {
+    return myAddress && isContractAddress(activeContracts.game)
+        ? activeGameSessionKey(activeContracts.game, myAddress)
+        : null;
+}
+
+function readSavedGame(): bigint | null {
+    const key = gameSessionKey();
+    if (key === null) return null;
+    try {
+        const raw = window.sessionStorage.getItem(key);
+        const id = parseStoredGameId(raw);
+        // Corrupt storage should never create an invisible, repeatedly failing
+        // resume loop. The contract still has the room if the player knows its
+        // code and chooses to re-enter it manually.
+        if (raw !== null && id === null) window.sessionStorage.removeItem(key);
+        return id;
+    } catch {
+        return null;
+    }
+}
+
+function rememberGame(id: bigint): void {
+    savedGameId = id;
+    const key = gameSessionKey();
+    if (key === null) return;
+    try {
+        window.sessionStorage.setItem(key, id.toString());
+    } catch {
+        // Private browsing/storage policy must not prevent a player joining.
+    }
+}
+
+function forgetSavedGame(): void {
+    savedGameId = null;
+    const key = gameSessionKey();
+    if (key === null) return;
+    try {
+        window.sessionStorage.removeItem(key);
+    } catch {
+        // Best effort only; the next active-membership validation remains safe.
+    }
+}
+
 const $bootLog = getEl("boot-log");
 const $connPill = getEl("conn-pill");
+const $gameActions = getEl("game-actions");
+const $btnForfeitGame = getEl<HTMLButtonElement>("btn-forfeit-game");
+const $forfeitDialog = getEl<HTMLDialogElement>("forfeit-dialog");
+
+function setGameActions(mode: "hidden" | "lobby" | "active"): void {
+    $gameActions.style.display = mode === "hidden" ? "none" : "flex";
+    $btnForfeitGame.style.display = mode === "active" ? "" : "none";
+}
 
 function bootLog(msg: string, level: "info" | "ok" | "err" = "info"): void {
     appendLog($bootLog, msg, level);
@@ -553,6 +612,7 @@ async function init(): Promise<void> {
     }
     productAccount = productRes.value;
     myAddress = ss58ToH160(productAccount.address).toLowerCase();
+    savedGameId = readSavedGame();
     bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
 
     bootLog("Opening chain client…");
@@ -603,8 +663,18 @@ async function init(): Promise<void> {
 
     $connPill.textContent = "connected";
     $connPill.className = "ok";
-    await refreshPacks();
+    // Pack browsing is unrelated to reopening a live room. Start it in the
+    // background so a refresh can return a player to the table without first
+    // waiting for catalog RPCs.
+    const packsReady = refreshPacks();
+    const resume = await resumeSavedGame();
+    if (resume === "resumed") return;
+    await packsReady;
     showScreen("home");
+    renderResumeCard();
+    if (resume === "unavailable") {
+        $homeError.textContent = "Couldn’t reopen your saved quiz yet. Try Resume when the connection recovers.";
+    }
 }
 
 // ── Home: packs & games ──────────────────────────────────────────────
@@ -615,6 +685,14 @@ const $packCatalogStatus = getEl("pack-catalog-status");
 const $selectedPackSummary = getEl("selected-pack-summary");
 const $homeError = getEl("home-error");
 const $btnCreateGame = getEl<HTMLButtonElement>("btn-create-game");
+const $resumeGameCard = getEl("resume-game-card");
+const $resumeGameCode = getEl("resume-game-code");
+
+function renderResumeCard(): void {
+    const shouldShow = savedGameId !== null && gameId === null;
+    $resumeGameCard.style.display = shouldShow ? "" : "none";
+    $resumeGameCode.textContent = shouldShow ? String(savedGameId) : "";
+}
 
 type CatalogPack = PackView & PackListItem;
 
@@ -932,14 +1010,41 @@ async function myLatestGameId(): Promise<bigint | null> {
     return id === 0n ? null : id;
 }
 
-/** A started game is rejoinable only by an existing player. */
-async function amPlayerInGame(id: bigint): Promise<boolean> {
+/** `null` means the chain could not be queried; `false` is authoritative. */
+async function activePlayerStatus(id: bigint): Promise<boolean | null> {
     try {
-        const res = await game.getPlayers.query(id);
-        return res.success && (res.value as string[]).some((p) => p.toLowerCase() === myAddress);
+        const res = await game.isPlayerActive.query(id, myAddress);
+        return res.success && Boolean(res.value);
     } catch {
-        return false;
+        return null;
     }
+}
+
+/** A started game is rejoinable only by an active (not forfeited) player. */
+async function amActivePlayerInGame(id: bigint): Promise<boolean> {
+    return (await activePlayerStatus(id)) === true;
+}
+
+type ResumeResult = "none" | "resumed" | "not-active" | "unavailable";
+
+/** Restore a browser's current room only after the new contract confirms it. */
+async function resumeSavedGame(): Promise<ResumeResult> {
+    const id = savedGameId ?? readSavedGame();
+    if (id === null || !game || !myAddress) return "none";
+    savedGameId = id;
+    const active = await activePlayerStatus(id);
+    if (active === null) {
+        // Keep the pointer so the explicit Resume button and a later refresh
+        // can retry after a transient RPC outage.
+        return "unavailable";
+    }
+    if (!active) {
+        forgetSavedGame();
+        return "not-active";
+    }
+    bootLog(`Reopening game ${id}…`, "ok");
+    enterGame(id);
+    return "resumed";
 }
 
 getEl("btn-create-game").addEventListener("click", async () => {
@@ -996,7 +1101,7 @@ getEl("btn-join-game").addEventListener("click", async () => {
         // this account already belongs to the game before entering its UI.
         if (msg.includes("AlreadyJoined")) {
             enterGame(id);
-        } else if (msg.includes("GameAlreadyStarted") && await amPlayerInGame(id)) {
+        } else if (msg.includes("GameAlreadyStarted") && await amActivePlayerInGame(id)) {
             enterGame(id);
         } else if (msg.includes("GameAlreadyStarted")) {
             $homeError.textContent = "This game has already started.";
@@ -1014,6 +1119,20 @@ getEl<HTMLInputElement>("join-game-id").addEventListener("keydown", (event) => {
         event.preventDefault();
         getEl<HTMLButtonElement>("btn-join-game").click();
     }
+});
+
+getEl<HTMLButtonElement>("btn-resume-game").addEventListener("click", async () => {
+    const result = await resumeSavedGame();
+    if (result === "resumed") return;
+    renderResumeCard();
+    $homeError.textContent = result === "not-active"
+        ? "You are no longer an active player in that quiz."
+        : "Couldn’t reopen that quiz yet. Try again when the connection recovers.";
+});
+
+getEl<HTMLButtonElement>("btn-forget-saved-game").addEventListener("click", () => {
+    forgetSavedGame();
+    renderResumeCard();
 });
 
 // ── Pack builder ─────────────────────────────────────────────────────
@@ -1179,6 +1298,7 @@ getEl("btn-seal-pack").addEventListener("click", async () => {
         }
         await refreshPacks();
         showScreen("home");
+        renderResumeCard();
     } catch (e) {
         $builderError.textContent = txError(e);
     } finally {
@@ -1190,6 +1310,7 @@ getEl("btn-seal-pack").addEventListener("click", async () => {
 getEl("btn-builder-done").addEventListener("click", async () => {
     await refreshPacks();
     showScreen("home");
+    renderResumeCard();
 });
 
 // ── Game loop ────────────────────────────────────────────────────────
@@ -1206,6 +1327,7 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             submit_count: 0,
             continue_count: 0,
             player_count: 1,
+            active_player_count: 1,
         },
         game: {
             pack_id: config.packId,
@@ -1215,6 +1337,7 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             review_blocks: config.reviewBlocks,
             max_players: config.maxPlayers,
             player_count: 1,
+            active_player_count: 1,
         },
         players: [myAddress],
         scores: [0],
@@ -1257,6 +1380,7 @@ function startGamePolling(): void {
 function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     gameSession += 1;
     gameId = id;
+    rememberGame(id);
     latest = initialSnapshot;
     actionKey = "";
     actionsSent.clear();
@@ -1273,11 +1397,13 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     preferredQuestionKey = null;
     getEl<HTMLInputElement>("answer-input").value = "";
     getEl<HTMLInputElement>("wager-final").value = "0";
+    setGameActions("hidden");
+    renderResumeCard();
     if (initialSnapshot) render(initialSnapshot);
     startGamePolling();
 }
 
-function leaveGame(): void {
+function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean } = {}): void {
     gameSession += 1;
     gameId = null;
     latest = null;
@@ -1288,16 +1414,70 @@ function leaveGame(): void {
     cachedPlayers = null;
     preferredQuestionKey = null;
     latestObservedAt = 0;
+    if (!preserveSavedGame) forgetSavedGame();
+    if ($forfeitDialog.open) $forfeitDialog.close();
+    setGameActions("hidden");
     stopGamePolling();
     void refreshPacks();
     showScreen("home");
+    renderResumeCard();
 }
 
 function isCurrentGame(id: bigint, session: number): boolean {
     return gameId === id && gameSession === session;
 }
 
-getEl("btn-back-home").addEventListener("click", leaveGame);
+getEl("btn-back-home").addEventListener("click", () => leaveGame());
+getEl("btn-abandoned-home").addEventListener("click", () => leaveGame());
+
+getEl("btn-leave-screen").addEventListener("click", () => {
+    // Navigation is deliberately not a forfeit: the player can resume from
+    // this browser session or by re-entering the game code later.
+    leaveGame({ preserveSavedGame: true });
+});
+
+getEl("btn-leave-lobby").addEventListener("click", async () => {
+    if (busy || gameId === null || !productAccount) return;
+    busy = true;
+    setLoading("btn-leave-lobby", true);
+    try {
+        await sendTx(game, "leaveLobby", gameId);
+        leaveGame();
+    } catch (e) {
+        getEl("lobby-error").textContent = txError(e);
+    } finally {
+        busy = false;
+        setLoading("btn-leave-lobby", false);
+    }
+});
+
+$btnForfeitGame.addEventListener("click", () => {
+    if (busy || gameId === null || !latest) return;
+    getEl("forfeit-error").textContent = "";
+    if (!$forfeitDialog.open) $forfeitDialog.showModal();
+});
+
+getEl("btn-cancel-forfeit").addEventListener("click", () => {
+    if ($forfeitDialog.open) $forfeitDialog.close();
+});
+
+getEl("btn-confirm-forfeit").addEventListener("click", async () => {
+    if (busy || gameId === null || !productAccount) return;
+    const id = gameId;
+    busy = true;
+    setLoading("btn-confirm-forfeit", true);
+    try {
+        await sendTx(game, "forfeitGame", id);
+        if ($forfeitDialog.open) $forfeitDialog.close();
+        leaveGame();
+        $homeError.textContent = "You forfeited this quiz. Your score remains on its scorecard.";
+    } catch (e) {
+        getEl("forfeit-error").textContent = txError(e);
+    } finally {
+        busy = false;
+        setLoading("btn-confirm-forfeit", false);
+    }
+});
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && gameId !== null) void poll();
@@ -1473,6 +1653,17 @@ async function poll(): Promise<void> {
             questionText: qText,
             answerText: aText,
         };
+        const mine = snap.submissions.find((submission) => submission.player.toLowerCase() === myAddress);
+        if (!players.includes(myAddress) || mine?.active === false) {
+            // Another tab can submit a leave/forfeit transaction. Stop this
+            // stale table immediately rather than letting it offer actions the
+            // contract will correctly reject.
+            leaveGame();
+            $homeError.textContent = phase.stage === STAGE_ABANDONED
+                ? "This quiz was abandoned."
+                : "You are no longer an active player in this quiz.";
+            return;
+        }
         latest = snap;
         latestObservedAt = Date.now();
         // reset per-stage action guards when the stage changes
@@ -1539,6 +1730,9 @@ function render(snap: Snapshot): void {
         case STAGE_FINISHED:
             renderResults(snap);
             break;
+        case STAGE_ABANDONED:
+            renderAbandoned(snap);
+            break;
     }
 }
 
@@ -1561,24 +1755,29 @@ function renderLobby(snap: Snapshot): void {
     // have it cached from the pack picker; joiners see a stable fallback for
     // one RPC round-trip and then the real title replaces it.
     getEl("lobby-title").textContent = packTitleCache.get(snap.game.pack_id) ?? `pack #${snap.game.pack_id}`;
+    const starter = snap.players[0] ?? "";
     renderList(
         getEl("lobby-players"),
-        snap.players.map((p, i) =>
+        snap.players.map((p) =>
             li(
                 span("", fmtAddr(p)),
-                span("sub", i === 0 ? "host" : ""),
+                span("sub", p.toLowerCase() === starter.toLowerCase() ? "starts when ready" : ""),
             ),
         ),
     );
-    const isCreator = snap.game.creator.toLowerCase() === myAddress;
-    getEl("btn-start-game").style.display = isCreator ? "" : "none";
-    getEl("lobby-waiting").style.display = isCreator ? "none" : "";
+    const isStarter = starter.toLowerCase() === myAddress;
+    getEl("btn-start-game").style.display = isStarter ? "" : "none";
+    getEl("lobby-waiting").style.display = isStarter ? "none" : "";
+    getEl("lobby-waiting").textContent = starter
+        ? `Waiting for ${fmtAddr(starter)} to start…`
+        : "Waiting for a player to start…";
+    setGameActions("lobby");
     showScreen("lobby");
 
     // First regular question is always slot zero. Fetch it while everyone is
     // joining so the answer screen does not need another network round-trip.
     prefetchQuestion(snap.game.pack_id, 0);
-    if (isCreator) void warmTx(game, "startGame", [lobbyGameId]);
+    if (isStarter) void warmTx(game, "startGame", [lobbyGameId]);
 
     void packTitle(snap.game.pack_id).then((title) => {
         // A title fetch can finish after the game advances or the player
@@ -1620,6 +1819,7 @@ function showStartedGame(): void {
             correct: false,
             overturn_votes: 0,
             continue_ready: false,
+            active: true,
         })),
         questionText: questionCache.get(`${previous.game.pack_id}:0`) ?? "",
         answerText: "",
@@ -1713,13 +1913,14 @@ function renderQuestion(snap: Snapshot): void {
     getEl("question-countdown").textContent = countdownText(snap);
 
     const mine = mySubmission(snap);
+    const amActive = mine?.active ?? false;
     const optimistic =
         optimisticAnswer !== null && optimisticAnswer.qkey === questionKeyFor(snap.phase);
     const answered = (mine?.submitted ?? false) || optimistic;
-    getEl("answer-form").style.display = answered || !questionReady ? "none" : "";
+    getEl("answer-form").style.display = answered || !questionReady || !amActive ? "none" : "";
     getEl("submitted-card").style.display = answered ? "" : "none";
 
-    if (!answered) {
+    if (!answered && amActive) {
         getEl("wager-grid-block").style.display = isFinal ? "none" : "";
         getEl("wager-final-row").style.display = isFinal ? "" : "none";
         if (isFinal) {
@@ -1738,7 +1939,11 @@ function renderQuestion(snap: Snapshot): void {
             snap.submissions.map((s) => {
                 const pendingMine =
                     s.player.toLowerCase() === myAddress && !s.submitted && optimistic;
-                const text = s.submitted
+                const text = !s.active
+                    ? s.submitted
+                        ? `“${s.answer}” · left quiz`
+                        : "left quiz"
+                    : s.submitted
                     ? `“${s.answer}” · wagered ${s.wager}`
                     : pendingMine
                       ? `“${optimisticAnswer?.answer}” · wagered ${optimisticAnswer?.wager} · confirming…`
@@ -1750,11 +1955,13 @@ function renderQuestion(snap: Snapshot): void {
     if (!isFinal && snap.phase.cursor + 1 < snap.game.num_questions) {
         prefetchQuestion(snap.game.pack_id, snap.phase.cursor + 1);
     }
+    setGameActions("active");
     showScreen("question");
 }
 
 getEl("btn-submit-answer").addEventListener("click", async () => {
     if (busy || gameId === null || !productAccount || !latest) return;
+    if (!mySubmission(latest)?.active) return;
     const $err = getEl("question-error");
     $err.textContent = "";
     const isFinal = latest.phase.stage === STAGE_FINAL_ANSWER;
@@ -1829,12 +2036,18 @@ function renderReview(snap: Snapshot): void {
         ? `Difficulty: ${DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? ""}`
         : "";
 
-    const threshold = Math.floor((snap.players.length - 1) / 2) + 1;
+    const mine = mySubmission(snap);
+    const amActive = mine?.active ?? false;
     renderList(
         getEl("review-rows"),
         snap.submissions.map((s) => {
             const isMe = s.player.toLowerCase() === myAddress;
-            const row = li(span("", fmtAddr(s.player)));
+            const eligibleVoters = snap.phase.active_player_count - (s.active ? 1 : 0);
+            const threshold = Math.floor(eligibleVoters / 2) + 1;
+            const row = li(
+                span("", fmtAddr(s.player)),
+                span("sub", s.active ? "" : "left quiz"),
+            );
             row.className = "answer-row";
             if (!s.submitted) {
                 row.append(
@@ -1847,7 +2060,7 @@ function renderReview(snap: Snapshot): void {
                 span("sr-only", s.correct ? "Correct answer. " : "Incorrect answer. "),
                 span(`player-answer ${s.correct ? "correct" : "wrong"} grow`, s.answer || "—"),
             );
-            if (!s.correct && !isMe) {
+            if (!s.correct && !isMe && amActive) {
                 const btn = document.createElement("button");
                 btn.className = "vote-btn";
                 btn.dataset.testid = `btn-vote-${s.player.toLowerCase()}`;
@@ -1864,20 +2077,21 @@ function renderReview(snap: Snapshot): void {
         }),
     );
 
-    const mine = mySubmission(snap);
     const continued = (mine?.continue_ready ?? false) || actionsSent.has("continue");
     const $btn = getEl<HTMLButtonElement>("btn-continue");
-    $btn.disabled = continued;
-    $btn.textContent = continued ? "Waiting for others…" : "Continue";
+    $btn.disabled = continued || !amActive;
+    $btn.textContent = !amActive ? "You left this quiz" : continued ? "Waiting for others…" : "Continue";
     getEl("continue-status").textContent =
-        `${snap.phase.continue_count}/${snap.phase.player_count} ready`;
+        `${snap.phase.continue_count}/${snap.phase.active_player_count} active players ready`;
 
     renderLeaderboard(getEl("review-leaderboard"), snap);
+    setGameActions("active");
     showScreen("review");
 }
 
 async function voteCorrect(target: string): Promise<void> {
     if (busy || gameId === null || !productAccount) return;
+    if (!latest || !mySubmission(latest)?.active) return;
     const key = `vote:${target.toLowerCase()}`;
     if (actionsSent.has(key)) return;
     // optimistic: mark the vote instantly, roll back on error
@@ -1905,6 +2119,7 @@ async function voteCorrect(target: string): Promise<void> {
 
 getEl("btn-continue").addEventListener("click", async () => {
     if (busy || gameId === null || !productAccount || actionsSent.has("continue")) return;
+    if (!latest || !mySubmission(latest)?.active) return;
     // optimistic: show "Waiting for others…" instantly, roll back on error
     actionsSent.add("continue");
     if (latest) render(latest);
@@ -1924,12 +2139,13 @@ getEl("btn-continue").addEventListener("click", async () => {
 // ── Difficulty vote ──────────────────────────────────────────────────
 
 function renderVote(snap: Snapshot): void {
+    const amActive = mySubmission(snap)?.active ?? false;
     getEl("vote-countdown").textContent = countdownText(snap);
     getEl("vote-status").textContent =
-        `${snap.phase.submit_count}/${snap.phase.player_count} voted` +
+        `${snap.phase.submit_count}/${snap.phase.active_player_count} active players voted` +
         (actionsSent.has("difficulty") ? " — your vote is in" : "");
     for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty")) {
-        btn.disabled = actionsSent.has("difficulty");
+        btn.disabled = actionsSent.has("difficulty") || !amActive;
     }
     // The winning difficulty is not known yet, but all three final cards are
     // immutable and tiny. Fetching them during the vote removes a visible
@@ -1937,12 +2153,14 @@ function renderVote(snap: Snapshot): void {
     for (let difficulty = 0; difficulty < 3; difficulty++) {
         prefetchQuestion(snap.game.pack_id, FINAL_SLOT_BASE + difficulty);
     }
+    setGameActions("active");
     showScreen("vote");
 }
 
 for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty")) {
     btn.addEventListener("click", async () => {
         if (busy || gameId === null || !productAccount || actionsSent.has("difficulty")) return;
+        if (!latest || !mySubmission(latest)?.active) return;
         // optimistic: lock the vote in visually, roll back on error
         actionsSent.add("difficulty");
         if (latest) render(latest);
@@ -1969,7 +2187,11 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
 
 function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
     const ranked = snap.players
-        .map((p, i) => ({ player: p, score: snap.scores[i] }))
+        .map((p, i) => ({
+            player: p,
+            score: snap.scores[i],
+            active: snap.submissions.find((submission) => submission.player.toLowerCase() === p.toLowerCase())?.active ?? true,
+        }))
         .sort((a, b) => b.score - a.score);
     renderList(
         list,
@@ -1977,6 +2199,7 @@ function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
             li(
                 span("sub", `#${i + 1}`),
                 span("", fmtAddr(r.player)),
+                span("sub", r.active ? "" : "left quiz"),
                 span("right pts", `${r.score}`),
             ),
         ),
@@ -1989,7 +2212,16 @@ function renderResults(snap: Snapshot): void {
     getEl("results-winner").textContent = winners.map(fmtAddr).join(" & ");
     renderLeaderboard(getEl("results-leaderboard"), snap);
     stopGamePolling();
+    setGameActions("hidden");
     showScreen("results");
+}
+
+function renderAbandoned(_snap: Snapshot): void {
+    getEl("abandoned-message").textContent = "Everyone left this quiz before it finished.";
+    stopGamePolling();
+    forgetSavedGame();
+    setGameActions("hidden");
+    showScreen("abandoned");
 }
 
 // ── Go ───────────────────────────────────────────────────────────────
