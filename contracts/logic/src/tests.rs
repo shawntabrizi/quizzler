@@ -75,7 +75,11 @@ const CFG: PhaseConfig = PhaseConfig {
 };
 
 fn clock(stage: u8, cursor: u8, anchor: u64) -> GameClock {
-    GameClock { stage, cursor, anchor }
+    GameClock {
+        stage,
+        cursor,
+        anchor,
+    }
 }
 
 #[test]
@@ -129,8 +133,14 @@ fn deadlines() {
 fn question_keys() {
     assert_eq!(question_key(&clock(STAGE_ANSWER, 1, 0)), 1);
     assert_eq!(question_key(&clock(STAGE_REVIEW, 2, 0)), 2);
-    assert_eq!(question_key(&clock(STAGE_FINAL_ANSWER, 2, 0)), FINAL_QUESTION_KEY);
-    assert_eq!(question_key(&clock(STAGE_FINAL_REVIEW, 2, 0)), FINAL_QUESTION_KEY);
+    assert_eq!(
+        question_key(&clock(STAGE_FINAL_ANSWER, 2, 0)),
+        FINAL_QUESTION_KEY
+    );
+    assert_eq!(
+        question_key(&clock(STAGE_FINAL_REVIEW, 2, 0)),
+        FINAL_QUESTION_KEY
+    );
 }
 
 // ── Voting ───────────────────────────────────────────────────────────
@@ -152,7 +162,11 @@ fn difficulty_resolution() {
     assert_eq!(resolve_difficulty([1, 1, 3]), 2);
     assert_eq!(resolve_difficulty([2, 2, 0]), 1, "tie breaks harder");
     assert_eq!(resolve_difficulty([2, 0, 2]), 2, "tie breaks harder");
-    assert_eq!(resolve_difficulty([1, 1, 1]), 2, "three-way tie breaks hardest");
+    assert_eq!(
+        resolve_difficulty([1, 1, 1]),
+        2,
+        "three-way tie breaks hardest"
+    );
 }
 
 #[test]

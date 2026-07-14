@@ -13,8 +13,8 @@
 // by the #[pvm::contract] macro expansion — declaring them here collides.
 use alloc::string::String;
 
-use pvm_contract as pvm;
 use pvm::{Decode, Encode, HostFn};
+use pvm_contract as pvm;
 use quizzler_logic as logic;
 
 const MAX_TITLE_BYTES: usize = 64;
@@ -86,9 +86,8 @@ fn caller20() -> [u8; 20] {
 #[pvm::contract]
 mod registry {
     use super::{
-        caller20, fail, final_slot, logic, pvm, PackMeta, PackStatus, PackView, Question,
-        Storage, MAX_ANSWERS, MAX_ANSWER_BYTES, MAX_REGULAR_QUESTIONS, MAX_TEXT_BYTES,
-        MAX_TITLE_BYTES,
+        MAX_ANSWER_BYTES, MAX_ANSWERS, MAX_REGULAR_QUESTIONS, MAX_TEXT_BYTES, MAX_TITLE_BYTES,
+        PackMeta, PackStatus, PackView, Question, Storage, caller20, fail, final_slot, logic, pvm,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -172,7 +171,13 @@ mod registry {
             Storage::accepted().insert(&(pack_id, slot, count), &norm);
             count += 1;
         }
-        Storage::questions().insert(&(pack_id, slot), &Question { text, answer_count: count });
+        Storage::questions().insert(
+            &(pack_id, slot),
+            &Question {
+                text,
+                answer_count: count,
+            },
+        );
         Storage::pack_meta().insert(&pack_id, &meta);
     }
 
@@ -222,8 +227,16 @@ mod registry {
     #[pvm::method]
     pub fn get_pack_status(pack_id: u32) -> PackStatus {
         match Storage::pack_meta().get(&pack_id) {
-            Some(m) => PackStatus { exists: true, sealed: m.sealed, regular_count: m.regular_count },
-            None => PackStatus { exists: false, sealed: false, regular_count: 0 },
+            Some(m) => PackStatus {
+                exists: true,
+                sealed: m.sealed,
+                regular_count: m.regular_count,
+            },
+            None => PackStatus {
+                exists: false,
+                sealed: false,
+                regular_count: 0,
+            },
         }
     }
 
@@ -259,6 +272,8 @@ mod registry {
     /// at execution time, so clients resolve their own creations here.
     #[pvm::method]
     pub fn my_latest_pack(who: pvm::Address) -> u32 {
-        Storage::latest_pack_of().get(&who.to_fixed_bytes()).unwrap_or(u32::MAX)
+        Storage::latest_pack_of()
+            .get(&who.to_fixed_bytes())
+            .unwrap_or(u32::MAX)
     }
 }

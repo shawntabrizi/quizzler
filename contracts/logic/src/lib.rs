@@ -102,7 +102,11 @@ pub fn roll(clock: GameClock, cfg: &PhaseConfig, now: u64) -> (GameClock, bool) 
             crossed_vote = true;
         }
         let (stage, cursor) = next_stage(c.stage, c.cursor, cfg.num_questions);
-        c = GameClock { stage, cursor, anchor: end };
+        c = GameClock {
+            stage,
+            cursor,
+            anchor: end,
+        };
     }
 }
 

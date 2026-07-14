@@ -21,13 +21,13 @@
 // by the #[pvm::contract] macro expansion — declaring them here collides.
 use alloc::string::String;
 
-use pvm_contract as pvm;
-use pvm::{Decode, Encode, HostFn};
-use quizzler_logic as logic;
-use logic::{GameClock, PhaseConfig, DIFFICULTY_UNSET};
+use logic::{DIFFICULTY_UNSET, GameClock, PhaseConfig};
 use logic::{
     STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE,
 };
+use pvm::{Decode, Encode, HostFn};
+use pvm_contract as pvm;
+use quizzler_logic as logic;
 
 const MAX_ANSWER_BYTES: usize = 64;
 const MAX_PLAYERS: u8 = 16;
@@ -250,7 +250,11 @@ fn registry_answers(pack_id: u32, slot: u8) -> Vec<String> {
 // ── Game helpers ─────────────────────────────────────────────────────
 
 fn clock_of(m: &GameMeta) -> GameClock {
-    GameClock { stage: m.stage, cursor: m.cursor, anchor: m.anchor }
+    GameClock {
+        stage: m.stage,
+        cursor: m.cursor,
+        anchor: m.anchor,
+    }
 }
 
 fn cfg_of(m: &GameMeta) -> PhaseConfig {
@@ -337,12 +341,12 @@ mod quizzler {
     // NOTE: no glob import — #[pvm::contract] injects its own String/Vec
     // imports into the module, which a `use super::*` would collide with.
     use super::{
-        active_slot, caller20, cfg_of, clock_of, collapse, current_block, fail, gen_game_code,
-        load_game, load_players, logic, pvm, registry_answers, registry_pack_status,
-        require_player, save_game, settle, GameMeta, GameView, PhaseView, Storage, Submission,
-        SubmissionView, DIFFICULTY_UNSET, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS, MAX_PLAYERS,
-        MAX_STAGE_BLOCKS, MAX_WAGER, STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW,
-        STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE,
+        DIFFICULTY_UNSET, GameMeta, GameView, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS, MAX_PLAYERS,
+        MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ANSWER, STAGE_FINAL_ANSWER,
+        STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE, Storage, Submission,
+        SubmissionView, active_slot, caller20, cfg_of, clock_of, collapse, current_block, fail,
+        gen_game_code, load_game, load_players, logic, pvm, registry_answers, registry_pack_status,
+        require_player, save_game, settle,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -499,7 +503,11 @@ mod quizzler {
 
         Storage::submissions().insert(
             &(game_id, qkey, who),
-            &Submission { answer: norm, wager, correct },
+            &Submission {
+                answer: norm,
+                wager,
+                correct,
+            },
         );
         let submitted = Storage::submit_count().get(&(game_id, qkey)).unwrap_or(0) + 1;
         Storage::submit_count().insert(&(game_id, qkey), &submitted);
@@ -537,7 +545,10 @@ mod quizzler {
             fail("AlreadyVoted");
         }
         Storage::overturn_voted().insert(&(game_id, qkey, target20, voter), &true);
-        let votes = Storage::overturn_votes().get(&(game_id, qkey, target20)).unwrap_or(0) + 1;
+        let votes = Storage::overturn_votes()
+            .get(&(game_id, qkey, target20))
+            .unwrap_or(0)
+            + 1;
         Storage::overturn_votes().insert(&(game_id, qkey, target20), &votes);
 
         if votes >= logic::overturn_threshold(player_count) {
@@ -597,7 +608,10 @@ mod quizzler {
             fail("AlreadyVoted");
         }
         Storage::difficulty_voted().insert(&(game_id, who), &true);
-        let count = Storage::difficulty_counts().get(&(game_id, difficulty)).unwrap_or(0) + 1;
+        let count = Storage::difficulty_counts()
+            .get(&(game_id, difficulty))
+            .unwrap_or(0)
+            + 1;
         Storage::difficulty_counts().insert(&(game_id, difficulty), &count);
         let total = Storage::difficulty_total().get(&game_id).unwrap_or(0) + 1;
         Storage::difficulty_total().insert(&game_id, &total);
@@ -619,7 +633,9 @@ mod quizzler {
     /// creations through this view.
     #[pvm::method]
     pub fn my_latest_game(who: pvm::Address) -> u64 {
-        Storage::latest_game_of().get(&who.to_fixed_bytes()).unwrap_or(0)
+        Storage::latest_game_of()
+            .get(&who.to_fixed_bytes())
+            .unwrap_or(0)
     }
 
     #[pvm::method]
@@ -674,7 +690,10 @@ mod quizzler {
 
     #[pvm::method]
     pub fn get_players(game_id: u64) -> Vec<pvm::Address> {
-        load_players(game_id).iter().map(|p| pvm::Address::from(*p)).collect()
+        load_players(game_id)
+            .iter()
+            .map(|p| pvm::Address::from(*p))
+            .collect()
     }
 
     /// Scores parallel to `get_players` order.
@@ -693,30 +712,38 @@ mod quizzler {
         load_game(game_id); // reverts on unknown game
         load_players(game_id)
             .iter()
-            .map(|p| match Storage::submissions().get(&(game_id, question_key, *p)) {
-                Some(s) => SubmissionView {
-                    player: pvm::Address::from(*p),
-                    submitted: true,
-                    answer: s.answer,
-                    wager: s.wager,
-                    correct: s.correct,
-                    overturn_votes: Storage::overturn_votes()
-                        .get(&(game_id, question_key, *p))
-                        .unwrap_or(0),
-                    continue_ready: Storage::continue_flags()
-                        .contains(&(game_id, question_key, *p)),
+            .map(
+                |p| match Storage::submissions().get(&(game_id, question_key, *p)) {
+                    Some(s) => SubmissionView {
+                        player: pvm::Address::from(*p),
+                        submitted: true,
+                        answer: s.answer,
+                        wager: s.wager,
+                        correct: s.correct,
+                        overturn_votes: Storage::overturn_votes()
+                            .get(&(game_id, question_key, *p))
+                            .unwrap_or(0),
+                        continue_ready: Storage::continue_flags().contains(&(
+                            game_id,
+                            question_key,
+                            *p,
+                        )),
+                    },
+                    None => SubmissionView {
+                        player: pvm::Address::from(*p),
+                        submitted: false,
+                        answer: String::new(),
+                        wager: 0,
+                        correct: false,
+                        overturn_votes: 0,
+                        continue_ready: Storage::continue_flags().contains(&(
+                            game_id,
+                            question_key,
+                            *p,
+                        )),
+                    },
                 },
-                None => SubmissionView {
-                    player: pvm::Address::from(*p),
-                    submitted: false,
-                    answer: String::new(),
-                    wager: 0,
-                    correct: false,
-                    overturn_votes: 0,
-                    continue_ready: Storage::continue_flags()
-                        .contains(&(game_id, question_key, *p)),
-                },
-            })
+            )
             .collect()
     }
 }
