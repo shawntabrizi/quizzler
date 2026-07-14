@@ -624,7 +624,8 @@ let catalogPacks: CatalogPack[] = [];
 let packSearch = "";
 // E2E runs can opt in to their disposable packs without exposing them to
 // players on the normal home screen.
-const showE2ETestPacks = new URLSearchParams(window.location.search).get("show-test-packs") === "1";
+const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
+    || new URLSearchParams(window.location.search).get("show-test-packs") === "1";
 // Fetch the stable starter IDs as well as recent community packs. This keeps
 // the curated catalog available even after a long-lived registry accumulates
 // lots of new packs, without making home-screen refreshes unbounded.

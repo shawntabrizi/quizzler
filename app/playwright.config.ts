@@ -43,6 +43,7 @@ export default defineConfig({
             ...process.env,
             VITE_QUIZZLER_REGISTRY: e2eContracts.registry,
             VITE_QUIZZLER_GAME: e2eContracts.game,
+            VITE_SHOW_E2E_PACKS: "1",
         },
         // E2E receives its own port so it cannot reuse the player-facing dev
         // server (which intentionally points at the active catalog).
