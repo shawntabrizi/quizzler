@@ -8,8 +8,8 @@
  *
  * Boot follows the product-sdk contracts-demo: SignerManager → product
  * account → chain client → contract handles → account mapping. Answers and
- * correctness are public on-chain — this client just chooses not to show
- * them before the review phase, like cards lying face-down on the table.
+ * correctness are public on-chain. The client reveals submitted answers and
+ * wagers after the local player locks in, while keeping correctness for review.
  */
 
 import { SignerManager, type SignerAccount } from "@parity/product-sdk-signer";
