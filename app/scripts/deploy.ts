@@ -160,6 +160,43 @@ async function assertActiveGameAbiMatchesBuild(): Promise<void> {
     }
 }
 
+/**
+ * Contract deployment does not need finality before the next staged step can
+ * safely read its address. Resolving at best-block inclusion avoids a long
+ * finality wait that can otherwise interrupt a resumable migration before it
+ * records the pair's state.
+ */
+async function submitAtBest(tx: any, signer: PolkadotSigner, label: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        let subscription: { unsubscribe(): void } | null = null;
+        let settled = false;
+        const finish = (error?: Error, value?: unknown) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            subscription?.unsubscribe();
+            if (error) reject(error);
+            else resolve(value);
+        };
+        const timer = setTimeout(() => finish(new Error(`${label} timed out waiting for a best block`)), 120_000);
+        try {
+            subscription = tx.signSubmitAndWatch(signer).subscribe({
+                next: (event: any) => {
+                    if (event.type !== "txBestBlocksState" || !event.found || event.ok === undefined) return;
+                    if (!event.ok) {
+                        finish(new Error(`${label} failed: ${JSON.stringify(event.dispatchError, bigintReplacer)}`));
+                    } else {
+                        finish(undefined, event);
+                    }
+                },
+                error: (error: unknown) => finish(error instanceof Error ? error : new Error(String(error))),
+            });
+        } catch (error) {
+            finish(error instanceof Error ? error : new Error(String(error)));
+        }
+    });
+}
+
 async function instantiate(
     client: PolkadotClient,
     api: any,
@@ -184,7 +221,7 @@ async function instantiate(
     const predicted: string = dryRun.result.value.addr;
     const gas = dryRun.weight_required;
 
-    const result = await (api as any).tx.Revive.instantiate_with_code({
+    const tx = (api as any).tx.Revive.instantiate_with_code({
         value: 0n,
         weight_limit: {
             ref_time: (gas.ref_time * 13n) / 10n,
@@ -195,16 +232,17 @@ async function instantiate(
         code: artifacts.bytecode,
         data: constructorData,
         salt: undefined,
-    }).signAndSubmit(signer);
+    });
+    const result: any = await submitAtBest(tx, signer, `${label} deploy`);
     if (!result.ok) {
         throw new Error(`${label} deploy failed: ${JSON.stringify(result.dispatchError, bigintReplacer)}`);
     }
-    const instantiated = result.events.find(
+    const instantiated = result.events?.find(
         (e: { type: string; value: { type: string } }) =>
             e.type === "Revive" && e.value.type === "Instantiated",
     );
     const addr: string = instantiated ? (instantiated.value as any).value.contract : predicted;
-    console.log(`  ${label} at ${addr} (block #${result.block.number})`);
+    console.log(`  ${label} at ${addr} (block #${result.block?.number ?? "best"})`);
     return { address: addr, bytecodeSha256: sha256(artifacts.bytecode) };
 }
 
