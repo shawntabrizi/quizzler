@@ -150,6 +150,8 @@ let optimisticAnswer: { qkey: number; answer: string; wager: number } | null = n
 const questionCache = new Map<string, string>();
 const answerCache = new Map<string, string>();
 const packTitleCache = new Map<number, string>();
+// A sealed pack is immutable, so its metadata never needs another RPC read.
+const sealedPackCache = new Map<number, PackView>();
 
 // Pack-builder state
 let builderPackId: number | null = null;
@@ -183,6 +185,7 @@ function setLoading(id: string, on: boolean): void {
     const btn = getEl<HTMLButtonElement>(id);
     btn.classList.toggle("loading", on);
     btn.disabled = on;
+    btn.setAttribute("aria-busy", String(on));
 }
 
 function txError(e: unknown): string {
@@ -266,13 +269,35 @@ async function canonicalAnswer(packId: number, slot: number): Promise<string> {
 }
 
 async function packTitle(packId: number): Promise<string> {
+    const sealedPack = sealedPackCache.get(packId);
+    if (sealedPack) return sealedPack.title;
     const cached = packTitleCache.get(packId);
     if (cached !== undefined) return cached;
     const res = await registry.getPack.query(packId);
     if (!res.success) return `pack #${packId}`;
-    const title = (res.value as PackView).title;
+    const pack = res.value as PackView;
+    if (pack.sealed) sealedPackCache.set(packId, pack);
+    const title = pack.title;
     packTitleCache.set(packId, title);
     return title;
+}
+
+async function sealedPack(packId: number): Promise<PackView | null> {
+    const cached = sealedPackCache.get(packId);
+    if (cached) return cached;
+    try {
+        const res = await registry.getPack.query(packId);
+        if (!res.success) return null;
+        const pack = res.value as PackView;
+        if (pack.sealed) {
+            sealedPackCache.set(packId, pack);
+            packTitleCache.set(packId, pack.title);
+            return pack;
+        }
+    } catch {
+        // A transient query failure should not discard the currently rendered list.
+    }
+    return null;
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────
@@ -356,12 +381,36 @@ const $homeError = getEl("home-error");
 const $btnCreateGame = getEl<HTMLButtonElement>("btn-create-game");
 
 let refreshingPacks = false;
+let lastPackListSignature: string | null = null;
+const PACK_LIST_LIMIT = 50;
+const PACK_FETCH_CONCURRENCY = 6;
+
+async function mapWithConcurrency<T, U>(
+    items: readonly T[],
+    limit: number,
+    mapper: (item: T) => Promise<U>,
+): Promise<U[]> {
+    const results = new Array<U>(items.length);
+    let next = 0;
+    async function worker(): Promise<void> {
+        for (;;) {
+            const index = next++;
+            if (index >= items.length) return;
+            results[index] = await mapper(items[index]);
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+    return results;
+}
 
 async function refreshPacks(): Promise<void> {
     if (refreshingPacks) return;
     refreshingPacks = true;
     try {
         await refreshPacksInner();
+        $homeError.textContent = "";
+    } catch {
+        $homeError.textContent = "Couldn’t refresh quiz packs. Retrying…";
     } finally {
         refreshingPacks = false;
     }
@@ -369,32 +418,52 @@ async function refreshPacks(): Promise<void> {
 
 async function refreshPacksInner(): Promise<void> {
     const countRes = await registry.packCount.query();
-    if (!countRes.success) return;
+    if (!countRes.success) throw new Error("pack count query failed");
     const count = Number(countRes.value);
-    const from = Math.max(0, count - 50);
+    const from = Math.max(0, count - PACK_LIST_LIMIT);
+    const ids = Array.from({ length: count - from }, (_, offset) => count - 1 - offset);
+    const packs = await mapWithConcurrency(ids, PACK_FETCH_CONCURRENCY, sealedPack);
+    const visible = packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], pack }]);
+    const signature = JSON.stringify(
+        visible.map(({ id, pack }) => [id, pack.title, pack.regular_count]),
+    );
+    // Avoid replacing identical DOM nodes every five seconds: it preserves
+    // keyboard focus and prevents needless layout work on a static list.
+    if (signature === lastPackListSignature) return;
+    lastPackListSignature = signature;
     const rows: HTMLLIElement[] = [];
-    for (let id = count - 1; id >= from; id--) {
-        const res = await registry.getPack.query(id);
-        if (!res.success) continue;
-        const pack = res.value as PackView;
-        if (!pack.sealed) continue;
+    for (const { id, pack } of visible) {
         const row = li(
             span("", `${pack.title}`),
             span("sub", `#${id} · ${pack.regular_count} questions`),
         );
         row.className = "clickable";
         row.dataset.testid = `pack-${id}`;
+        row.tabIndex = 0;
+        row.setAttribute("role", "button");
+        row.setAttribute("aria-pressed", String(selectedPackId === id));
         if (selectedPackId === id) row.classList.add("selected");
-        row.addEventListener("click", () => {
+        const select = () => {
             selectedPackId = id;
             selectedPack = pack;
             $btnCreateGame.disabled = false;
             const qInput = getEl<HTMLInputElement>("cfg-questions");
-            const maxQ = Math.min(pack.regular_count, 10);
+            const maxQ = Math.min(pack.regular_count, MAX_GAME_QUESTIONS);
             qInput.max = String(maxQ);
             if (Number(qInput.value) > maxQ) qInput.value = String(maxQ);
-            for (const el of $packList.children) el.classList.remove("selected");
+            for (const el of $packList.querySelectorAll<HTMLElement>('[role="button"]')) {
+                el.classList.remove("selected");
+                el.setAttribute("aria-pressed", "false");
+            }
             row.classList.add("selected");
+            row.setAttribute("aria-pressed", "true");
+        };
+        row.addEventListener("click", select);
+        row.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                select();
+            }
         });
         rows.push(row);
     }
@@ -532,6 +601,13 @@ getEl("btn-join-game").addEventListener("click", async () => {
     } finally {
         busy = false;
         setLoading("btn-join-game", false);
+    }
+});
+
+getEl<HTMLInputElement>("join-game-id").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        getEl<HTMLButtonElement>("btn-join-game").click();
     }
 });
 
@@ -980,10 +1056,18 @@ function paintWagerGrid(): void {
     for (const btn of $wagerButtons) {
         const value = Number(btn.dataset.wager);
         const outcome = wagerOutcomes.get(value);
+        const selected = selectedWager === value && outcome === undefined;
         btn.classList.toggle("used-correct", outcome === true);
         btn.classList.toggle("used-wrong", outcome === false);
-        btn.classList.toggle("selected", selectedWager === value && outcome === undefined);
+        btn.classList.toggle("selected", selected);
         btn.disabled = outcome !== undefined;
+        btn.setAttribute("aria-pressed", String(selected));
+        btn.setAttribute(
+            "aria-label",
+            outcome === undefined
+                ? `Wager ${value}${selected ? ", selected" : ""}`
+                : `Wager ${value}, already used and ${outcome ? "correct" : "incorrect"}`,
+        );
     }
 }
 
@@ -1085,6 +1169,13 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
     }
 });
 
+getEl<HTMLInputElement>("answer-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.isComposing) {
+        event.preventDefault();
+        getEl<HTMLButtonElement>("btn-submit-answer").click();
+    }
+});
+
 // ── Review screen ────────────────────────────────────────────────────
 
 function renderReview(snap: Snapshot): void {
@@ -1117,6 +1208,7 @@ function renderReview(snap: Snapshot): void {
                 return row;
             }
             row.append(
+                span("sr-only", s.correct ? "Correct answer. " : "Incorrect answer. "),
                 span(`player-answer ${s.correct ? "correct" : "wrong"} grow`, s.answer || "—"),
             );
             if (!s.correct && !isMe) {

@@ -12,7 +12,7 @@
             --fg-primary-inverted: #0a0a0a;
             --fg-secondary: #a3a3a3;
             --fg-secondary-hover: #ebebeb;
-            --fg-tertiary: #525252;
+            --fg-tertiary: #8a8a8a;
             --fg-error: #ef4444;
             --fg-warning: #f59e0b;
             --fg-success: #22c55e;
@@ -57,7 +57,7 @@
 
         main { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
 
-        header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
+        header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
         header h1 {
             font-family: Georgia, "Times New Roman", serif;
             font-weight: 400;
@@ -196,7 +196,7 @@
         }
         .wager-btn.selected:hover { background: var(--bg-action-primary-hover); }
         .wager-btn.used-correct,
-        .wager-btn.used-wrong { opacity: 1; cursor: not-allowed; color: #ffffff; }
+        .wager-btn.used-wrong { opacity: 1; cursor: not-allowed; color: var(--fg-primary-inverted); }
         .wager-btn.used-correct { background: var(--fg-success); border-color: var(--fg-success); }
         .wager-btn.used-wrong { background: var(--fg-error); border-color: var(--fg-error); }
         .wager-btn.used-correct:hover { background: var(--fg-success); }
@@ -224,7 +224,7 @@
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--fg-primary-inverted);
             font-variant-numeric: tabular-nums;
         }
         .wager-badge.correct { background: var(--fg-success); }
@@ -236,6 +236,21 @@
 
         .muted { color: var(--fg-tertiary); }
         .error-text { color: var(--fg-error); font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
 
         #boot-log { font-size: 0.85rem; color: var(--fg-secondary); }
         #boot-log div { padding: 2px 0; }
@@ -270,7 +285,7 @@
                     </div>
                     <button id="btn-join-game" class="primary" data-testid="btn-join-game" style="align-self: end;">Join game</button>
                 </div>
-                <div class="error-text" id="home-error" data-testid="home-error"></div>
+                <div class="error-text" id="home-error" data-testid="home-error" role="alert"></div>
             </div>
 
             <div class="card">
@@ -345,7 +360,7 @@
                         <button id="btn-builder-done" data-testid="btn-builder-done">Back home</button>
                     </div>
                 </div>
-                <div class="error-text" id="builder-error" data-testid="builder-error"></div>
+                <div class="error-text" id="builder-error" data-testid="builder-error" role="alert"></div>
             </div>
         </section>
 
@@ -359,7 +374,7 @@
                     <button id="btn-start-game" class="primary" data-testid="btn-start-game" style="display: none;">Start game</button>
                     <span class="muted" id="lobby-waiting" data-testid="lobby-waiting">Waiting for the host to start…</span>
                 </div>
-                <div class="error-text" id="lobby-error"></div>
+                <div class="error-text" id="lobby-error" role="alert"></div>
             </div>
         </section>
 
@@ -372,9 +387,10 @@
                 </div>
                 <p class="question-text" id="question-text" data-testid="question-text"></p>
                 <div id="answer-form">
+                    <label class="sr-only" for="answer-input">Your answer</label>
                     <input type="text" id="answer-input" data-testid="answer-input" placeholder="Type your answer…" maxlength="64" autocomplete="off" />
-                    <div id="wager-grid-block">
-                        <label style="margin-top: 12px;">Wager points — each number can be used once per game</label>
+                    <div id="wager-grid-block" role="group" aria-labelledby="wager-label">
+                        <p id="wager-label" class="hint" style="margin-top: 12px;">Wager points — each number can be used once per game</p>
                         <div class="wager-grid" id="wager-grid" data-testid="wager-grid">
                             <button class="wager-btn" data-wager="1" data-testid="wager-1">1</button>
                             <button class="wager-btn" data-wager="2" data-testid="wager-2">2</button>
@@ -394,7 +410,7 @@
                     </div>
                     <button id="btn-submit-answer" class="primary" data-testid="btn-submit-answer">Submit answer</button>
                 </div>
-                <div class="error-text" id="question-error" data-testid="question-error"></div>
+                <div class="error-text" id="question-error" data-testid="question-error" role="alert"></div>
             </div>
             <div class="card" id="submitted-card" style="display: none;" data-testid="submitted-card">
                 <h2>Answers so far</h2>
@@ -420,7 +436,7 @@
                     <button id="btn-continue" class="primary" data-testid="btn-continue">Continue</button>
                     <span class="muted" id="continue-status" data-testid="continue-status"></span>
                 </div>
-                <div class="error-text" id="review-error"></div>
+                <div class="error-text" id="review-error" role="alert"></div>
             </div>
             <div class="card">
                 <h2>Leaderboard</h2>
@@ -442,7 +458,7 @@
                     <button data-difficulty="2" class="btn-difficulty" data-testid="btn-difficulty-hard">Hard</button>
                 </div>
                 <p class="hint" id="vote-status" data-testid="vote-status" style="margin-top: 12px;"></p>
-                <div class="error-text" id="vote-error"></div>
+                <div class="error-text" id="vote-error" role="alert"></div>
             </div>
         </section>
 
