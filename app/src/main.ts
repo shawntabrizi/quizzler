@@ -14,7 +14,6 @@
 
 import { SignerManager, type SignerAccount } from "@parity/product-sdk-signer";
 import { createChainClient } from "@parity/product-sdk-chain-client";
-import { paseo_asset_hub } from "@parity/product-sdk-descriptors/paseo-asset-hub";
 import {
     createContractFromClient,
     createContractRuntimeFromClient,
@@ -333,6 +332,10 @@ async function init(): Promise<void> {
     bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
 
     bootLog("Opening chain client…");
+    // The chain descriptor carries substantial runtime metadata. Load it only
+    // once the visible boot flow reaches the chain step so first paint is not
+    // blocked by parsing it with the rest of the app bundle.
+    const { paseo_asset_hub } = await import("@parity/product-sdk-descriptors/paseo-asset-hub");
     const client = await createChainClient({ chains: { assetHub: paseo_asset_hub } });
     bootLog("Chain client ready", "ok");
 
