@@ -25,6 +25,7 @@ import { ss58ToH160, truncateAddress } from "@parity/product-sdk-address";
 import registryAbi from "./abi-registry.json";
 import gameAbi from "./abi-game.json";
 import contractInfo from "./contract-address.json";
+import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { normalizeAnswer } from "./normalize";
 import { appendLog, getEl, li, renderList, span } from "./ui";
 
@@ -40,6 +41,13 @@ const STAGE_FINISHED = 6;
 const FINAL_QKEY = 255;
 const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
+const MAX_STAGE_BLOCKS = 600;
+const MAX_STAGE_SECONDS = MAX_STAGE_BLOCKS * 2;
+const MAX_GAME_QUESTIONS = 10;
+const MAX_PLAYERS = 16;
+const MAX_TITLE_BYTES = 64;
+const MAX_QUESTION_BYTES = 256;
+const MAX_ANSWER_BYTES = 64;
 const SECONDS_PER_BLOCK = 2; // measured on Paseo Asset Hub Next (2026-07)
 const POLL_MS = 2_000; // one poll per block
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
@@ -125,11 +133,15 @@ const actionsSent = new Set<string>();
 let pollInFlight = false;
 let lastRank = -1;
 let behindStreak = 0;
+// Incremented whenever a game is entered or left. This distinguishes a new
+// session from a stale request even when the player re-enters the same game.
+let gameSession = 0;
 
 // Once-per-game wager pool: value → correct? (undefined = still available)
 let wagerOutcomes = new Map<number, boolean>();
 let wagerHistoryLoadedUpTo = -1;
 let selectedWager: number | null = null;
+let activeAnswerKey = "";
 // Optimistic local echo of my in-flight answer, shown until the chain
 // confirms it (rolled back if the tx fails).
 let optimisticAnswer: { qkey: number; answer: string; wager: number } | null = null;
@@ -418,17 +430,58 @@ async function myLatestGameId(): Promise<bigint | null> {
     return id === 0n ? null : id;
 }
 
+/** A started game is rejoinable only by an existing player. */
+async function amPlayerInGame(id: bigint): Promise<boolean> {
+    try {
+        const res = await game.getPlayers.query(id);
+        return res.success && (res.value as string[]).some((p) => p.toLowerCase() === myAddress);
+    } catch {
+        return false;
+    }
+}
+
 getEl("btn-create-game").addEventListener("click", async () => {
     if (busy || selectedPackId === null || selectedPack === null || !productAccount) return;
     $homeError.textContent = "";
-    const numQuestions = Math.min(
-        Number(getEl<HTMLInputElement>("cfg-questions").value) || 5,
-        selectedPack.regular_count,
-        10,
+    const maxQuestions = Math.min(selectedPack.regular_count, MAX_GAME_QUESTIONS);
+    const numQuestions = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-questions").value,
+        1,
+        maxQuestions,
     );
-    const answerBlocks = secondsToBlocks(Number(getEl<HTMLInputElement>("cfg-answer-secs").value) || 60);
-    const reviewBlocks = secondsToBlocks(Number(getEl<HTMLInputElement>("cfg-review-secs").value) || 45);
-    const maxPlayers = Number(getEl<HTMLInputElement>("cfg-max-players").value) || 8;
+    if (numQuestions === null) {
+        $homeError.textContent = `Choose between 1 and ${maxQuestions} questions.`;
+        return;
+    }
+    const answerSeconds = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-answer-secs").value,
+        12,
+        MAX_STAGE_SECONDS,
+    );
+    if (answerSeconds === null) {
+        $homeError.textContent = `Answer time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
+        return;
+    }
+    const reviewSeconds = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-review-secs").value,
+        12,
+        MAX_STAGE_SECONDS,
+    );
+    if (reviewSeconds === null) {
+        $homeError.textContent = `Review time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
+        return;
+    }
+    const maxPlayers = parseIntegerInRange(
+        getEl<HTMLInputElement>("cfg-max-players").value,
+        1,
+        MAX_PLAYERS,
+    );
+    if (maxPlayers === null) {
+        $homeError.textContent = `Max players must be a whole number from 1 to ${MAX_PLAYERS}.`;
+        return;
+    }
+    const answerBlocks = secondsToBlocks(answerSeconds);
+    const reviewBlocks = secondsToBlocks(reviewSeconds);
     busy = true;
     setLoading("btn-create-game", true);
     try {
@@ -452,7 +505,11 @@ getEl("btn-join-game").addEventListener("click", async () => {
         $homeError.textContent = "Enter a game code.";
         return;
     }
-    const id = BigInt(raw);
+    const id = parseGameCode(raw);
+    if (id === null) {
+        $homeError.textContent = "Enter a six-digit game code.";
+        return;
+    }
     busy = true;
     setLoading("btn-join-game", true);
     try {
@@ -460,9 +517,15 @@ getEl("btn-join-game").addEventListener("click", async () => {
         enterGame(id);
     } catch (e) {
         const msg = txError(e);
-        // Rejoining a game you're already in is fine — just re-enter it.
-        if (msg.includes("AlreadyJoined") || msg.includes("GameAlreadyStarted")) {
+        // Rejoining from the lobby is always safe. Once a game starts,
+        // `GameAlreadyStarted` is also returned to strangers, so verify that
+        // this account already belongs to the game before entering its UI.
+        if (msg.includes("AlreadyJoined")) {
             enterGame(id);
+        } else if (msg.includes("GameAlreadyStarted") && await amPlayerInGame(id)) {
+            enterGame(id);
+        } else if (msg.includes("GameAlreadyStarted")) {
+            $homeError.textContent = "This game has already started.";
         } else {
             $homeError.textContent = msg;
         }
@@ -482,6 +545,10 @@ getEl("btn-new-pack").addEventListener("click", () => {
     builderPackId = null;
     builderRegular = 0;
     builderFinals.fill(false);
+    getEl<HTMLInputElement>("pack-title").value = "";
+    getEl<HTMLInputElement>("q-text").value = "";
+    getEl<HTMLInputElement>("q-answers").value = "";
+    getEl<HTMLSelectElement>("q-kind").value = "regular";
     getEl("builder-title").textContent = "New pack";
     getEl("builder-create-row").style.display = "";
     getEl("builder-question-form").style.display = "none";
@@ -496,6 +563,10 @@ getEl("btn-create-pack").addEventListener("click", async () => {
     const title = getEl<HTMLInputElement>("pack-title").value.trim();
     if (!title) {
         $builderError.textContent = "Give the pack a title.";
+        return;
+    }
+    if (utf8ByteLength(title) > MAX_TITLE_BYTES) {
+        $builderError.textContent = `Pack titles can be at most ${MAX_TITLE_BYTES} bytes.`;
         return;
     }
     busy = true;
@@ -529,14 +600,38 @@ getEl("btn-add-question").addEventListener("click", async () => {
     if (busy || builderPackId === null || !productAccount) return;
     $builderError.textContent = "";
     const text = getEl<HTMLInputElement>("q-text").value.trim();
-    const answers = getEl<HTMLInputElement>("q-answers").value
+    const enteredAnswers = getEl<HTMLInputElement>("q-answers").value
         .split(",")
         .map((a) => a.trim())
         .filter((a) => a.length > 0);
     const kind = getEl<HTMLSelectElement>("q-kind").value;
-    if (!text || answers.length === 0) {
+    if (!text || enteredAnswers.length === 0) {
         $builderError.textContent = "A question needs text and at least one answer.";
         return;
+    }
+    if (utf8ByteLength(text) > MAX_QUESTION_BYTES) {
+        $builderError.textContent = `Questions can be at most ${MAX_QUESTION_BYTES} bytes.`;
+        return;
+    }
+    const answers: string[] = [];
+    const normalizedAnswers = new Set<string>();
+    for (const answer of enteredAnswers) {
+        const normalized = normalizeAnswer(answer);
+        if (!normalized) {
+            $builderError.textContent = "Each accepted answer needs at least one letter or number.";
+            return;
+        }
+        if (normalized.length > MAX_ANSWER_BYTES) {
+            $builderError.textContent = `Accepted answers can be at most ${MAX_ANSWER_BYTES} bytes.`;
+            return;
+        }
+        if (!normalizedAnswers.has(normalized)) {
+            normalizedAnswers.add(normalized);
+            // The contract's no_std normalizer intentionally only handles
+            // ASCII. Send the same folded value a player will submit so
+            // answers such as “café” remain matchable end-to-end.
+            answers.push(normalized);
+        }
     }
     if (answers.length > 5) {
         $builderError.textContent = "At most 5 accepted answers.";
@@ -609,27 +704,40 @@ getEl("btn-builder-done").addEventListener("click", async () => {
 // ── Game loop ────────────────────────────────────────────────────────
 
 function enterGame(id: bigint): void {
+    gameSession += 1;
     gameId = id;
     latest = null;
+    actionKey = "";
     actionsSent.clear();
     wagerOutcomes = new Map();
     wagerHistoryLoadedUpTo = -1;
     selectedWager = null;
+    activeAnswerKey = "";
     optimisticAnswer = null;
     lastRank = -1;
     behindStreak = 0;
+    getEl<HTMLInputElement>("answer-input").value = "";
+    getEl<HTMLInputElement>("wager-final").value = "0";
     if (pollTimer) clearInterval(pollTimer);
     void poll();
     pollTimer = setInterval(() => void poll(), POLL_MS);
 }
 
 function leaveGame(): void {
+    gameSession += 1;
     gameId = null;
     latest = null;
+    selectedWager = null;
+    activeAnswerKey = "";
+    optimisticAnswer = null;
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = null;
     void refreshPacks();
     showScreen("home");
+}
+
+function isCurrentGame(id: bigint, session: number): boolean {
+    return gameId === id && gameSession === session;
 }
 
 getEl("btn-back-home").addEventListener("click", leaveGame);
@@ -654,12 +762,13 @@ function stageRank(phase: PhaseView): number {
  * then keep it current from the live snapshot (overturns can flip the
  * current question's outcome during review).
  */
-async function syncWagerHistory(snap: Snapshot): Promise<void> {
-    if (gameId === null) return;
+async function syncWagerHistory(snap: Snapshot, id: bigint, session: number): Promise<void> {
+    if (!isCurrentGame(id, session)) return;
     const uptoCursor =
         snap.phase.stage === STAGE_ANSWER ? snap.phase.cursor : snap.phase.cursor + 1;
     for (let k = wagerHistoryLoadedUpTo + 1; k < Math.min(uptoCursor, snap.game.num_questions); k++) {
-        const res = await game.getSubmissions.query(gameId, k);
+        const res = await game.getSubmissions.query(id, k);
+        if (!isCurrentGame(id, session)) return;
         if (!res.success) return;
         const mine = (res.value as SubmissionView[]).find(
             (s) => s.player.toLowerCase() === myAddress,
@@ -668,7 +777,7 @@ async function syncWagerHistory(snap: Snapshot): Promise<void> {
         wagerHistoryLoadedUpTo = k;
     }
     // live update for the question currently on the table (regular only)
-    if (snap.phase.stage === STAGE_ANSWER || snap.phase.stage === STAGE_REVIEW) {
+    if (isCurrentGame(id, session) && (snap.phase.stage === STAGE_ANSWER || snap.phase.stage === STAGE_REVIEW)) {
         const mine = snap.submissions.find((s) => s.player.toLowerCase() === myAddress);
         if (mine?.submitted) wagerOutcomes.set(mine.wager, mine.correct);
     }
@@ -676,18 +785,22 @@ async function syncWagerHistory(snap: Snapshot): Promise<void> {
 
 async function poll(): Promise<void> {
     if (gameId === null || !game || pollInFlight) return;
+    const polledGameId = gameId;
+    const polledSession = gameSession;
     pollInFlight = true;
     try {
-        const phaseRes = await game.getPhase.query(gameId);
+        const phaseRes = await game.getPhase.query(polledGameId);
+        if (!isCurrentGame(polledGameId, polledSession)) return;
         if (!phaseRes.success) return;
         const phase = phaseRes.value as PhaseView;
         const qkey = questionKeyFor(phase);
         const [gameRes, playersRes, scoresRes, subsRes] = await Promise.all([
-            game.getGame.query(gameId),
-            game.getPlayers.query(gameId),
-            game.getScores.query(gameId),
-            game.getSubmissions.query(gameId, qkey),
+            game.getGame.query(polledGameId),
+            game.getPlayers.query(polledGameId),
+            game.getScores.query(polledGameId),
+            game.getSubmissions.query(polledGameId, qkey),
         ]);
+        if (!isCurrentGame(polledGameId, polledSession)) return;
         if (!gameRes.success || !playersRes.success || !scoresRes.success || !subsRes.success) return;
 
         // Drop snapshots that move the game BACKWARDS unless they persist —
@@ -707,12 +820,14 @@ async function poll(): Promise<void> {
         let aText = "";
         if (phase.slot !== NO_SLOT) {
             qText = await questionText(gameView.pack_id, phase.slot);
+            if (!isCurrentGame(polledGameId, polledSession)) return;
             if (phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW) {
                 aText = await canonicalAnswer(gameView.pack_id, phase.slot);
+                if (!isCurrentGame(polledGameId, polledSession)) return;
             }
         }
 
-        latest = {
+        const snap: Snapshot = {
             phase,
             game: gameView,
             players: (playersRes.value as string[]).map((p) => p.toLowerCase()),
@@ -721,13 +836,24 @@ async function poll(): Promise<void> {
             questionText: qText,
             answerText: aText,
         };
-        await syncWagerHistory(latest);
+        await syncWagerHistory(snap, polledGameId, polledSession);
+        if (!isCurrentGame(polledGameId, polledSession)) return;
+        latest = snap;
         // reset per-stage action guards when the stage changes
-        const key = `${gameId}:${latest.phase.stage}:${latest.phase.cursor}`;
+        const key = `${polledGameId}:${latest.phase.stage}:${latest.phase.cursor}`;
         if (key !== actionKey) {
             actionKey = key;
             actionsSent.clear();
             optimisticAnswer = null;
+        }
+        const isAnswerStage =
+            latest.phase.stage === STAGE_ANSWER || latest.phase.stage === STAGE_FINAL_ANSWER;
+        const answerKey = `${polledGameId}:${latest.phase.stage}:${questionKeyFor(latest.phase)}`;
+        if (isAnswerStage && answerKey !== activeAnswerKey) {
+            activeAnswerKey = answerKey;
+            selectedWager = null;
+            getEl<HTMLInputElement>("answer-input").value = "";
+            getEl<HTMLInputElement>("wager-final").value = "0";
         }
         // chain caught up with the optimistic echo
         if (optimisticAnswer && mySubmission(latest)?.submitted) {
@@ -738,6 +864,9 @@ async function poll(): Promise<void> {
         console.warn("poll failed", e);
     } finally {
         pollInFlight = false;
+        // A new session may have started while this request was in flight.
+        // Start its first poll immediately instead of waiting for its interval.
+        if (gameId !== null && gameSession !== polledSession) void poll();
     }
 }
 
@@ -770,8 +899,22 @@ function render(snap: Snapshot): void {
 // ── Lobby ────────────────────────────────────────────────────────────
 
 async function renderLobby(snap: Snapshot): Promise<void> {
-    getEl("lobby-game-id").textContent = String(gameId);
-    getEl("lobby-title").textContent = await packTitle(snap.game.pack_id);
+    const lobbyGameId = gameId;
+    const lobbySession = gameSession;
+    if (lobbyGameId === null) return;
+    let title: string;
+    try {
+        title = await packTitle(snap.game.pack_id);
+    } catch {
+        title = `pack #${snap.game.pack_id}`;
+    }
+    // A title fetch can finish after the game advances or the player leaves.
+    // Do not let that old asynchronous render take the UI back to the lobby.
+    if (!isCurrentGame(lobbyGameId, lobbySession) || latest !== snap || snap.phase.stage !== STAGE_LOBBY) {
+        return;
+    }
+    getEl("lobby-game-id").textContent = String(lobbyGameId);
+    getEl("lobby-title").textContent = title;
     renderList(
         getEl("lobby-players"),
         snap.players.map((p, i) =>
@@ -871,8 +1014,8 @@ function renderQuestion(snap: Snapshot): void {
             paintWagerGrid();
         }
     } else {
-        // Others' answers, face-down until review: show submitted text for
-        // everyone who locked in, "…" for players still thinking.
+        // Sporcle Party-style live reveal: players can see answers and wagers
+        // as teammates lock in, while correctness stays hidden until review.
         renderList(
             getEl("live-answers"),
             snap.submissions.map((s) => {
@@ -896,9 +1039,24 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
     $err.textContent = "";
     const isFinal = latest.phase.stage === STAGE_FINAL_ANSWER;
     const answer = normalizeAnswer(getEl<HTMLInputElement>("answer-input").value);
+    if (!answer) {
+        $err.textContent = "Enter an answer using letters or numbers.";
+        return;
+    }
     let wager: number;
     if (isFinal) {
-        wager = Number(getEl<HTMLInputElement>("wager-final").value) || 0;
+        const myIndex = latest.players.indexOf(myAddress);
+        const maxWager = myIndex >= 0 ? latest.scores[myIndex] : 0;
+        const parsedWager = parseIntegerInRange(
+            getEl<HTMLInputElement>("wager-final").value,
+            0,
+            maxWager,
+        );
+        if (parsedWager === null) {
+            $err.textContent = `Final wager must be a whole number from 0 to ${maxWager}.`;
+            return;
+        }
+        wager = parsedWager;
     } else {
         if (selectedWager === null) {
             $err.textContent = "Pick a wager first — each number can be used once per game.";

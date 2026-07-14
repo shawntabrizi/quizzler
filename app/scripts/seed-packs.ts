@@ -63,6 +63,17 @@ function validateQuestion(q: PackQuestion, where: string): void {
     }
 }
 
+/** Match the builder: registry entries must be in the same folded form that
+ * the app sends as player submissions. */
+function normalizedAnswers(answers: string[]): string[] {
+    const unique = new Set<string>();
+    for (const answer of answers) {
+        const normalized = normalizeAnswer(answer);
+        if (normalized) unique.add(normalized);
+    }
+    return [...unique];
+}
+
 function bigintReplacer(_k: string, v: unknown): unknown {
     return typeof v === "bigint" ? v.toString() : v;
 }
@@ -222,7 +233,7 @@ async function main(): Promise<void> {
         const regular: `0x${string}`[] = pack.questions.slice(resumeFrom).map((q) =>
             encodeFunctionData({
                 abi, functionName: "addQuestion",
-                args: [packId, q.text, q.answers, false, 0],
+                args: [packId, q.text, normalizedAnswers(q.answers), false, 0],
             }),
         );
 
@@ -267,7 +278,7 @@ async function main(): Promise<void> {
         for (const [d, name] of (["easy", "medium", "hard"] as const).entries()) {
             const data = encodeFunctionData({
                 abi, functionName: "addQuestion",
-                args: [packId, pack.finals[name].text, pack.finals[name].answers, true, d],
+                args: [packId, pack.finals[name].text, normalizedAnswers(pack.finals[name].answers), true, d],
             });
             try {
                 const price = await dryRun(data);

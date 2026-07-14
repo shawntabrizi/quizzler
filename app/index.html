@@ -284,11 +284,11 @@
                     </div>
                     <div class="grow">
                         <label for="cfg-answer-secs">Answer time (s)</label>
-                        <input type="number" id="cfg-answer-secs" data-testid="cfg-answer-secs" value="60" min="12" max="3600" />
+                        <input type="number" id="cfg-answer-secs" data-testid="cfg-answer-secs" value="60" min="12" max="1200" />
                     </div>
                     <div class="grow">
                         <label for="cfg-review-secs">Review time (s)</label>
-                        <input type="number" id="cfg-review-secs" data-testid="cfg-review-secs" value="45" min="12" max="3600" />
+                        <input type="number" id="cfg-review-secs" data-testid="cfg-review-secs" value="45" min="12" max="1200" />
                     </div>
                     <div class="grow">
                         <label for="cfg-max-players">Max players</label>
@@ -398,7 +398,7 @@
             </div>
             <div class="card" id="submitted-card" style="display: none;" data-testid="submitted-card">
                 <h2>Answers so far</h2>
-                <p class="hint">Correct answers are revealed when everyone locks in.</p>
+                <p class="hint">Submitted answers and wagers appear as players lock in. Correctness is revealed in review.</p>
                 <ul class="list" id="live-answers" data-testid="live-answers"></ul>
             </div>
         </section>
