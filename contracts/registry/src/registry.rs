@@ -34,6 +34,10 @@ const fn final_slot(difficulty: u8) -> u8 {
 struct PackMeta {
     creator: [u8; 20],
     title: String,
+    /// Immutable display artwork selected when the pack is created. The
+    /// contract deliberately stores the original UTF-8 string rather than a
+    /// client-specific emoji ID, so every client can render the same artwork.
+    emoji: String,
     regular_count: u8,
     finals_set: [bool; 3],
     sealed: bool,
@@ -49,6 +53,7 @@ struct Question {
 struct PackView {
     creator: pvm::Address,
     title: String,
+    emoji: String,
     regular_count: u8,
     finals_set_count: u8,
     sealed: bool,
@@ -98,10 +103,18 @@ mod registry {
         Ok(())
     }
 
+    /// Create a pack with immutable, creator-selected display artwork.
+    ///
+    /// `emoji` is intentionally stored as raw UTF-8 rather than an artwork
+    /// enum. That keeps pack identity portable between clients and supports
+    /// multi-codepoint emoji such as flags and skin-tone/ZWJ sequences.
     #[pvm::method]
-    pub fn create_pack(title: String) {
+    pub fn create_pack(title: String, emoji: String) {
         if title.is_empty() || title.len() > MAX_TITLE_BYTES {
             fail("BadTitle");
+        }
+        if !logic::valid_pack_emoji(&emoji) {
+            fail("BadEmoji");
         }
         let creator = caller20();
         let id = Storage::pack_count().get().unwrap_or(0);
@@ -110,6 +123,7 @@ mod registry {
             &PackMeta {
                 creator,
                 title,
+                emoji,
                 regular_count: 0,
                 finals_set: [false; 3],
                 sealed: false,
@@ -217,6 +231,7 @@ mod registry {
         PackView {
             creator: pvm::Address::from(m.creator),
             title: m.title,
+            emoji: m.emoji,
             regular_count: m.regular_count,
             finals_set_count: m.finals_set.iter().filter(|&&s| s).count() as u8,
             sealed: m.sealed,

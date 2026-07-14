@@ -17,7 +17,11 @@
         "typecheck:tools": "tsc -p tsconfig.tools.json",
         "validate:packs": "tsx scripts/validate-packs.ts",
         "deploy:contract": "tsx scripts/deploy.ts",
+        "deploy:registry-migration": "DEPLOY_REGISTRY_MIGRATION=1 tsx scripts/deploy.ts",
+        "deploy:e2e-contracts": "DEPLOY_E2E_PROFILE=1 tsx scripts/deploy.ts",
         "seed:packs": "tsx scripts/seed-packs.ts",
+        "seed:registry-migration": "SEED_REGISTRY_MIGRATION=1 tsx scripts/seed-packs.ts",
+        "promote:registry-migration": "tsx scripts/promote-registry-migration.ts",
         "test:e2e": "playwright test",
         "test:e2e:ui": "playwright test --ui"
     },

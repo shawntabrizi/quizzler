@@ -1,0 +1,15 @@
+{
+    "version": 1,
+    "packs": [
+        { "file": "01-general-knowledge.json", "title": "General Knowledge", "emoji": "🧠" },
+        { "file": "02-movies-tv.json", "title": "Movies & TV", "emoji": "🎬" },
+        { "file": "03-music.json", "title": "Music", "emoji": "🎵" },
+        { "file": "04-science-nature.json", "title": "Science & Nature", "emoji": "🔬" },
+        { "file": "05-geography.json", "title": "Geography", "emoji": "🌍" },
+        { "file": "06-history.json", "title": "History", "emoji": "🏛️" },
+        { "file": "07-sports.json", "title": "Sports", "emoji": "🏆" },
+        { "file": "08-food-drink.json", "title": "Food & Drink", "emoji": "🍜" },
+        { "file": "09-video-games.json", "title": "Video Games", "emoji": "🎮" },
+        { "file": "10-tech-crypto.json", "title": "Tech & Crypto", "emoji": "🤖" }
+    ]
+}

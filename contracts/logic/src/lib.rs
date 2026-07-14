@@ -13,6 +13,21 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
+/// Maximum UTF-8 byte length for a pack's creator-selected emoji artwork.
+/// This accommodates common ZWJ, skin-tone, and flag sequences while keeping
+/// display metadata's on-chain storage bounded.
+pub const MAX_PACK_EMOJI_BYTES: usize = 32;
+
+/// Validate the bounded artwork metadata the registry stores for each pack.
+///
+/// Full Unicode emoji classification would require a large, fast-moving
+/// Unicode table in the contract. The client supplies an emoji picker; the
+/// chain enforces the durable invariant needed by every valid modern sequence:
+/// a non-empty, bounded UTF-8 string.
+pub fn valid_pack_emoji(emoji: &str) -> bool {
+    !emoji.trim().is_empty() && emoji.len() <= MAX_PACK_EMOJI_BYTES
+}
+
 // ── Stages ───────────────────────────────────────────────────────────
 //
 // A game moves through stages paced purely by block number:

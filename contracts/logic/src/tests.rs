@@ -66,6 +66,24 @@ fn numbers_and_short_answers_require_exact_match() {
     assert_eq!(fuzz_allowance("leonardo dicaprio"), 2);
 }
 
+// ── Pack metadata ───────────────────────────────────────────────────
+
+#[test]
+fn pack_emoji_metadata_accepts_modern_sequences_with_bounded_storage() {
+    assert!(valid_pack_emoji("🎬"));
+    assert!(valid_pack_emoji("🇵🇹"), "flag sequence");
+    assert!(valid_pack_emoji("👩🏽‍🚀"), "skin-tone + ZWJ sequence");
+    assert!(valid_pack_emoji("👨‍👩‍👧‍👦"), "family ZWJ sequence");
+    assert!(!valid_pack_emoji(""));
+    assert!(!valid_pack_emoji("   "));
+    assert!(valid_pack_emoji("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"));
+    assert!(
+        !valid_pack_emoji("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
+        "33 UTF-8 bytes must be rejected"
+    );
+    assert_eq!(MAX_PACK_EMOJI_BYTES, 32);
+}
+
 // ── Phase machine ────────────────────────────────────────────────────
 
 const CFG: PhaseConfig = PhaseConfig {

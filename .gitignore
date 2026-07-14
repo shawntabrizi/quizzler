@@ -12,3 +12,7 @@ playwright-report/
 # misc
 .DS_Store
 *.local
+
+# resumable, unpromoted registry migration state (contains live testnet addresses)
+app/.quizzler-registry-migration.json
+app/.quizzler-e2e-contract-address.json
