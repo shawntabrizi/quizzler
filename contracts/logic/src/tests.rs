@@ -137,6 +137,8 @@ fn lobby_and_finished_do_not_roll() {
     assert_eq!(roll(lobby, &CFG, 1_000_000).0, lobby);
     let done = clock(STAGE_FINISHED, 2, 65);
     assert_eq!(roll(done, &CFG, 1_000_000).0, done);
+    let abandoned = clock(STAGE_ABANDONED, 0, 12);
+    assert_eq!(roll(abandoned, &CFG, 1_000_000).0, abandoned);
 }
 
 #[test]
@@ -171,6 +173,14 @@ fn overturn_thresholds() {
     assert_eq!(overturn_threshold(4), 2);
     assert_eq!(overturn_threshold(5), 3);
     assert_eq!(overturn_threshold(10), 5);
+}
+
+#[test]
+fn eligible_voter_majorities_cover_forfeited_targets() {
+    assert_eq!(majority_threshold(1), 1);
+    assert_eq!(majority_threshold(2), 2);
+    assert_eq!(majority_threshold(3), 2);
+    assert_eq!(majority_threshold(4), 3);
 }
 
 #[test]

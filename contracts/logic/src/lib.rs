@@ -44,6 +44,9 @@ pub const STAGE_VOTE: u8 = 3;
 pub const STAGE_FINAL_ANSWER: u8 = 4;
 pub const STAGE_FINAL_REVIEW: u8 = 5;
 pub const STAGE_FINISHED: u8 = 6;
+/// Everyone explicitly left before the quiz could finish. Unlike Finished,
+/// this is not a scored result, but it is equally terminal and untimed.
+pub const STAGE_ABANDONED: u8 = 7;
 
 /// Question-slot key used for the final question in per-question storage maps
 /// (regular questions use their index 0..num_questions).
@@ -221,8 +224,17 @@ pub fn answer_matches(submitted: &str, accepted: &[String]) -> bool {
 /// players. With fewer than 3 players there is no jury (threshold 1 with
 /// 2 players means the single opponent decides — which is the fun outcome).
 pub fn overturn_threshold(player_count: u32) -> u32 {
-    let others = player_count.saturating_sub(1);
-    others / 2 + 1
+    majority_threshold(player_count.saturating_sub(1))
+}
+
+/// Strict majority needed from a known set of eligible voters.
+///
+/// The regular overturn helper removes the answer's owner first. A player
+/// who has forfeited is no longer eligible, however, so historical answers
+/// can have every active player as an eligible voter. Keep that case explicit
+/// rather than smuggling it through a misleading total-player count.
+pub fn majority_threshold(eligible_voters: u32) -> u32 {
+    eligible_voters / 2 + 1
 }
 
 /// Majority difficulty, ties broken toward harder; no votes at all → medium.

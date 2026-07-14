@@ -23,7 +23,8 @@ use alloc::string::String;
 
 use logic::{DIFFICULTY_UNSET, GameClock, PhaseConfig};
 use logic::{
-    STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE,
+    STAGE_ABANDONED, STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY,
+    STAGE_REVIEW, STAGE_VOTE,
 };
 use pvm::{Decode, Encode, HostFn};
 use pvm_contract as pvm;
@@ -76,7 +77,11 @@ struct GameView {
     answer_blocks: u32,
     review_blocks: u32,
     max_players: u8,
+    /// Historical roster size. It is fixed after the lobby starts so scores
+    /// and submitted answers retain a stable order.
     player_count: u8,
+    /// Players who have not permanently forfeited the running quiz.
+    active_player_count: u8,
 }
 
 #[derive(pvm::SolAbi)]
@@ -93,7 +98,12 @@ struct PhaseView {
     slot: u8,
     submit_count: u32,
     continue_count: u32,
+    /// Historical roster size (all lobby players, or all participants after
+    /// the game starts).
     player_count: u8,
+    /// Current quorum size. UI progress and early-collapse rules must use
+    /// this rather than the historical roster after somebody forfeits.
+    active_player_count: u8,
 }
 
 #[derive(pvm::SolAbi)]
@@ -105,6 +115,9 @@ struct SubmissionView {
     correct: bool,
     overturn_votes: u32,
     continue_ready: bool,
+    /// False after a participant permanently forfeits. Their prior answer and
+    /// score remain visible, but they no longer count toward future quorums.
+    active: bool,
 }
 
 /// Mirror of the registry's PackStatus view (cross-contract decode target).
@@ -125,17 +138,18 @@ struct Storage {
     game_meta: pvm::storage::Mapping<u64, GameMeta>,
     players: pvm::storage::Mapping<u64, Vec<[u8; 20]>>,
     scores: pvm::storage::Mapping<(u64, [u8; 20]), u32>,
+    // A lobby roster is physically mutable. Once a quiz starts the roster is
+    // historical, and this flag excludes a forfeiter from future quorums
+    // without erasing their score or submitted answers.
+    forfeited: pvm::storage::Mapping<(u64, [u8; 20]), bool>,
     // (game, question_key, player)
     submissions: pvm::storage::Mapping<(u64, u8, [u8; 20]), Submission>,
-    submit_count: pvm::storage::Mapping<(u64, u8), u32>,
     continue_flags: pvm::storage::Mapping<(u64, u8, [u8; 20]), bool>,
-    continue_count: pvm::storage::Mapping<(u64, u8), u32>,
     // (game, question_key, target) → votes to overturn target's wrong answer
-    overturn_votes: pvm::storage::Mapping<(u64, u8, [u8; 20]), u32>,
     overturn_voted: pvm::storage::Mapping<(u64, u8, [u8; 20], [u8; 20]), bool>,
-    difficulty_voted: pvm::storage::Mapping<(u64, [u8; 20]), bool>,
-    difficulty_counts: pvm::storage::Mapping<(u64, u8), u32>,
-    difficulty_total: pvm::storage::Mapping<u64, u32>,
+    // The individual choice lets a later forfeit remove an already-cast vote
+    // from both the live quorum and the final difficulty resolution.
+    difficulty_choice: pvm::storage::Mapping<(u64, [u8; 20]), u8>,
     // bitmask of wager values (bits 1..=10) already spent by a player
     used_wagers: pvm::storage::Mapping<(u64, [u8; 20]), u16>,
     // creator → newest game they created (codes shift under reorgs, so
@@ -276,20 +290,86 @@ fn load_players(game_id: u64) -> Vec<[u8; 20]> {
     Storage::players().get(&game_id).unwrap_or_default()
 }
 
-fn require_player(game_id: u64, who: &[u8; 20]) -> u32 {
+fn is_roster_player(game_id: u64, who: &[u8; 20]) -> bool {
+    load_players(game_id).iter().any(|p| p == who)
+}
+
+/// A lobby roster contains only current members. Once play begins, the roster
+/// becomes historical and a forfeited flag controls future participation.
+fn is_active_player(game_id: u64, who: &[u8; 20]) -> bool {
+    is_roster_player(game_id, who) && !Storage::forfeited().get(&(game_id, *who)).unwrap_or(false)
+}
+
+fn active_player_count(game_id: u64) -> u32 {
+    load_players(game_id)
+        .iter()
+        .filter(|player| is_active_player(game_id, player))
+        .count() as u32
+}
+
+fn require_active_player(game_id: u64, who: &[u8; 20]) -> u32 {
     let players = load_players(game_id);
     if !players.iter().any(|p| p == who) {
         fail("NotAPlayer");
     }
-    players.len() as u32
+    if Storage::forfeited().get(&(game_id, *who)).unwrap_or(false) {
+        fail("PlayerForfeited");
+    }
+    active_player_count(game_id)
 }
 
-fn stored_difficulty_counts(game_id: u64) -> [u32; 3] {
-    [
-        Storage::difficulty_counts().get(&(game_id, 0)).unwrap_or(0),
-        Storage::difficulty_counts().get(&(game_id, 1)).unwrap_or(0),
-        Storage::difficulty_counts().get(&(game_id, 2)).unwrap_or(0),
-    ]
+fn active_submission_count(game_id: u64, question_key: u8) -> u32 {
+    load_players(game_id)
+        .iter()
+        .filter(|player| is_active_player(game_id, player))
+        .filter(|player| Storage::submissions().contains(&(game_id, question_key, **player)))
+        .count() as u32
+}
+
+fn active_continue_count(game_id: u64, question_key: u8) -> u32 {
+    load_players(game_id)
+        .iter()
+        .filter(|player| is_active_player(game_id, player))
+        .filter(|player| Storage::continue_flags().contains(&(game_id, question_key, **player)))
+        .count() as u32
+}
+
+fn active_difficulty_counts(game_id: u64) -> [u32; 3] {
+    let mut counts = [0; 3];
+    for player in load_players(game_id)
+        .iter()
+        .filter(|player| is_active_player(game_id, player))
+    {
+        if let Some(difficulty) = Storage::difficulty_choice().get(&(game_id, *player)) {
+            if difficulty < 3 {
+                counts[difficulty as usize] += 1;
+            }
+        }
+    }
+    counts
+}
+
+fn active_difficulty_total(game_id: u64) -> u32 {
+    active_difficulty_counts(game_id).iter().sum()
+}
+
+fn active_overturn_votes(game_id: u64, question_key: u8, target: &[u8; 20]) -> u32 {
+    load_players(game_id)
+        .iter()
+        .filter(|player| is_active_player(game_id, player))
+        .filter(|player| {
+            Storage::overturn_voted().contains(&(game_id, question_key, *target, **player))
+        })
+        .count() as u32
+}
+
+fn active_overturn_voters(game_id: u64, target: &[u8; 20]) -> u32 {
+    let active = active_player_count(game_id);
+    if is_active_player(game_id, target) {
+        active.saturating_sub(1)
+    } else {
+        active
+    }
 }
 
 /// Apply timeout transitions to the stored clock; resolves the final
@@ -297,7 +377,7 @@ fn stored_difficulty_counts(game_id: u64) -> [u32; 3] {
 fn settle(game_id: u64, m: &mut GameMeta) {
     let (clock, crossed_vote) = logic::roll(clock_of(m), &cfg_of(m), current_block());
     if crossed_vote && m.final_difficulty == DIFFICULTY_UNSET {
-        m.final_difficulty = logic::resolve_difficulty(stored_difficulty_counts(game_id));
+        m.final_difficulty = logic::resolve_difficulty(active_difficulty_counts(game_id));
     }
     m.stage = clock.stage;
     m.cursor = clock.cursor;
@@ -307,12 +387,33 @@ fn settle(game_id: u64, m: &mut GameMeta) {
 /// Early collapse: everyone has acted, advance one stage right now.
 fn collapse(game_id: u64, m: &mut GameMeta) {
     if m.stage == STAGE_VOTE && m.final_difficulty == DIFFICULTY_UNSET {
-        m.final_difficulty = logic::resolve_difficulty(stored_difficulty_counts(game_id));
+        m.final_difficulty = logic::resolve_difficulty(active_difficulty_counts(game_id));
     }
     let (stage, cursor) = logic::next_stage(m.stage, m.cursor, m.num_questions);
     m.stage = stage;
     m.cursor = cursor;
     m.anchor = current_block();
+}
+
+/// A forfeit can reduce the current quorum. Re-evaluate exactly the action
+/// that is live, counting only active players rather than stale aggregates.
+fn collapse_if_everyone_ready(game_id: u64, m: &mut GameMeta) {
+    let active = active_player_count(game_id);
+    if active == 0 {
+        m.stage = STAGE_ABANDONED;
+        m.anchor = current_block();
+        return;
+    }
+    let question_key = logic::question_key(&clock_of(m));
+    let ready = match m.stage {
+        STAGE_ANSWER | STAGE_FINAL_ANSWER => active_submission_count(game_id, question_key),
+        STAGE_REVIEW | STAGE_FINAL_REVIEW => active_continue_count(game_id, question_key),
+        STAGE_VOTE => active_difficulty_total(game_id),
+        _ => return,
+    };
+    if ready >= active {
+        collapse(game_id, m);
+    }
 }
 
 fn save_game(game_id: u64, m: &GameMeta) {
@@ -342,11 +443,14 @@ mod quizzler {
     // imports into the module, which a `use super::*` would collide with.
     use super::{
         DIFFICULTY_UNSET, GameMeta, GameView, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS, MAX_PLAYERS,
-        MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ANSWER, STAGE_FINAL_ANSWER,
+        MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ABANDONED, STAGE_ANSWER, STAGE_FINAL_ANSWER,
         STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE, Storage, Submission,
-        SubmissionView, active_slot, caller20, cfg_of, clock_of, collapse, current_block, fail,
-        gen_game_code, load_game, load_players, logic, pvm, registry_answers, registry_pack_status,
-        require_player, save_game, settle,
+        SubmissionView, active_continue_count, active_difficulty_counts, active_difficulty_total,
+        active_overturn_voters, active_overturn_votes, active_player_count, active_slot,
+        active_submission_count, caller20, cfg_of, clock_of, collapse, collapse_if_everyone_ready,
+        current_block, fail, gen_game_code, is_active_player, is_roster_player, load_game,
+        load_players, logic, pvm, registry_answers, registry_pack_status, require_active_player,
+        save_game, settle,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -436,14 +540,44 @@ mod quizzler {
         Storage::scores().insert(&(game_id, who), &0);
     }
 
+    /// Leave an unstarted lobby. The roster remains ordered by arrival, so if
+    /// the current starter leaves the next-longest-waiting player inherits the
+    /// one temporary lobby privilege: starting the quiz.
+    #[pvm::method]
+    pub fn leave_lobby(game_id: u64) {
+        let mut meta = load_game(game_id);
+        if meta.stage != STAGE_LOBBY {
+            fail("LobbyClosed");
+        }
+        let who = caller20();
+        let mut players = load_players(game_id);
+        let Some(index) = players.iter().position(|player| *player == who) else {
+            fail("NotAPlayer");
+        };
+        players.remove(index);
+        // A later rejoin is a fresh lobby arrival, even if a future contract
+        // version wrote this flag before the lobby began.
+        Storage::forfeited().remove(&(game_id, who));
+        Storage::players().insert(&game_id, &players);
+        if players.is_empty() {
+            meta.stage = STAGE_ABANDONED;
+            meta.anchor = current_block();
+        }
+        save_game(game_id, &meta);
+    }
+
     #[pvm::method]
     pub fn start_game(game_id: u64) {
         let mut meta = load_game(game_id);
         if meta.stage != STAGE_LOBBY {
             fail("GameAlreadyStarted");
         }
-        if meta.creator != caller20() {
-            fail("NotGameCreator");
+        let starter = match load_players(game_id).first() {
+            Some(player) => *player,
+            None => fail("LobbyEmpty"),
+        };
+        if starter != caller20() {
+            fail("NotLobbyStarter");
         }
         meta.stage = STAGE_ANSWER;
         meta.cursor = 0;
@@ -461,7 +595,7 @@ mod quizzler {
             fail("NotAcceptingAnswers");
         }
         let who = caller20();
-        let player_count = require_player(game_id, &who);
+        let active_count = require_active_player(game_id, &who);
         let qkey = logic::question_key(&clock_of(&meta));
 
         if Storage::submissions().contains(&(game_id, qkey, who)) {
@@ -509,9 +643,7 @@ mod quizzler {
                 correct,
             },
         );
-        let submitted = Storage::submit_count().get(&(game_id, qkey)).unwrap_or(0) + 1;
-        Storage::submit_count().insert(&(game_id, qkey), &submitted);
-        if submitted >= player_count {
+        if active_submission_count(game_id, qkey) >= active_count {
             collapse(game_id, &mut meta);
         }
         save_game(game_id, &meta);
@@ -527,10 +659,13 @@ mod quizzler {
             fail("NotInReview");
         }
         let voter = caller20();
-        let player_count = require_player(game_id, &voter);
+        require_active_player(game_id, &voter);
         let target20: [u8; 20] = target.to_fixed_bytes();
         if voter == target20 {
             fail("CannotVoteForSelf");
+        }
+        if !is_roster_player(game_id, &target20) {
+            fail("NotAPlayer");
         }
         let qkey = logic::question_key(&clock_of(&meta));
 
@@ -545,13 +680,9 @@ mod quizzler {
             fail("AlreadyVoted");
         }
         Storage::overturn_voted().insert(&(game_id, qkey, target20, voter), &true);
-        let votes = Storage::overturn_votes()
-            .get(&(game_id, qkey, target20))
-            .unwrap_or(0)
-            + 1;
-        Storage::overturn_votes().insert(&(game_id, qkey, target20), &votes);
 
-        if votes >= logic::overturn_threshold(player_count) {
+        let votes = active_overturn_votes(game_id, qkey, &target20);
+        if votes >= logic::majority_threshold(active_overturn_voters(game_id, &target20)) {
             sub.correct = true;
             Storage::submissions().insert(&(game_id, qkey, target20), &sub);
             let score = Storage::scores().get(&(game_id, target20)).unwrap_or(0);
@@ -576,15 +707,13 @@ mod quizzler {
             fail("NotInReview");
         }
         let who = caller20();
-        let player_count = require_player(game_id, &who);
+        let active_count = require_active_player(game_id, &who);
         let qkey = logic::question_key(&clock_of(&meta));
         if Storage::continue_flags().contains(&(game_id, qkey, who)) {
             fail("AlreadyContinued");
         }
         Storage::continue_flags().insert(&(game_id, qkey, who), &true);
-        let count = Storage::continue_count().get(&(game_id, qkey)).unwrap_or(0) + 1;
-        Storage::continue_count().insert(&(game_id, qkey), &count);
-        if count >= player_count {
+        if active_continue_count(game_id, qkey) >= active_count {
             collapse(game_id, &mut meta);
         }
         save_game(game_id, &meta);
@@ -603,21 +732,33 @@ mod quizzler {
             fail("BadDifficulty");
         }
         let who = caller20();
-        let player_count = require_player(game_id, &who);
-        if Storage::difficulty_voted().contains(&(game_id, who)) {
+        let active_count = require_active_player(game_id, &who);
+        if Storage::difficulty_choice().contains(&(game_id, who)) {
             fail("AlreadyVoted");
         }
-        Storage::difficulty_voted().insert(&(game_id, who), &true);
-        let count = Storage::difficulty_counts()
-            .get(&(game_id, difficulty))
-            .unwrap_or(0)
-            + 1;
-        Storage::difficulty_counts().insert(&(game_id, difficulty), &count);
-        let total = Storage::difficulty_total().get(&game_id).unwrap_or(0) + 1;
-        Storage::difficulty_total().insert(&game_id, &total);
-        if total >= player_count {
+        Storage::difficulty_choice().insert(&(game_id, who), &difficulty);
+        if active_difficulty_total(game_id) >= active_count {
             collapse(game_id, &mut meta);
         }
+        save_game(game_id, &meta);
+    }
+
+    /// Permanently stop participating in a running quiz. Historic answers and
+    /// scores remain readable, but the player no longer blocks later answer,
+    /// review, or difficulty-vote quorums.
+    #[pvm::method]
+    pub fn forfeit_game(game_id: u64) {
+        let mut meta = load_game(game_id);
+        settle(game_id, &mut meta);
+        match meta.stage {
+            STAGE_ANSWER | STAGE_REVIEW | STAGE_VOTE | STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => {}
+            STAGE_LOBBY => fail("UseLeaveLobby"),
+            _ => fail("GameNotActive"),
+        }
+        let who = caller20();
+        require_active_player(game_id, &who);
+        Storage::forfeited().insert(&(game_id, who), &true);
+        collapse_if_everyone_ready(game_id, &mut meta);
         save_game(game_id, &meta);
     }
 
@@ -649,6 +790,7 @@ mod quizzler {
             review_blocks: m.review_blocks,
             max_players: m.max_players,
             player_count: load_players(game_id).len() as u8,
+            active_player_count: active_player_count(game_id) as u8,
         }
     }
 
@@ -669,11 +811,12 @@ mod quizzler {
             _ => 0xff,
         };
         // During the difficulty vote there is no per-question submit counter;
-        // surface the vote tally in its place so the client sees progress.
+        // surface the active vote tally in its place so the client sees
+        // progress. Every count intentionally filters forfeited players.
         let submit_count = if m.stage == STAGE_VOTE {
-            Storage::difficulty_total().get(&game_id).unwrap_or(0)
+            active_difficulty_total(game_id)
         } else {
-            Storage::submit_count().get(&(game_id, qkey)).unwrap_or(0)
+            active_submission_count(game_id, qkey)
         };
         PhaseView {
             stage: m.stage,
@@ -683,8 +826,9 @@ mod quizzler {
             final_difficulty: m.final_difficulty,
             slot,
             submit_count,
-            continue_count: Storage::continue_count().get(&(game_id, qkey)).unwrap_or(0),
+            continue_count: active_continue_count(game_id, qkey),
             player_count: load_players(game_id).len() as u8,
+            active_player_count: active_player_count(game_id) as u8,
         }
     }
 
@@ -705,6 +849,15 @@ mod quizzler {
             .collect()
     }
 
+    /// Whether `who` is still an active participant. This is deliberately
+    /// narrower than `get_players`: after a forfeit, the address remains in
+    /// the historical scorecard but may not re-enter or act in the quiz.
+    #[pvm::method]
+    pub fn is_player_active(game_id: u64, who: pvm::Address) -> bool {
+        load_game(game_id);
+        is_active_player(game_id, &who.to_fixed_bytes())
+    }
+
     /// Per-player submission state for a question key (question index, or
     /// 0xff for the final question), in `get_players` order.
     #[pvm::method]
@@ -720,14 +873,13 @@ mod quizzler {
                         answer: s.answer,
                         wager: s.wager,
                         correct: s.correct,
-                        overturn_votes: Storage::overturn_votes()
-                            .get(&(game_id, question_key, *p))
-                            .unwrap_or(0),
+                        overturn_votes: active_overturn_votes(game_id, question_key, p),
                         continue_ready: Storage::continue_flags().contains(&(
                             game_id,
                             question_key,
                             *p,
                         )),
+                        active: is_active_player(game_id, p),
                     },
                     None => SubmissionView {
                         player: pvm::Address::from(*p),
@@ -741,6 +893,7 @@ mod quizzler {
                             question_key,
                             *p,
                         )),
+                        active: is_active_player(game_id, p),
                     },
                 },
             )
