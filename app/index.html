@@ -95,6 +95,7 @@
         .grow { flex: 1; min-width: 120px; }
 
         label { display: block; color: var(--fg-secondary); font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
+        .answer-inputs { display: grid; gap: 8px; }
 
         input[type="text"], input[type="number"], select {
             width: 100%;
@@ -337,8 +338,14 @@
                     </div>
                     <div class="row">
                         <div class="grow">
-                            <label for="q-answers">Accepted answers (comma-separated, up to 5)</label>
-                            <input type="text" id="q-answers" data-testid="q-answers" placeholder="Paris" />
+                            <label for="q-answers">Accepted answers (up to 5)</label>
+                            <div class="answer-inputs">
+                                <input type="text" id="q-answers" class="q-answer" data-testid="q-answers" placeholder="First accepted answer" maxlength="64" />
+                                <input type="text" class="q-answer" aria-label="Accepted answer 2" placeholder="Optional alternative" maxlength="64" />
+                                <input type="text" class="q-answer" aria-label="Accepted answer 3" placeholder="Optional alternative" maxlength="64" />
+                                <input type="text" class="q-answer" aria-label="Accepted answer 4" placeholder="Optional alternative" maxlength="64" />
+                                <input type="text" class="q-answer" aria-label="Accepted answer 5" placeholder="Optional alternative" maxlength="64" />
+                            </div>
                         </div>
                     </div>
                     <div class="row">

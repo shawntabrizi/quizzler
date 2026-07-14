@@ -616,6 +616,7 @@ getEl<HTMLInputElement>("join-game-id").addEventListener("keydown", (event) => {
 const $builderError = getEl("builder-error");
 const $builderProgress = getEl("builder-progress");
 const $btnSeal = getEl<HTMLButtonElement>("btn-seal-pack");
+const $builderAnswerInputs = [...document.querySelectorAll<HTMLInputElement>(".q-answer")];
 
 getEl("btn-new-pack").addEventListener("click", () => {
     builderPackId = null;
@@ -623,7 +624,7 @@ getEl("btn-new-pack").addEventListener("click", () => {
     builderFinals.fill(false);
     getEl<HTMLInputElement>("pack-title").value = "";
     getEl<HTMLInputElement>("q-text").value = "";
-    getEl<HTMLInputElement>("q-answers").value = "";
+    for (const input of $builderAnswerInputs) input.value = "";
     getEl<HTMLSelectElement>("q-kind").value = "regular";
     getEl("builder-title").textContent = "New pack";
     getEl("builder-create-row").style.display = "";
@@ -676,10 +677,7 @@ getEl("btn-add-question").addEventListener("click", async () => {
     if (busy || builderPackId === null || !productAccount) return;
     $builderError.textContent = "";
     const text = getEl<HTMLInputElement>("q-text").value.trim();
-    const enteredAnswers = getEl<HTMLInputElement>("q-answers").value
-        .split(",")
-        .map((a) => a.trim())
-        .filter((a) => a.length > 0);
+    const enteredAnswers = $builderAnswerInputs.map((input) => input.value.trim()).filter(Boolean);
     const kind = getEl<HTMLSelectElement>("q-kind").value;
     if (!text || enteredAnswers.length === 0) {
         $builderError.textContent = "A question needs text and at least one answer.";
@@ -737,7 +735,7 @@ getEl("btn-add-question").addEventListener("click", async () => {
             li(span("sub", tag), span("", ` ${text}`)),
         );
         getEl<HTMLInputElement>("q-text").value = "";
-        getEl<HTMLInputElement>("q-answers").value = "";
+        for (const input of $builderAnswerInputs) input.value = "";
         updateBuilderProgress();
     } catch (e) {
         $builderError.textContent = txError(e);
