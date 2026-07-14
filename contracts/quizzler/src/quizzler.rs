@@ -215,7 +215,10 @@ fn registry_call<T: pvm::SolAbi>(
     let mut output_buf = alloc::vec![0u8; out_cap];
     let mut output_ref: &mut [u8] = &mut output_buf[..];
     let result = pvm::api::call_evm(
-        pvm::CallFlags::ALLOW_REENTRY,
+        // Registry methods are pure reads. Keep the runtime's reentrancy
+        // guard in place and prevent a configured registry from changing
+        // state while the game is mid-transition.
+        pvm::CallFlags::READ_ONLY,
         &registry,
         u64::MAX,
         &[0u8; 32],
@@ -366,7 +369,7 @@ mod quizzler {
         answer_blocks: u32,
         review_blocks: u32,
         max_players: u8,
-    ) -> u64 {
+    ) {
         let pack = registry_pack_status(pack_id);
         if !pack.exists || !pack.sealed {
             fail("PackNotSealed");
@@ -408,7 +411,6 @@ mod quizzler {
         Storage::scores().insert(&(id, creator), &0);
         Storage::latest_game_of().insert(&creator, &id);
         Storage::game_count().set(&(seq + 1));
-        id
     }
 
     #[pvm::method]

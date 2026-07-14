@@ -100,7 +100,7 @@ mod registry {
     }
 
     #[pvm::method]
-    pub fn create_pack(title: String) -> u32 {
+    pub fn create_pack(title: String) {
         if title.is_empty() || title.len() > MAX_TITLE_BYTES {
             fail("BadTitle");
         }
@@ -118,7 +118,6 @@ mod registry {
         );
         Storage::latest_pack_of().insert(&creator, &id);
         Storage::pack_count().set(&(id + 1));
-        id
     }
 
     #[pvm::method]
