@@ -46,6 +46,7 @@ App (needs Node ≥ 22, pnpm):
 cd app
 pnpm install
 pnpm test                 # normalize-parity unit tests
+pnpm typecheck:tools      # type-check scripts, Playwright config, and E2E helpers
 pnpm validate:packs       # validate all starter-pack files offline
 pnpm deploy:contract      # deploy to Paseo Asset Hub (dev //Alice; writes src/contract-address.json)
 pnpm seed:packs           # seed shared/packs/*.json on-chain (resume-safe)
