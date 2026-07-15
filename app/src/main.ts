@@ -91,6 +91,31 @@ const POLL_FALLBACK_MS = 8_000;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
 
+// These marks are deliberately local-only: they make startup, catalog, and
+// first-snapshot timing visible in the browser Performance panel without
+// adding analytics, network requests, or player-visible work.
+const PERFORMANCE_PREFIX = "quizzler:";
+
+function performanceMark(name: string): string {
+    const mark = `${PERFORMANCE_PREFIX}${name}`;
+    try {
+        globalThis.performance?.mark(mark);
+    } catch {
+        // Performance entries are optional (and can be disabled by an embed).
+    }
+    return mark;
+}
+
+function performanceMeasure(name: string, startMark: string, endMark: string): void {
+    try {
+        globalThis.performance?.measure(`${PERFORMANCE_PREFIX}${name}`, startMark, endMark);
+    } catch {
+        // A missing/cleared mark must never affect the game itself.
+    }
+}
+
+const appStartMark = performanceMark("app:start");
+
 const registrySupportsPackEmoji = (registryAbi as Array<{
     type?: string;
     name?: string;
@@ -227,6 +252,8 @@ let latestObservedAt = 0;
 // Incremented whenever a game is entered or left. This distinguishes a new
 // session from a stale request even when the player re-enters the same game.
 let gameSession = 0;
+let gameEntryMark: string | null = null;
+let awaitingFirstGameSnapshot = false;
 
 // Once-per-game wager pool: value → correct? (undefined = still available)
 let wagerOutcomes = new Map<number, boolean>();
@@ -648,6 +675,7 @@ async function sealedPack(packId: number): Promise<PackView | null> {
 // ── Boot ─────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
+    const bootStartMark = performanceMark("boot:start");
     showScreen("boot");
     if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
         setConnectionStatus("no contract", "err");
@@ -655,6 +683,14 @@ async function init(): Promise<void> {
         bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
         return;
     }
+
+    // Runtime metadata is independent of the signer prompt. Start loading it
+    // now so the often-expensive descriptor parse overlaps the account flow.
+    const descriptorStartMark = performanceMark("descriptor:start");
+    const descriptorReady = import("@parity/product-sdk-descriptors/paseo-asset-hub");
+    // Keep an early import failure handled until the boot flow reaches it,
+    // avoiding an unhandled-rejection warning while a signer prompt is open.
+    void descriptorReady.catch(() => undefined);
 
     bootLog("Connecting signer…");
     const connectRes = await manager.connect();
@@ -664,6 +700,8 @@ async function init(): Promise<void> {
         return;
     }
     bootLog("Signer connected", "ok");
+    const signerConnectedMark = performanceMark("signer:connected");
+    performanceMeasure("signer:connect", bootStartMark, signerConnectedMark);
 
     bootLog("Requesting product account quizzler.dot/0…");
     const productRes = await manager.getProductAccount("quizzler.dot", 0);
@@ -679,15 +717,16 @@ async function init(): Promise<void> {
     bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
 
     bootLog("Opening chain client…");
-    // The chain descriptor carries substantial runtime metadata. Load it only
-    // once the visible boot flow reaches the chain step so first paint is not
-    // blocked by parsing it with the rest of the app bundle.
-    const { paseo_asset_hub } = await import("@parity/product-sdk-descriptors/paseo-asset-hub");
+    const { paseo_asset_hub } = await descriptorReady;
+    const descriptorReadyMark = performanceMark("descriptor:ready");
+    performanceMeasure("descriptor:load", descriptorStartMark, descriptorReadyMark);
     const client = await createChainClient({ chains: { assetHub: paseo_asset_hub } });
     assetHub = client.assetHub;
     bestBlocks = client.raw.assetHub.bestBlocks$;
     subscribeChainStatus();
     bootLog("Chain client ready", "ok");
+    const chainReadyMark = performanceMark("chain:ready");
+    performanceMeasure("chain:open", descriptorReadyMark, chainReadyMark);
 
     registry = createContractFromClient(
         client.raw.assetHub,
@@ -704,6 +743,12 @@ async function init(): Promise<void> {
         { signerManager: manager },
     );
     bootLog("Contract handles ready (registry + game)", "ok");
+
+    // Sealed packs are immutable. Restore their last known metadata for an
+    // instant picker on a return visit, then reconcile the current registry
+    // window in the background below.
+    hydratePackCatalogCache();
+    void refreshPacks();
 
     // One-time SS58 → H160 mapping required by pallet-revive for .tx().
     // Idempotent: costs one signature the first time, free afterwards.
@@ -727,10 +772,6 @@ async function init(): Promise<void> {
     void syncNextTxNonce();
 
     setConnectionStatus("connected", "ok");
-    // Pack browsing is unrelated to reopening a live room. Start it in the
-    // background so a refresh can return a player to the table without first
-    // waiting for catalog RPCs.
-    const packsReady = refreshPacks();
     const resume = await resumeSavedGame();
     if (resume === "resumed") return;
     let inviteError = "";
@@ -746,8 +787,9 @@ async function init(): Promise<void> {
             inviteError = $homeError.textContent || "Couldn’t join this shared lobby.";
         }
     }
-    await packsReady;
     showScreen("home");
+    const homeReadyMark = performanceMark("home:shown");
+    performanceMeasure("boot:to-home", appStartMark, homeReadyMark);
     renderResumeCard();
     if (inviteError) {
         $homeError.textContent = inviteError;
@@ -844,10 +886,15 @@ configureGameControls();
 
 type CatalogPack = PackView & PackListItem;
 
-let refreshingPacks = false;
+let refreshingPacks: Promise<void> | null = null;
+let communityRefresh: Promise<void> | null = null;
 let lastPackListSignature: string | null = null;
 let catalogPacks: CatalogPack[] = [];
 let packSearch = "";
+let knownPackCount = 0;
+let starterPacksLoading = false;
+let communityPacksLoading = false;
+let communityPacksRequested = false;
 // E2E runs can opt in to their disposable packs without exposing them to
 // players on the normal home screen.
 const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
@@ -857,6 +904,102 @@ const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
 // lots of new packs, without making home-screen refreshes unbounded.
 const PACK_RECENT_LIST_LIMIT = 100;
 const PACK_FETCH_CONCURRENCY = 6;
+const PACK_CATALOG_CACHE_VERSION = 1;
+const PACK_CATALOG_CACHE_LIMIT = STARTER_PACK_COUNT + PACK_RECENT_LIST_LIMIT;
+
+function packCatalogCacheKey(): string | null {
+    return isContractAddress(activeContracts.registry)
+        ? `quizzler:pack-catalog:${PACK_CATALOG_CACHE_VERSION}:${activeContracts.registry.toLowerCase()}`
+        : null;
+}
+
+function isCachedCatalogPack(value: unknown): value is CatalogPack {
+    if (value === null || typeof value !== "object") return false;
+    const pack = value as Partial<CatalogPack>;
+    return Number.isSafeInteger(pack.id)
+        && (pack.id as number) >= 0
+        && typeof pack.creator === "string"
+        && typeof pack.title === "string"
+        && (pack.emoji === undefined || typeof pack.emoji === "string")
+        && Number.isSafeInteger(pack.regular_count)
+        && (pack.regular_count as number) >= 0
+        && Number.isSafeInteger(pack.finals_set_count)
+        && (pack.finals_set_count as number) >= 0
+        && pack.sealed === true;
+}
+
+/** A sealed pack is immutable, so a validated local metadata cache is safe. */
+function hydratePackCatalogCache(): void {
+    const key = packCatalogCacheKey();
+    if (key === null) return;
+    try {
+        const raw = window.localStorage.getItem(key);
+        if (raw === null) return;
+        const cached = JSON.parse(raw) as { version?: unknown; packs?: unknown };
+        if (cached.version !== PACK_CATALOG_CACHE_VERSION || !Array.isArray(cached.packs)) return;
+        const byId = new Map<number, CatalogPack>();
+        for (const value of cached.packs) {
+            if (isCachedCatalogPack(value)) byId.set(value.id, value);
+        }
+        if (byId.size === 0) return;
+        catalogPacks = [...byId.values()].slice(0, PACK_CATALOG_CACHE_LIMIT);
+        for (const pack of catalogPacks) {
+            sealedPackCache.set(pack.id, pack);
+            packTitleCache.set(pack.id, pack.title);
+        }
+        renderPackList();
+        performanceMark("catalog:cache-restored");
+    } catch {
+        // Storage can be blocked or stale/corrupt. The registry remains the
+        // source of truth, so simply continue without the cache.
+    }
+}
+
+function persistPackCatalog(): void {
+    const key = packCatalogCacheKey();
+    if (key === null) return;
+    try {
+        window.localStorage.setItem(key, JSON.stringify({
+            version: PACK_CATALOG_CACHE_VERSION,
+            packs: catalogPacks.filter((pack) => pack.sealed).slice(0, PACK_CATALOG_CACHE_LIMIT),
+        }));
+    } catch {
+        // Private mode and quota limits should not affect normal browsing.
+    }
+}
+
+function starterPackIds(count: number): number[] {
+    return Array.from({ length: Math.min(count, STARTER_PACK_COUNT) }, (_, id) => id);
+}
+
+function communityPackIds(count: number): number[] {
+    return Array.from(
+        { length: Math.min(count, PACK_RECENT_LIST_LIMIT) },
+        (_, offset) => count - 1 - offset,
+    ).filter((id) => id >= STARTER_PACK_COUNT);
+}
+
+function retainCatalogWindow(count: number): void {
+    const allowed = new Set([...starterPackIds(count), ...communityPackIds(count)]);
+    const next = catalogPacks.filter((pack) => allowed.has(pack.id));
+    if (next.length === catalogPacks.length) return;
+    catalogPacks = next;
+    persistPackCatalog();
+    renderPackList();
+}
+
+function mergeCatalogPacks(packs: readonly CatalogPack[]): void {
+    const byId = new Map(catalogPacks.map((pack) => [pack.id, pack]));
+    let changed = false;
+    for (const pack of packs) {
+        if (byId.get(pack.id) !== pack) changed = true;
+        byId.set(pack.id, pack);
+    }
+    if (!changed) return;
+    catalogPacks = [...byId.values()];
+    persistPackCatalog();
+    renderPackList();
+}
 
 async function mapWithConcurrency<T, U>(
     items: readonly T[],
@@ -876,35 +1019,77 @@ async function mapWithConcurrency<T, U>(
     return results;
 }
 
-async function refreshPacks(): Promise<void> {
-    if (refreshingPacks) return;
-    refreshingPacks = true;
+function refreshPacks({ includeCommunity = getEl("screen-pack-select").classList.contains("active") }: {
+    includeCommunity?: boolean;
+} = {}): Promise<void> {
+    if (includeCommunity) communityPacksRequested = true;
+    if (refreshingPacks) return refreshingPacks;
+    starterPacksLoading = true;
+    renderPackList();
     const error = getEl("screen-pack-select").classList.contains("active")
         ? $packSelectionError
         : $homeError;
-    try {
-        await refreshPacksInner();
-        error.textContent = "";
-    } catch {
-        error.textContent = "Couldn’t refresh quiz packs. Retrying…";
-    } finally {
-        refreshingPacks = false;
-    }
+    const request = refreshStarterPacks()
+        .then(() => {
+            error.textContent = "";
+        })
+        .catch(() => {
+            error.textContent = "Couldn’t refresh quiz packs. Retrying…";
+        })
+        .finally(() => {
+            starterPacksLoading = false;
+            refreshingPacks = null;
+            renderPackList();
+            if (communityPacksRequested) {
+                communityPacksRequested = false;
+                requestCommunityPacks(knownPackCount);
+            }
+        });
+    refreshingPacks = request;
+    return request;
 }
 
-async function refreshPacksInner(): Promise<void> {
+async function refreshStarterPacks(): Promise<void> {
+    const startMark = performanceMark("catalog:starters:start");
     const countRes = await registry.packCount.query();
     if (!countRes.success) throw new Error("pack count query failed");
     const count = Number(countRes.value);
-    const starterIds = Array.from({ length: Math.min(count, STARTER_PACK_COUNT) }, (_, id) => id);
-    const recentIds = Array.from(
-        { length: Math.min(count, PACK_RECENT_LIST_LIMIT) },
-        (_, offset) => count - 1 - offset,
-    );
-    const ids = [...new Set([...starterIds, ...recentIds])];
+    knownPackCount = count;
+    retainCatalogWindow(count);
+    const ids = starterPackIds(count);
     const packs = await mapWithConcurrency(ids, PACK_FETCH_CONCURRENCY, sealedPack);
-    catalogPacks = packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]);
+    mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
+    const readyMark = performanceMark("catalog:starters:ready");
+    performanceMeasure("catalog:starters", startMark, readyMark);
+}
+
+/** Load the larger community window only after someone opens the picker. */
+function requestCommunityPacks(count: number): void {
+    if (count <= STARTER_PACK_COUNT || communityRefresh) return;
+    const ids = communityPackIds(count);
+    if (ids.length === 0) return;
+    communityPacksLoading = true;
     renderPackList();
+    const request = (async () => {
+        const startMark = performanceMark("catalog:community:start");
+        const packs = await mapWithConcurrency(ids, PACK_FETCH_CONCURRENCY, sealedPack);
+        mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
+        const readyMark = performanceMark("catalog:community:ready");
+        performanceMeasure("catalog:community", startMark, readyMark);
+    })().catch(() => {
+        // Keep the starter packs usable if a larger background refresh fails.
+        if (getEl("screen-pack-select").classList.contains("active")) {
+            $packSelectionError.textContent = "Couldn’t load more community packs yet.";
+        }
+    }).finally(() => {
+        communityPacksLoading = false;
+        communityRefresh = null;
+        renderPackList();
+        // If a newer count landed during this batch, fetch just its current
+        // recent window next rather than waiting for another picker visit.
+        if (knownPackCount > count) requestCommunityPacks(knownPackCount);
+    });
+    communityRefresh = request;
 }
 
 function questionCountLabel(pack: Pick<PackView, "regular_count">): string {
@@ -1011,7 +1196,24 @@ function packSection(title: string, packs: readonly CatalogPack[]): HTMLElement 
     return section;
 }
 
+function updatePackCatalogStatus(featured: readonly CatalogPack[], community: readonly CatalogPack[]): void {
+    const total = featured.length + community.length;
+    if (total === 0) {
+        $packCatalogStatus.textContent = starterPacksLoading || communityPacksLoading
+            ? "Loading quiz packs…"
+            : "";
+        return;
+    }
+    const parts: string[] = [];
+    if (featured.length > 0) parts.push(`${featured.length} featured`);
+    if (community.length > 0) parts.push(`${community.length} community`);
+    const status = `${parts.join(" · ")} ${total === 1 ? "pack" : "packs"}`;
+    $packCatalogStatus.textContent = communityPacksLoading ? `${status} · loading more…` : status;
+}
+
 function renderPackList(): void {
+    const { featured, community } = sectionPacks(catalogPacks, packSearch, showE2ETestPacks);
+    const total = featured.length + community.length;
     const signature = JSON.stringify(
         {
             packs: catalogPacks.map((pack) => [
@@ -1027,11 +1229,12 @@ function renderPackList(): void {
     );
     // Avoid replacing identical DOM nodes every five seconds: it preserves
     // keyboard focus and prevents needless layout work on a static catalog.
-    if (signature === lastPackListSignature) return;
+    if (signature === lastPackListSignature) {
+        updatePackCatalogStatus(featured, community);
+        return;
+    }
     const communityWasOpen = $packList.querySelector<HTMLDetailsElement>(".community-packs")?.open ?? false;
     lastPackListSignature = signature;
-    const { featured, community } = sectionPacks(catalogPacks, packSearch, showE2ETestPacks);
-    const total = featured.length + community.length;
     if (total === 0) {
         const empty = document.createElement("p");
         empty.className = "pack-empty";
@@ -1039,7 +1242,7 @@ function renderPackList(): void {
             ? `No packs match “${packSearch.trim()}”.`
             : "No sealed packs yet — create one!";
         $packList.replaceChildren(empty);
-        $packCatalogStatus.textContent = "";
+        updatePackCatalogStatus(featured, community);
         return;
     }
 
@@ -1058,11 +1261,7 @@ function renderPackList(): void {
         content.append(details);
     }
     $packList.replaceChildren(content);
-
-    const parts: string[] = [];
-    if (featured.length > 0) parts.push(`${featured.length} featured`);
-    if (community.length > 0) parts.push(`${community.length} community`);
-    $packCatalogStatus.textContent = `${parts.join(" · ")} ${total === 1 ? "pack" : "packs"}`;
+    updatePackCatalogStatus(featured, community);
 }
 
 $packSearch.addEventListener("input", () => {
@@ -1579,8 +1778,9 @@ function stopGamePolling(): void {
 
 /**
  * Best-block notifications get a refresh underway as soon as the chain moves,
- * instead of waiting for the next arbitrary two-second interval. A low-rate
- * fallback keeps the table live if the host's block subscription drops.
+ * and an immediate read prevents a newly joined/reopened table from waiting
+ * for the next block. A low-rate fallback keeps the table live if the host's
+ * block subscription drops.
  */
 function startGamePolling(): void {
     stopGamePolling();
@@ -1589,9 +1789,10 @@ function startGamePolling(): void {
             lastBlockSignalAt = Date.now();
             if (document.visibilityState === "visible") void poll();
         });
-    } else {
-        void poll();
     }
+    // Subscriptions only signal future blocks. Always reconcile once on entry
+    // so join, refresh, and invite links have a snapshot straight away.
+    void poll();
     pollTimer = setInterval(() => {
         if (document.visibilityState === "visible" && Date.now() - lastBlockSignalAt >= POLL_FALLBACK_MS) {
             void poll();
@@ -1602,6 +1803,8 @@ function startGamePolling(): void {
 function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     gameSession += 1;
     gameId = id;
+    gameEntryMark = performanceMark("game:entered");
+    awaitingFirstGameSnapshot = true;
     pendingAbandonedForfeit = null;
     rememberGame(id);
     latest = initialSnapshot;
@@ -1622,7 +1825,10 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     getEl<HTMLInputElement>("wager-final").value = "0";
     setGameActions("hidden");
     renderResumeCard();
-    if (initialSnapshot) render(initialSnapshot);
+    if (initialSnapshot) {
+        recordFirstGameSnapshot();
+        render(initialSnapshot);
+    }
     startGamePolling();
 }
 
@@ -1638,6 +1844,8 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     cachedPlayers = null;
     preferredQuestionKey = null;
     latestObservedAt = 0;
+    gameEntryMark = null;
+    awaitingFirstGameSnapshot = false;
     if (!preserveSavedGame) forgetSavedGame();
     if ($forfeitDialog.open) $forfeitDialog.close();
     setGameActions("hidden");
@@ -1649,6 +1857,14 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
 
 function isCurrentGame(id: bigint, session: number): boolean {
     return gameId === id && gameSession === session;
+}
+
+function recordFirstGameSnapshot(): void {
+    if (!awaitingFirstGameSnapshot || gameEntryMark === null) return;
+    const snapshotMark = performanceMark("game:first-snapshot");
+    performanceMeasure("game:time-to-first-snapshot", gameEntryMark, snapshotMark);
+    awaitingFirstGameSnapshot = false;
+    gameEntryMark = null;
 }
 
 getEl("btn-back-home").addEventListener("click", () => leaveGame());
@@ -1892,6 +2108,7 @@ async function poll(): Promise<void> {
             if (phase.stage === STAGE_ABANDONED && pendingAbandonedForfeit === polledGameId) {
                 latest = snap;
                 latestObservedAt = Date.now();
+                recordFirstGameSnapshot();
                 renderAbandoned(snap);
                 return;
             }
@@ -1906,6 +2123,7 @@ async function poll(): Promise<void> {
         }
         latest = snap;
         latestObservedAt = Date.now();
+        recordFirstGameSnapshot();
         // reset per-stage action guards when the stage changes
         const key = `${polledGameId}:${latest.phase.stage}:${latest.phase.cursor}`;
         if (key !== actionKey) {
