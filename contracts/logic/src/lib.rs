@@ -18,6 +18,11 @@ use alloc::vec::Vec;
 /// display metadata's on-chain storage bounded.
 pub const MAX_PACK_EMOJI_BYTES: usize = 32;
 
+/// Maximum UTF-8 byte length for a player-selected display name. Names are
+/// intentionally small: they travel with every live game snapshot and are a
+/// convenience label, not user-generated profile content.
+pub const MAX_PLAYER_NAME_BYTES: usize = 24;
+
 /// Validate the bounded artwork metadata the registry stores for each pack.
 ///
 /// Full Unicode emoji classification would require a large, fast-moving
@@ -25,7 +30,24 @@ pub const MAX_PACK_EMOJI_BYTES: usize = 32;
 /// chain enforces the durable invariant needed by every valid modern sequence:
 /// a non-empty, bounded UTF-8 string.
 pub fn valid_pack_emoji(emoji: &str) -> bool {
-    !emoji.trim().is_empty() && emoji.len() <= MAX_PACK_EMOJI_BYTES
+    !emoji.trim().is_empty()
+        && emoji.len() <= MAX_PACK_EMOJI_BYTES
+        && !emoji.chars().any(char::is_control)
+}
+
+/// Validate an optional player display name before it is kept in the global
+/// account-to-name mapping. Empty is handled by the game contract as an
+/// explicit request to clear a name; this helper validates stored values.
+///
+/// Requiring an already-trimmed value prevents a name that visually appears
+/// blank or indistinguishable from another name in compact party UI. Control
+/// characters are rejected so names are safe to place in one-line lobby and
+/// results rows without surprising layout or assistive technology.
+pub fn valid_player_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= MAX_PLAYER_NAME_BYTES
+        && name == name.trim()
+        && !name.chars().any(char::is_control)
 }
 
 // ── Stages ───────────────────────────────────────────────────────────

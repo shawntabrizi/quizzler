@@ -84,6 +84,19 @@ fn pack_emoji_metadata_accepts_modern_sequences_with_bounded_storage() {
     assert_eq!(MAX_PACK_EMOJI_BYTES, 32);
 }
 
+#[test]
+fn player_names_are_compact_single_line_labels() {
+    assert!(valid_player_name("Alex"));
+    assert!(valid_player_name("João 🎲"));
+    assert!(valid_player_name("123456789012345678901234"));
+    assert!(!valid_player_name(""));
+    assert!(!valid_player_name(" Alex"));
+    assert!(!valid_player_name("Alex "));
+    assert!(!valid_player_name("Alex\nBob"));
+    assert!(!valid_player_name("1234567890123456789012345"));
+    assert_eq!(MAX_PLAYER_NAME_BYTES, 24);
+}
+
 // ── Phase machine ────────────────────────────────────────────────────
 
 const CFG: PhaseConfig = PhaseConfig {

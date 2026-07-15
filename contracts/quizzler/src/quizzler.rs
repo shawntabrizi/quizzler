@@ -120,6 +120,36 @@ struct SubmissionView {
     active: bool,
 }
 
+/// One bounded read model for a live game. It combines the game metadata,
+/// settled phase, roster, scores, optional display names, and current-question
+/// submissions that otherwise require several sequential RPC calls.
+#[derive(pvm::SolAbi)]
+struct LiveGameView {
+    pack_id: u32,
+    creator: pvm::Address,
+    num_questions: u8,
+    answer_blocks: u32,
+    review_blocks: u32,
+    max_players: u8,
+    stage: u8,
+    cursor: u8,
+    deadline: u64,
+    current_block: u64,
+    final_difficulty: u8,
+    slot: u8,
+    submit_count: u32,
+    continue_count: u32,
+    player_count: u8,
+    active_player_count: u8,
+    players: alloc::vec::Vec<pvm::Address>,
+    scores: alloc::vec::Vec<u32>,
+    /// Parallel to `players`; an empty string means the client should fall
+    /// back to its normal abbreviated address label.
+    player_names: alloc::vec::Vec<String>,
+    /// Current question (or final-question) submissions in roster order.
+    submissions: alloc::vec::Vec<SubmissionView>,
+}
+
 /// Mirror of the registry's PackStatus view (cross-contract decode target).
 #[derive(pvm::SolAbi)]
 struct PackStatus {
@@ -155,6 +185,13 @@ struct Storage {
     // creator → newest game they created (codes shift under reorgs, so
     // clients resolve through this instead of scanning)
     latest_game_of: pvm::storage::Mapping<[u8; 20], u64>,
+    // (creator, client-selected nonce) → game code. This is stable under
+    // concurrent creation from the same account, unlike the latest pointer.
+    created_game_of: pvm::storage::Mapping<([u8; 20], u64), u64>,
+    // Optional, global social label for an account. A blank mapping value is
+    // intentionally represented by an absent entry so legacy UI can retain
+    // address labels as a safe fallback.
+    display_names: pvm::storage::Mapping<[u8; 20], String>,
 }
 
 // ── Host helpers ─────────────────────────────────────────────────────
@@ -180,8 +217,7 @@ fn current_block() -> u64 {
 /// strangers don't stumble into (or grief) games by guessing ids. Derived
 /// from keccak(creator ‖ seq ‖ attempt), bumping `attempt` on collision.
 fn gen_game_code(creator: &[u8; 20], seq: u64) -> u64 {
-    let mut attempt: u8 = 0;
-    loop {
+    for attempt in 0..=u8::MAX {
         let mut input = [0u8; 29];
         input[..20].copy_from_slice(creator);
         input[20..28].copy_from_slice(&seq.to_le_bytes());
@@ -192,8 +228,34 @@ fn gen_game_code(creator: &[u8; 20], seq: u64) -> u64 {
         if !Storage::game_meta().contains(&code) {
             return code;
         }
-        attempt = attempt.wrapping_add(1);
     }
+    // The six-digit code space has been exhausted for this deterministic
+    // sequence. Never spin forever if a pathological collision set occurs.
+    fail("GameCodeSpaceExhausted")
+}
+
+fn indexed_address(address: [u8; 20]) -> [u8; 32] {
+    let mut topic = [0u8; 32];
+    topic[12..].copy_from_slice(&address);
+    topic
+}
+
+fn indexed_u64(value: u64) -> [u8; 32] {
+    let mut topic = [0u8; 32];
+    topic[24..].copy_from_slice(&value.to_be_bytes());
+    topic
+}
+
+/// Emit the code with the creator in indexed topics so a party client or
+/// indexer can resolve a creation without racing against `my_latest_game`.
+/// The currently locked contract SDK exposes raw logs but does not include
+/// event declarations in generated ABI JSON, so this intentionally follows
+/// the standard `GameCreated(address,uint64)` EVM wire format directly.
+fn emit_game_created(creator: [u8; 20], game_id: u64) {
+    let mut signature = [0u8; 32];
+    pvm::api::hash_keccak_256(b"GameCreated(address,uint64)", &mut signature);
+    let topics = [signature, indexed_address(creator), indexed_u64(game_id)];
+    pvm::api::deposit_event(&topics, &[]);
 }
 
 // ── Registry cross-contract calls ────────────────────────────────────
@@ -290,6 +352,85 @@ fn load_players(game_id: u64) -> Vec<[u8; 20]> {
     Storage::players().get(&game_id).unwrap_or_default()
 }
 
+fn is_active_in_players(game_id: u64, who: &[u8; 20], players: &[[u8; 20]]) -> bool {
+    players.iter().any(|player| player == who)
+        && !Storage::forfeited().get(&(game_id, *who)).unwrap_or(false)
+}
+
+fn active_player_count_in(game_id: u64, players: &[[u8; 20]]) -> u32 {
+    players
+        .iter()
+        .filter(|player| {
+            !Storage::forfeited()
+                .get(&(game_id, **player))
+                .unwrap_or(false)
+        })
+        .count() as u32
+}
+
+fn active_submission_count_in(game_id: u64, question_key: u8, players: &[[u8; 20]]) -> u32 {
+    players
+        .iter()
+        .filter(|player| {
+            !Storage::forfeited()
+                .get(&(game_id, **player))
+                .unwrap_or(false)
+        })
+        .filter(|player| Storage::submissions().contains(&(game_id, question_key, **player)))
+        .count() as u32
+}
+
+fn active_continue_count_in(game_id: u64, question_key: u8, players: &[[u8; 20]]) -> u32 {
+    players
+        .iter()
+        .filter(|player| {
+            !Storage::forfeited()
+                .get(&(game_id, **player))
+                .unwrap_or(false)
+        })
+        .filter(|player| Storage::continue_flags().contains(&(game_id, question_key, **player)))
+        .count() as u32
+}
+
+fn active_difficulty_counts_in(game_id: u64, players: &[[u8; 20]]) -> [u32; 3] {
+    let mut counts = [0; 3];
+    for player in players.iter().filter(|player| {
+        !Storage::forfeited()
+            .get(&(game_id, **player))
+            .unwrap_or(false)
+    }) {
+        if let Some(difficulty) = Storage::difficulty_choice().get(&(game_id, *player)) {
+            if difficulty < 3 {
+                counts[difficulty as usize] += 1;
+            }
+        }
+    }
+    counts
+}
+
+fn active_difficulty_total_in(game_id: u64, players: &[[u8; 20]]) -> u32 {
+    active_difficulty_counts_in(game_id, players).iter().sum()
+}
+
+fn active_overturn_votes_in(
+    game_id: u64,
+    question_key: u8,
+    target: &[u8; 20],
+    players: &[[u8; 20]],
+) -> u32 {
+    players
+        .iter()
+        .filter(|player| {
+            !Storage::forfeited()
+                .get(&(game_id, **player))
+                .unwrap_or(false)
+        })
+        .filter(|player| {
+            Storage::overturn_voted().contains(&(game_id, question_key, *target, **player))
+        })
+        .count() as u32
+}
+
 fn is_roster_player(game_id: u64, who: &[u8; 20]) -> bool {
     load_players(game_id).iter().any(|p| p == who)
 }
@@ -297,14 +438,12 @@ fn is_roster_player(game_id: u64, who: &[u8; 20]) -> bool {
 /// A lobby roster contains only current members. Once play begins, the roster
 /// becomes historical and a forfeited flag controls future participation.
 fn is_active_player(game_id: u64, who: &[u8; 20]) -> bool {
-    is_roster_player(game_id, who) && !Storage::forfeited().get(&(game_id, *who)).unwrap_or(false)
+    is_active_in_players(game_id, who, &load_players(game_id))
 }
 
 fn active_player_count(game_id: u64) -> u32 {
-    load_players(game_id)
-        .iter()
-        .filter(|player| is_active_player(game_id, player))
-        .count() as u32
+    let players = load_players(game_id);
+    active_player_count_in(game_id, &players)
 }
 
 fn require_active_player(game_id: u64, who: &[u8; 20]) -> u32 {
@@ -315,57 +454,38 @@ fn require_active_player(game_id: u64, who: &[u8; 20]) -> u32 {
     if Storage::forfeited().get(&(game_id, *who)).unwrap_or(false) {
         fail("PlayerForfeited");
     }
-    active_player_count(game_id)
+    active_player_count_in(game_id, &players)
 }
 
 fn active_submission_count(game_id: u64, question_key: u8) -> u32 {
-    load_players(game_id)
-        .iter()
-        .filter(|player| is_active_player(game_id, player))
-        .filter(|player| Storage::submissions().contains(&(game_id, question_key, **player)))
-        .count() as u32
+    let players = load_players(game_id);
+    active_submission_count_in(game_id, question_key, &players)
 }
 
 fn active_continue_count(game_id: u64, question_key: u8) -> u32 {
-    load_players(game_id)
-        .iter()
-        .filter(|player| is_active_player(game_id, player))
-        .filter(|player| Storage::continue_flags().contains(&(game_id, question_key, **player)))
-        .count() as u32
+    let players = load_players(game_id);
+    active_continue_count_in(game_id, question_key, &players)
 }
 
 fn active_difficulty_counts(game_id: u64) -> [u32; 3] {
-    let mut counts = [0; 3];
-    for player in load_players(game_id)
-        .iter()
-        .filter(|player| is_active_player(game_id, player))
-    {
-        if let Some(difficulty) = Storage::difficulty_choice().get(&(game_id, *player)) {
-            if difficulty < 3 {
-                counts[difficulty as usize] += 1;
-            }
-        }
-    }
-    counts
+    let players = load_players(game_id);
+    active_difficulty_counts_in(game_id, &players)
 }
 
 fn active_difficulty_total(game_id: u64) -> u32 {
-    active_difficulty_counts(game_id).iter().sum()
+    let players = load_players(game_id);
+    active_difficulty_total_in(game_id, &players)
 }
 
 fn active_overturn_votes(game_id: u64, question_key: u8, target: &[u8; 20]) -> u32 {
-    load_players(game_id)
-        .iter()
-        .filter(|player| is_active_player(game_id, player))
-        .filter(|player| {
-            Storage::overturn_voted().contains(&(game_id, question_key, *target, **player))
-        })
-        .count() as u32
+    let players = load_players(game_id);
+    active_overturn_votes_in(game_id, question_key, target, &players)
 }
 
 fn active_overturn_voters(game_id: u64, target: &[u8; 20]) -> u32 {
-    let active = active_player_count(game_id);
-    if is_active_player(game_id, target) {
+    let players = load_players(game_id);
+    let active = active_player_count_in(game_id, &players);
+    if is_active_in_players(game_id, target, &players) {
         active.saturating_sub(1)
     } else {
         active
@@ -424,16 +544,149 @@ fn reconcile_overturns_after_forfeit(game_id: u64, m: &GameMeta) {
     }
 }
 
-/// Apply timeout transitions to the stored clock; resolves the final
-/// difficulty if the roll crossed the end of the Vote stage.
-fn settle(game_id: u64, m: &mut GameMeta) {
-    let (clock, crossed_vote) = logic::roll(clock_of(m), &cfg_of(m), current_block());
+/// Apply timeout transitions at a known block; resolves the final difficulty
+/// if the roll crossed the end of the Vote stage. View methods pass one block
+/// through their whole snapshot so deadline/current-block data cannot be
+/// internally inconsistent.
+fn settle_at(game_id: u64, m: &mut GameMeta, now: u64) {
+    let (clock, crossed_vote) = logic::roll(clock_of(m), &cfg_of(m), now);
     if crossed_vote && m.final_difficulty == DIFFICULTY_UNSET {
         m.final_difficulty = logic::resolve_difficulty(active_difficulty_counts(game_id));
     }
     m.stage = clock.stage;
     m.cursor = clock.cursor;
     m.anchor = clock.anchor;
+}
+
+/// Apply timeout transitions to the stored clock at the current block.
+fn settle(game_id: u64, m: &mut GameMeta) {
+    settle_at(game_id, m, current_block());
+}
+
+fn game_view_from(game_id: u64, m: &GameMeta, players: &[[u8; 20]]) -> GameView {
+    GameView {
+        pack_id: m.pack_id,
+        creator: pvm::Address::from(m.creator),
+        num_questions: m.num_questions,
+        answer_blocks: m.answer_blocks,
+        review_blocks: m.review_blocks,
+        max_players: m.max_players,
+        player_count: players.len() as u8,
+        active_player_count: active_player_count_in(game_id, players) as u8,
+    }
+}
+
+fn phase_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -> PhaseView {
+    let clock = clock_of(m);
+    let question_key = logic::question_key(&clock);
+    let slot = match m.stage {
+        STAGE_ANSWER | STAGE_REVIEW | STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => active_slot(m),
+        _ => 0xff,
+    };
+    let submit_count = if m.stage == STAGE_VOTE {
+        active_difficulty_total_in(game_id, players)
+    } else {
+        active_submission_count_in(game_id, question_key, players)
+    };
+    PhaseView {
+        stage: m.stage,
+        cursor: m.cursor,
+        deadline: logic::stage_deadline(&clock, &cfg_of(m)),
+        current_block: now,
+        final_difficulty: m.final_difficulty,
+        slot,
+        submit_count,
+        continue_count: active_continue_count_in(game_id, question_key, players),
+        player_count: players.len() as u8,
+        active_player_count: active_player_count_in(game_id, players) as u8,
+    }
+}
+
+fn submission_views_from(
+    game_id: u64,
+    question_key: u8,
+    players: &[[u8; 20]],
+) -> Vec<SubmissionView> {
+    players
+        .iter()
+        .map(
+            |player| match Storage::submissions().get(&(game_id, question_key, *player)) {
+                Some(submission) => SubmissionView {
+                    player: pvm::Address::from(*player),
+                    submitted: true,
+                    answer: submission.answer,
+                    wager: submission.wager,
+                    correct: submission.correct,
+                    overturn_votes: active_overturn_votes_in(
+                        game_id,
+                        question_key,
+                        player,
+                        players,
+                    ),
+                    continue_ready: Storage::continue_flags().contains(&(
+                        game_id,
+                        question_key,
+                        *player,
+                    )),
+                    active: is_active_in_players(game_id, player, players),
+                },
+                None => SubmissionView {
+                    player: pvm::Address::from(*player),
+                    submitted: false,
+                    answer: String::new(),
+                    wager: 0,
+                    correct: false,
+                    overturn_votes: 0,
+                    continue_ready: Storage::continue_flags().contains(&(
+                        game_id,
+                        question_key,
+                        *player,
+                    )),
+                    active: is_active_in_players(game_id, player, players),
+                },
+            },
+        )
+        .collect()
+}
+
+fn player_names_from(players: &[[u8; 20]]) -> Vec<String> {
+    players
+        .iter()
+        .map(|player| Storage::display_names().get(player).unwrap_or_default())
+        .collect()
+}
+
+fn live_game_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -> LiveGameView {
+    let phase = phase_view_from(game_id, m, now, players);
+    let question_key = logic::question_key(&clock_of(m));
+    LiveGameView {
+        pack_id: m.pack_id,
+        creator: pvm::Address::from(m.creator),
+        num_questions: m.num_questions,
+        answer_blocks: m.answer_blocks,
+        review_blocks: m.review_blocks,
+        max_players: m.max_players,
+        stage: phase.stage,
+        cursor: phase.cursor,
+        deadline: phase.deadline,
+        current_block: phase.current_block,
+        final_difficulty: phase.final_difficulty,
+        slot: phase.slot,
+        submit_count: phase.submit_count,
+        continue_count: phase.continue_count,
+        player_count: phase.player_count,
+        active_player_count: phase.active_player_count,
+        players: players
+            .iter()
+            .map(|player| pvm::Address::from(*player))
+            .collect(),
+        scores: players
+            .iter()
+            .map(|player| Storage::scores().get(&(game_id, *player)).unwrap_or(0))
+            .collect(),
+        player_names: player_names_from(players),
+        submissions: submission_views_from(game_id, question_key, players),
+    }
 }
 
 /// Early collapse: everyone has acted, advance one stage right now.
@@ -494,15 +747,16 @@ mod quizzler {
     // NOTE: no glob import — #[pvm::contract] injects its own String/Vec
     // imports into the module, which a `use super::*` would collide with.
     use super::{
-        DIFFICULTY_UNSET, GameMeta, GameView, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS, MAX_PLAYERS,
-        MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ABANDONED, STAGE_ANSWER, STAGE_FINAL_ANSWER,
-        STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE, Storage, Submission,
-        SubmissionView, active_continue_count, active_difficulty_total, active_overturn_votes,
-        active_player_count, active_slot, active_submission_count, apply_overturn_if_quorum,
-        caller20, cfg_of, clock_of, collapse, collapse_if_everyone_ready, current_block, fail,
-        gen_game_code, is_active_player, is_roster_player, load_game, load_players, logic, pvm,
+        DIFFICULTY_UNSET, GameMeta, GameView, LiveGameView, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS,
+        MAX_PLAYERS, MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ABANDONED, STAGE_ANSWER,
+        STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE, Storage,
+        Submission, SubmissionView, active_continue_count, active_difficulty_total, active_slot,
+        active_submission_count, apply_overturn_if_quorum, caller20, clock_of, collapse,
+        collapse_if_everyone_ready, current_block, emit_game_created, fail, game_view_from,
+        gen_game_code, is_active_player, is_roster_player, live_game_view_from, load_game,
+        load_players, logic, phase_view_from, player_names_from, pvm,
         reconcile_overturns_after_forfeit, registry_answers, registry_pack_status,
-        require_active_player, save_game, settle,
+        require_active_player, save_game, settle, settle_at, submission_views_from,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -520,15 +774,29 @@ mod quizzler {
         pvm::Address::from(Storage::registry().get().unwrap_or([0u8; 20]))
     }
 
-    // ── Game lifecycle ───────────────────────────────────────────
-
+    /// Set the optional social label shown next to this account in every
+    /// lobby, review, and scorecard. Sending an empty string clears it;
+    /// clients then fall back to their standard abbreviated address.
     #[pvm::method]
-    pub fn create_game(
+    pub fn set_display_name(name: String) {
+        let who = caller20();
+        if name.is_empty() {
+            Storage::display_names().remove(&who);
+            return;
+        }
+        if !logic::valid_player_name(&name) {
+            fail("BadDisplayName");
+        }
+        Storage::display_names().insert(&who, &name);
+    }
+
+    fn create_game_record(
         pack_id: u32,
         num_questions: u8,
         answer_blocks: u32,
         review_blocks: u32,
         max_players: u8,
+        creation_nonce: Option<u64>,
     ) {
         let pack = registry_pack_status(pack_id);
         if !pack.exists || !pack.sealed {
@@ -551,7 +819,16 @@ mod quizzler {
         }
 
         let creator = caller20();
+        if let Some(nonce) = creation_nonce {
+            if Storage::created_game_of().contains(&(creator, nonce)) {
+                fail("CreationNonceUsed");
+            }
+        }
         let seq = Storage::game_count().get().unwrap_or(0);
+        let next_seq = match seq.checked_add(1) {
+            Some(next) => next,
+            None => fail("GameIdExhausted"),
+        };
         let id = gen_game_code(&creator, seq);
         let meta = GameMeta {
             pack_id,
@@ -570,7 +847,52 @@ mod quizzler {
         Storage::players().insert(&id, &players);
         Storage::scores().insert(&(id, creator), &0);
         Storage::latest_game_of().insert(&creator, &id);
-        Storage::game_count().set(&(seq + 1));
+        if let Some(nonce) = creation_nonce {
+            Storage::created_game_of().insert(&(creator, nonce), &id);
+        }
+        Storage::game_count().set(&next_seq);
+        emit_game_created(creator, id);
+    }
+
+    // ── Game lifecycle ───────────────────────────────────────────
+
+    #[pvm::method]
+    pub fn create_game(
+        pack_id: u32,
+        num_questions: u8,
+        answer_blocks: u32,
+        review_blocks: u32,
+        max_players: u8,
+    ) {
+        create_game_record(
+            pack_id,
+            num_questions,
+            answer_blocks,
+            review_blocks,
+            max_players,
+            None,
+        );
+    }
+
+    /// Concurrent tabs can use a unique nonce and resolve the durable join
+    /// code with `get_game_for_creation`, instead of racing on latest game.
+    #[pvm::method]
+    pub fn create_game_with_nonce(
+        pack_id: u32,
+        num_questions: u8,
+        answer_blocks: u32,
+        review_blocks: u32,
+        max_players: u8,
+        creation_nonce: u64,
+    ) {
+        create_game_record(
+            pack_id,
+            num_questions,
+            answer_blocks,
+            review_blocks,
+            max_players,
+            Some(creation_nonce),
+        );
     }
 
     #[pvm::method]
@@ -673,6 +995,12 @@ mod quizzler {
             Storage::used_wagers().insert(&(game_id, who), &(mask | bit));
         }
 
+        // Bound raw input before normalization. This preserves the casual
+        // plaintext model while preventing a punctuation-only payload from
+        // allocating far more memory than the durable normalized answer.
+        if answer.len() > MAX_ANSWER_BYTES {
+            fail("AnswerTooLong");
+        }
         let norm = logic::normalize(&answer);
         if norm.len() > MAX_ANSWER_BYTES {
             fail("AnswerTooLong");
@@ -819,19 +1147,20 @@ mod quizzler {
             .unwrap_or(0)
     }
 
+    /// Resolve a game created with `create_game_with_nonce`; 0 means this
+    /// creator/nonce pair has not been used (valid join codes are six digits).
+    #[pvm::method]
+    pub fn get_game_for_creation(who: pvm::Address, creation_nonce: u64) -> u64 {
+        Storage::created_game_of()
+            .get(&(who.to_fixed_bytes(), creation_nonce))
+            .unwrap_or(0)
+    }
+
     #[pvm::method]
     pub fn get_game(game_id: u64) -> GameView {
         let m = load_game(game_id);
-        GameView {
-            pack_id: m.pack_id,
-            creator: pvm::Address::from(m.creator),
-            num_questions: m.num_questions,
-            answer_blocks: m.answer_blocks,
-            review_blocks: m.review_blocks,
-            max_players: m.max_players,
-            player_count: load_players(game_id).len() as u8,
-            active_player_count: active_player_count(game_id) as u8,
-        }
+        let players = load_players(game_id);
+        game_view_from(game_id, &m, &players)
     }
 
     /// Everything the client needs each poll tick, settled to `current_block`
@@ -840,36 +1169,11 @@ mod quizzler {
     /// using (get_game.pack_id, slot).
     #[pvm::method]
     pub fn get_phase(game_id: u64) -> PhaseView {
+        let now = current_block();
         let mut m = load_game(game_id);
-        settle(game_id, &mut m);
-        let clock = clock_of(&m);
-        let qkey = logic::question_key(&clock);
-        let slot = match m.stage {
-            STAGE_ANSWER | STAGE_REVIEW | STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => {
-                active_slot(&m)
-            }
-            _ => 0xff,
-        };
-        // During the difficulty vote there is no per-question submit counter;
-        // surface the active vote tally in its place so the client sees
-        // progress. Every count intentionally filters forfeited players.
-        let submit_count = if m.stage == STAGE_VOTE {
-            active_difficulty_total(game_id)
-        } else {
-            active_submission_count(game_id, qkey)
-        };
-        PhaseView {
-            stage: m.stage,
-            cursor: m.cursor,
-            deadline: logic::stage_deadline(&clock, &cfg_of(&m)),
-            current_block: current_block(),
-            final_difficulty: m.final_difficulty,
-            slot,
-            submit_count,
-            continue_count: active_continue_count(game_id, qkey),
-            player_count: load_players(game_id).len() as u8,
-            active_player_count: active_player_count(game_id) as u8,
-        }
+        settle_at(game_id, &mut m, now);
+        let players = load_players(game_id);
+        phase_view_from(game_id, &m, now, &players)
     }
 
     #[pvm::method]
@@ -889,6 +1193,29 @@ mod quizzler {
             .collect()
     }
 
+    /// Optional display names parallel to `get_players`; an empty entry means
+    /// no name has been set and clients should render their address fallback.
+    #[pvm::method]
+    pub fn get_player_names(game_id: u64) -> Vec<String> {
+        load_game(game_id);
+        let players = load_players(game_id);
+        player_names_from(&players)
+    }
+
+    /// Consolidated live game snapshot for low-latency polling. It is settled
+    /// to one `current_block` in memory (without mutating storage) and keeps
+    /// plaintext submitted answers public, matching Quizzler's party model.
+    /// Question text and canonical review answers remain in the registry and
+    /// are fetched separately by the returned `(pack_id, slot)`.
+    #[pvm::method]
+    pub fn get_live_game(game_id: u64) -> LiveGameView {
+        let now = current_block();
+        let mut m = load_game(game_id);
+        settle_at(game_id, &mut m, now);
+        let players = load_players(game_id);
+        live_game_view_from(game_id, &m, now, &players)
+    }
+
     /// Whether `who` is still an active participant. This is deliberately
     /// narrower than `get_players`: after a forfeit, the address remains in
     /// the historical scorecard but may not re-enter or act in the quiz.
@@ -903,40 +1230,7 @@ mod quizzler {
     #[pvm::method]
     pub fn get_submissions(game_id: u64, question_key: u8) -> Vec<SubmissionView> {
         load_game(game_id); // reverts on unknown game
-        load_players(game_id)
-            .iter()
-            .map(
-                |p| match Storage::submissions().get(&(game_id, question_key, *p)) {
-                    Some(s) => SubmissionView {
-                        player: pvm::Address::from(*p),
-                        submitted: true,
-                        answer: s.answer,
-                        wager: s.wager,
-                        correct: s.correct,
-                        overturn_votes: active_overturn_votes(game_id, question_key, p),
-                        continue_ready: Storage::continue_flags().contains(&(
-                            game_id,
-                            question_key,
-                            *p,
-                        )),
-                        active: is_active_player(game_id, p),
-                    },
-                    None => SubmissionView {
-                        player: pvm::Address::from(*p),
-                        submitted: false,
-                        answer: String::new(),
-                        wager: 0,
-                        correct: false,
-                        overturn_votes: 0,
-                        continue_ready: Storage::continue_flags().contains(&(
-                            game_id,
-                            question_key,
-                            *p,
-                        )),
-                        active: is_active_player(game_id, p),
-                    },
-                },
-            )
-            .collect()
+        let players = load_players(game_id);
+        submission_views_from(game_id, question_key, &players)
     }
 }
