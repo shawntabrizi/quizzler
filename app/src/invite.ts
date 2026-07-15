@@ -1,6 +1,7 @@
 import { parseGameCode } from "./input";
 
 export const INVITE_QUERY_PARAM = "join";
+export const PRODUCT_DEEP_LINK_ORIGIN = "polkadot://quizzler.dot";
 
 export interface SharedLobbyInvite {
     present: boolean;
@@ -30,5 +31,13 @@ export function sharedLobbyInviteUrl(urlString: string, gameId: bigint): string 
     url.searchParams.delete("show-test-packs");
     url.searchParams.delete("d");
     url.searchParams.set(INVITE_QUERY_PARAM, gameId.toString());
-    return url.toString();
+
+    // A .dot deep link opens the installed Polkadot Desktop product directly,
+    // rather than sending a player through the public web gateway first. Keep
+    // the in-product route, player-facing parameters, and fragment intact.
+    const deepLink = new URL(PRODUCT_DEEP_LINK_ORIGIN);
+    deepLink.pathname = url.pathname;
+    deepLink.search = url.search;
+    deepLink.hash = url.hash;
+    return deepLink.toString();
 }

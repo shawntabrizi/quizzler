@@ -11,12 +11,18 @@ describe("shared lobby invite links", () => {
             });
         expect(consumeSharedLobbyInvite("https://quizzler.example/play?join=12345").gameId).toBeNull();
         expect(consumeSharedLobbyInvite("https://quizzler.example/play").present).toBe(false);
+        expect(consumeSharedLobbyInvite("polkadot://quizzler.dot/?join=466181#lobby"))
+            .toEqual({
+                present: true,
+                gameId: 466181n,
+                cleanedUrl: "polkadot://quizzler.dot/#lobby",
+            });
     });
 
-    it("builds an invite while preserving the rest of the product URL", () => {
+    it("builds a native .dot invite while preserving the product route", () => {
         expect(sharedLobbyInviteUrl("https://quizzler.example/play?show-test-packs=1&theme=dark#lobby", 466181n))
-            .toBe("https://quizzler.example/play?theme=dark&join=466181#lobby");
+            .toBe("polkadot://quizzler.dot/play?theme=dark&join=466181#lobby");
         expect(sharedLobbyInviteUrl("https://quizzler.example/play?theme=dark&d=old-deployment#lobby", 466181n))
-            .toBe("https://quizzler.example/play?theme=dark&join=466181#lobby");
+            .toBe("polkadot://quizzler.dot/play?theme=dark&join=466181#lobby");
     });
 });
