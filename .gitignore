@@ -4,6 +4,7 @@ node_modules/
 # build output
 dist/
 target/
+app/dist.car
 
 # test artifacts
 test-results/
