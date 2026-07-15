@@ -154,7 +154,12 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         await expect(frame.getByTestId("results-podium").locator("li")).toHaveCount(2);
         await expect(frame.getByTestId("results-final-wagers").locator('[data-outcome="won"]')).toHaveCount(1);
         await expect(frame.getByTestId("results-final-wagers").locator('[data-outcome="lost"]')).toHaveCount(1);
-        await expect(frame.getByTestId("results-leaderboard").getByText("2")).toBeVisible();
+        await expect(
+            frame
+                .getByTestId("results-leaderboard")
+                .locator(".results-score")
+                .filter({ hasText: /^2$/ }),
+        ).toBeVisible();
 
         await charlieDone;
         const scores = await charlie.query<(number | bigint)[]>("getScores", [gameId]);
