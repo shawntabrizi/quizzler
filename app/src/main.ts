@@ -31,6 +31,7 @@ import registryAbi from "./abi-registry.json";
 import gameAbi from "./abi-game.json";
 import sessionRegistryAbi from "./abi-session-registry.json";
 import contractInfo from "./contract-address.json";
+import { retryChainRead } from "./chain-read-retry";
 import {
     ANSWER_BLOCK_PRESETS,
     countdownLabel,
@@ -1763,7 +1764,7 @@ async function questionText(packId: number, slot: number): Promise<string> {
     if (pending) return pending;
     const registryAtRequest = registry;
     const request = (async () => {
-        const res = await registryAtRequest.getQuestion.query(packId, slot);
+        const res = await retryChainRead<any>(() => registryAtRequest.getQuestion.query(packId, slot));
         if (!res.success) return "";
         const text = res.value as string;
         questionCache.set(key, text);
@@ -1781,7 +1782,7 @@ async function canonicalAnswer(packId: number, slot: number): Promise<string> {
     if (pending) return pending;
     const registryAtRequest = registry;
     const request = (async () => {
-        const res = await registryAtRequest.getAnswers.query(packId, slot);
+        const res = await retryChainRead<any>(() => registryAtRequest.getAnswers.query(packId, slot));
         if (!res.success) return "";
         const answers = res.value as string[];
         const canonical = answers[0] ?? "";
@@ -1802,7 +1803,7 @@ async function packTitle(packId: number): Promise<string> {
     if (pending) return pending;
     const registryAtRequest = registry;
     const request = (async () => {
-        const res = await registryAtRequest.getPack.query(packId);
+        const res = await retryChainRead<any>(() => registryAtRequest.getPack.query(packId));
         if (!res.success) return "Quiz pack";
         const pack = res.value as PackView;
         if (pack.sealed) sealedPackCache.set(key, pack);
@@ -1835,7 +1836,7 @@ async function sealedPacks(
         );
         const responses = await mapWithConcurrency(batches, 3, async (batch) => {
             try {
-                const result = await registryAtRequest.getPacks.query(batch);
+                const result = await retryChainRead<any>(() => registryAtRequest.getPacks.query(batch));
                 return result.success ? result.value as PackView[] : null;
             } catch {
                 return null;
@@ -1910,21 +1911,26 @@ function createContractHandles(client: any, descriptor: any): void {
         : null;
 }
 
-async function verifyActiveContractPair(): Promise<boolean> {
+type ContractPairStatus = "linked" | "mismatch" | "unavailable";
+
+async function verifyActiveContractPair(): Promise<ContractPairStatus> {
     try {
         // The two linkage reads are independent; don't serialize boot on them.
         const [linkedRegistry, linkedSessionRegistry] = await Promise.all([
-            game.registry.query(),
-            sessionRegistryConfigured() && sessionRegistry ? game.sessionRegistry.query() : Promise.resolve(null),
+            retryChainRead<any>(() => game.registry.query()),
+            sessionRegistryConfigured() && sessionRegistry
+                ? retryChainRead<any>(() => game.sessionRegistry.query())
+                : Promise.resolve(null),
         ]);
-        if (!linkedRegistry.success) return false;
-        if (String(linkedRegistry.value).toLowerCase() !== activeContracts.registry?.toLowerCase()) return false;
-        if (!sessionRegistryConfigured()) return true;
-        if (!sessionRegistry || linkedSessionRegistry === null) return false;
-        return linkedSessionRegistry.success
-            && String(linkedSessionRegistry.value).toLowerCase() === activeContracts.sessionRegistry?.toLowerCase();
+        if (!linkedRegistry.success) return "unavailable";
+        if (String(linkedRegistry.value).toLowerCase() !== activeContracts.registry?.toLowerCase()) return "mismatch";
+        if (!sessionRegistryConfigured()) return "linked";
+        if (!sessionRegistry || linkedSessionRegistry === null || !linkedSessionRegistry.success) return "unavailable";
+        return String(linkedSessionRegistry.value).toLowerCase() === activeContracts.sessionRegistry?.toLowerCase()
+            ? "linked"
+            : "mismatch";
     } catch {
-        return false;
+        return "unavailable";
     }
 }
 
@@ -2010,10 +2016,16 @@ async function init(): Promise<void> {
     createContractHandles(client, paseo_asset_hub);
     bootLog(sessionRegistry ? "Contract handles ready (registry + game + sessions)" : "Contract handles ready (registry + game)", "ok");
 
-    if (!await verifyActiveContractPair()) {
+    const contractPairStatus = await verifyActiveContractPair();
+    if (contractPairStatus !== "linked") {
         setConnectionStatus("not connected", "err");
-        setBootHeadline("Couldn’t start — try reloading.", true);
-        bootLog("contract mismatch: the game contract is not linked to this registry deployment.", "err");
+        if (contractPairStatus === "mismatch") {
+            setBootHeadline("Couldn’t start — try reloading.", true);
+            bootLog("contract mismatch: the game contract is not linked to this registry deployment.", "err");
+        } else {
+            setBootHeadline("Couldn’t reach the game — try reloading.", true);
+            bootLog("Couldn’t verify the game connection. Try reloading.", "err");
+        }
         return;
     }
 
@@ -3751,7 +3763,9 @@ async function syncWagerHistory(snap: Snapshot, id: bigint, session: number): Pr
         { length: Math.max(0, Math.min(completedRegular, snap.game.num_questions) - wagerHistoryLoadedUpTo - 1) },
         (_, i) => wagerHistoryLoadedUpTo + 1 + i,
     );
-    const results = await Promise.all(keys.map((key) => game.getSubmissions.query(id, key)));
+    const results = await Promise.all(
+        keys.map((key) => retryChainRead<any>(() => game.getSubmissions.query(id, key))),
+    );
     for (let i = 0; i < results.length; i++) {
         if (!isCurrentGame(id, session) || latest !== snap) return;
         const res = results[i];
@@ -3782,7 +3796,7 @@ async function poll(): Promise<void> {
     const polledSession = gameSession;
     pollInFlight = true;
     try {
-        const liveResult = await game.getLiveGame.query(polledGameId);
+        const liveResult = await retryChainRead<any>(() => game.getLiveGame.query(polledGameId));
         if (!isCurrentGame(polledGameId, polledSession) || !liveResult.success) return;
         const live = liveResult.value as LiveGameView;
         const phase: PhaseView = {
@@ -3857,12 +3871,12 @@ async function poll(): Promise<void> {
             : null;
         const questionSlot = phase.slot !== NO_SLOT ? phase.slot : resultSlot;
         if (questionSlot !== null) {
-            const [question, answer] = await Promise.all([
+            const [question, answer] = await retryChainRead<[string, string]>(() => Promise.all([
                 questionText(gameView.pack_id, questionSlot),
                 phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW || phase.stage === STAGE_FINISHED
                     ? canonicalAnswer(gameView.pack_id, questionSlot)
                     : Promise.resolve(""),
-            ]);
+            ]));
             qText = question;
             aText = answer;
             if (!isCurrentGame(polledGameId, polledSession)) return;
@@ -3938,9 +3952,11 @@ async function poll(): Promise<void> {
         // Historic wagers matter for controls, not for the first paint. On a
         // rejoin this used to delay the whole table by one serial RPC per
         // completed question.
-        void syncWagerHistory(snap, polledGameId, polledSession).then(() => {
-            if (isCurrentGame(polledGameId, polledSession) && latest === snap) render(snap);
-        });
+        void syncWagerHistory(snap, polledGameId, polledSession)
+            .then(() => {
+                if (isCurrentGame(polledGameId, polledSession) && latest === snap) render(snap);
+            })
+            .catch((error) => console.warn("wager history sync failed", error));
     } catch (e) {
         consecutivePollFailures += 1;
         if (consecutivePollFailures >= 2) {

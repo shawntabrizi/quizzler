@@ -16,6 +16,7 @@ import { decodeFunctionResult, encodeFunctionData, hexToBytes, type Abi } from "
 
 import { getE2EContracts } from "./contracts";
 import { PASEO_AH } from "./fixtures";
+import { retryChainRead } from "../src/chain-read-retry";
 
 // Read as files: Playwright's ESM loader rejects bare JSON imports.
 const registryAbi = JSON.parse(
@@ -110,9 +111,9 @@ export class ScriptedPlayer {
         const { abi, dest } = route(functionName);
         const data = encodeFunctionData({ abi, functionName, args });
         // unsafe API: descriptor lags the live runtime for ReviveApi_call
-        const res: any = await (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
+        const res: any = await retryChainRead(() => (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
             this.ss58, dest, 0n, undefined, undefined, hexToBytes(data), { at: "best" },
-        );
+        ));
         if (!res.result.success || res.result.value.flags !== 0) {
             throw new Error(`query ${functionName} reverted`);
         }
@@ -125,9 +126,9 @@ export class ScriptedPlayer {
     async tx(functionName: string, args: unknown[], retried = false): Promise<void> {
         const { abi, dest } = route(functionName);
         const data = encodeFunctionData({ abi, functionName, args });
-        const res: any = await (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
+        const res: any = await retryChainRead(() => (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
             this.ss58, dest, 0n, undefined, undefined, hexToBytes(data), { at: "best" },
-        );
+        ));
         if (!res.result.success) {
             throw new Error(`${functionName} dry-run failed: ${JSON.stringify(res.result.value, br)}`);
         }
