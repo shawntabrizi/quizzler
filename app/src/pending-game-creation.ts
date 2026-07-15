@@ -12,7 +12,7 @@ export const PENDING_GAME_CREATION_VERSION = 1 as const;
 
 const MAX_UINT64 = 0xffff_ffff_ffff_ffffn;
 const MAX_PACK_ID = 0xffff_ffff;
-const MAX_GAME_QUESTIONS = 10;
+const MAX_GAME_QUESTIONS = 20;
 const MIN_STAGE_BLOCKS = 2;
 const MAX_STAGE_BLOCKS = 600;
 

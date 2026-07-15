@@ -74,6 +74,10 @@ describe("pending game-creation browser session", () => {
 
     it("rejects invalid values before they can be persisted", () => {
         const storage = memoryStorage();
+        expect(rememberPendingGameCreation(storage, GAME, ACCOUNT, {
+            nonce: 20n,
+            config: { ...CONFIG, numQuestions: 20 },
+        })).toBe(true);
         expect(() => rememberPendingGameCreation(storage, GAME, ACCOUNT, {
             nonce: -1n,
             config: CONFIG,
@@ -81,6 +85,10 @@ describe("pending game-creation browser session", () => {
         expect(() => rememberPendingGameCreation(storage, GAME, ACCOUNT, {
             nonce: 1n,
             config: { ...CONFIG, answerBlocks: 1 },
+        })).toThrow("configuration is invalid");
+        expect(() => rememberPendingGameCreation(storage, GAME, ACCOUNT, {
+            nonce: 1n,
+            config: { ...CONFIG, numQuestions: 21 },
         })).toThrow("configuration is invalid");
     });
 });

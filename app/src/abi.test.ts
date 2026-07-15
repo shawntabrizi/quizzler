@@ -158,6 +158,50 @@ describe("transaction ABI", () => {
         ]);
     });
 
+    it("exposes a locked final-wager phase and live difficulty totals", () => {
+        const submitFinalWager = method(gameAbi as AbiItem[], "submitFinalWager");
+        expect(submitFinalWager.stateMutability).toBe("nonpayable");
+        expect(submitFinalWager.inputs).toEqual([
+            { name: "game_id", type: "uint64" },
+            { name: "wager", type: "uint32" },
+        ]);
+
+        const submitFinalAnswer = method(gameAbi as AbiItem[], "submitFinalAnswer");
+        expect(submitFinalAnswer.stateMutability).toBe("nonpayable");
+        expect(submitFinalAnswer.inputs).toEqual([
+            { name: "game_id", type: "uint64" },
+            { name: "answer", type: "string" },
+        ]);
+
+        const getPhase = method(gameAbi as AbiItem[], "getPhase");
+        expect(getPhase.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: expect.arrayContaining([
+                    { name: "final_wager_count", type: "uint32" },
+                    { name: "easy_vote_count", type: "uint32" },
+                    { name: "medium_vote_count", type: "uint32" },
+                    { name: "hard_vote_count", type: "uint32" },
+                ]),
+            },
+        ]);
+
+        const getLiveGame = method(gameAbi as AbiItem[], "getLiveGame");
+        expect(getLiveGame.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: expect.arrayContaining([
+                    { name: "difficulty_choices", type: "uint8[]" },
+                    { name: "difficulty_vote_locked", type: "bool[]" },
+                    { name: "final_wagers", type: "uint32[]" },
+                    { name: "final_wager_locked", type: "bool[]" },
+                ]),
+            },
+        ]);
+    });
+
     it("requires session-key possession before enabling instant actions", () => {
         const request = method(sessionRegistryAbi as AbiItem[], "requestSession");
         expect(request.stateMutability).toBe("nonpayable");

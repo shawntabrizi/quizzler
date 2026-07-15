@@ -3,11 +3,12 @@
 **Proof of Knowledge** — a social trivia party game on Polkadot, inspired by Sporcle Party.
 
 One player opens a lobby from a quiz pack, friends join with a game code, everyone answers
-typed questions on their own device and wagers 1–10 points on their confidence. When time
-runs out (or everyone has locked in), the table reviews the answers together — wrong
-answers can be voted "close enough" by the other players — and a difficulty-voted final
-round with a big wager decides the winner. The entire game — lobby, timing, answers,
-scoring, votes — runs as a smart contract on Paseo Asset Hub.
+typed questions on their own device and spends each regular wager from 1 through the number
+of questions once. When time runs out (or everyone has locked in), the table reviews the
+answers together — wrong answers can be voted "close enough" by the other players — and a
+difficulty-voted final round has everyone lock a wager before its prompt is revealed. The
+entire game — lobby, timing, answers, scoring, votes — runs as a smart contract on Paseo
+Asset Hub.
 
 ## How it works
 

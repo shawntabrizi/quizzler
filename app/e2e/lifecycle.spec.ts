@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
 import { ScriptedPlayer } from "./scripted-player";
 
-const STAGE = { ANSWER: 1, REVIEW: 2, ABANDONED: 7 } as const;
+const STAGE = { ANSWER: 1, REVIEW: 2, ABANDONED: 8 } as const;
 
 test("transfers the lobby starter and excludes forfeits from later quorums", async () => {
     test.setTimeout(600_000);
@@ -41,7 +41,7 @@ test("transfers the lobby starter and excludes forfeits from later quorums", asy
 
         // Bob's own answer is now needed to advance; Charlie's earlier answer
         // cannot advance the stage on Bob's behalf.
-        await bob.tx("submitAnswer", [gameId, "Tokyo", 2]);
+        await bob.tx("submitAnswer", [gameId, "Tokyo", 1]);
         phase = await bob.getPhase(gameId);
         expect(phase.stage).toBe(STAGE.REVIEW);
         expect(phase.active_player_count).toBe(1);

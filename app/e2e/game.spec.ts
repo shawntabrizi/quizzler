@@ -7,11 +7,11 @@ import { ScriptedPlayer } from "./scripted-player";
  * live answers, review with an overturn vote, continue collapse, the
  * difficulty vote, the final wager round, and the results screen.
  *
- * Scoring walkthrough (charlie answers wrong on purpose, wagering 5):
- *   Q1: bob correct +7 → 7; charlie wrong 0, bob votes "mark correct" —
- *       with 2 players the single other player is a majority → charlie +5.
- *   Final (both vote easy → "what is 2 plus 2"): bob all-in 7 → 14,
- *       charlie wagers 0 → stays 5. Winner: bob at 14.
+ * Scoring walkthrough (charlie answers wrong on purpose, both wager 1):
+ *   Q1: bob correct +1 → 1; charlie wrong 0, bob votes "mark correct" —
+ *       with 2 players the single other player is a majority → charlie +1.
+ *   Final (both vote easy → "what is 2 plus 2"): bob wagers 1 → 2,
+ *       charlie locks 0 → stays 1. Winner: bob at 2.
  */
 test("plays a full two-player game to the results screen", async ({ testHost }) => {
     test.setTimeout(600_000);
@@ -23,6 +23,10 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
     await expect(frame.getByTestId("conn-pill")).toHaveText("connected", { timeout: 120_000 });
 
     const charlie = await ScriptedPlayer.connect("Charlie");
+    let releaseCharlieDifficultyVote: (() => void) | undefined;
+    const charlieDifficultyVoteGate = new Promise<void>((resolve) => {
+        releaseCharlieDifficultyVote = resolve;
+    });
     try {
         const packTitle = `E2E Game ${Date.now()}`;
         const packId = await charlie.createTestPack(packTitle, {
@@ -55,16 +59,17 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         // charlie plays the rest of the game on a poll loop
         const charlieDone = charlie.playUntilFinished(gameId, {
             answer: "wrong on purpose",
-            wager: 5,
+            wager: 1,
             finalWager: 0,
             difficultyVote: 0,
+            beforeDifficultyVote: () => charlieDifficultyVoteGate,
         });
 
-        // ── question 1: bob answers correctly with wager 7 ───────
+        // ── question 1: bob answers correctly with wager 1 ───────
         await expect(frame.getByTestId("screen-question")).toBeVisible({ timeout: 120_000 });
         await expect(frame.getByTestId("question-text")).toHaveText("What is the capital of Japan?");
         await frame.getByTestId("answer-input").fill("Tokyo");
-        await frame.getByTestId("wager-7").click();
+        await frame.getByTestId("wager-1").click();
         await frame.getByTestId("btn-submit-answer").click();
 
         // After submitting, bob either sees the live answers card (charlie
@@ -96,14 +101,43 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         await frame.getByTestId("btn-continue").click();
 
         // ── difficulty vote (both pick easy) ─────────────────────
+        // Hold Charlie just long enough to prove the on-chain live tally
+        // reports Bob's Easy vote before the phase can collapse.
         await expect(frame.getByTestId("screen-vote")).toBeVisible({ timeout: 120_000 });
         await frame.getByTestId("btn-difficulty-easy").click();
+        await expect.poll(async () => {
+            const phase = await charlie.getPhase(gameId);
+            return Number(phase.easy_vote_count);
+        }, { timeout: 60_000 }).toBe(1);
+        const votePhase = await charlie.getPhase(gameId);
+        expect(Number(votePhase.stage)).toBe(3);
+        expect(Number(votePhase.medium_vote_count)).toBe(0);
+        expect(Number(votePhase.hard_vote_count)).toBe(0);
+        await expect(frame.getByTestId("vote-distribution-easy-count")).toHaveText("1", {
+            timeout: 60_000,
+        });
+        await expect(frame.getByTestId("vote-distribution-medium-count")).toHaveText("0");
+        await expect(frame.getByTestId("vote-distribution-hard-count")).toHaveText("0");
+        releaseCharlieDifficultyVote?.();
 
-        // ── final question: bob goes all-in ──────────────────────
+        // ── final wager: the final question stays hidden until it is locked
+        await expect(frame.getByTestId("screen-final-wager")).toBeVisible({ timeout: 120_000 });
+        await expect(frame.getByTestId("screen-question")).toBeHidden();
+        await expect.poll(async () => {
+            const phase = await charlie.getPhase(gameId);
+            return [Number(phase.stage), Number(phase.final_wager_count)];
+        }, { timeout: 60_000 }).toEqual([4, 1]);
+        await expect(frame.getByTestId("final-wager-score")).toContainText("1");
+        await expect(frame.getByTestId("final-wager-status")).toContainText("1/2 active players locked in", {
+            timeout: 60_000,
+        });
+        await frame.getByTestId("final-wager-input").fill("1");
+        await frame.getByTestId("btn-confirm-final-wager").click();
+
+        // ── final question: Bob answers after his wager is locked ─
         await expect(frame.getByTestId("screen-question")).toBeVisible({ timeout: 120_000 });
         await expect(frame.getByTestId("question-number")).toContainText("Final");
         await frame.getByTestId("answer-input").fill("4");
-        await frame.getByTestId("wager-final").fill("7");
         await frame.getByTestId("btn-submit-answer").click();
 
         // ── final review → results ───────────────────────────────
@@ -112,12 +146,13 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
 
         await expect(frame.getByTestId("screen-results")).toBeVisible({ timeout: 180_000 });
         await expect(frame.getByTestId("results-winner")).toHaveText("You");
-        await expect(frame.getByTestId("results-leaderboard").getByText("14")).toBeVisible();
+        await expect(frame.getByTestId("results-leaderboard").getByText("2")).toBeVisible();
 
         await charlieDone;
         const scores = await charlie.query<(number | bigint)[]>("getScores", [gameId]);
-        expect(scores.map(Number).sort((a, b) => b - a)).toEqual([14, 5]);
+        expect(scores.map(Number).sort((a, b) => b - a)).toEqual([2, 1]);
     } finally {
+        releaseCharlieDifficultyVote?.();
         charlie.destroy();
     }
 });

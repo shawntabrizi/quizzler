@@ -39,7 +39,7 @@ function route(functionName: string): { abi: Abi; dest: `0x${string}` } {
 
 const STAGE = {
     LOBBY: 0, ANSWER: 1, REVIEW: 2, VOTE: 3,
-    FINAL_ANSWER: 4, FINAL_REVIEW: 5, FINISHED: 6, ABANDONED: 7,
+    FINAL_WAGER: 4, FINAL_ANSWER: 5, FINAL_REVIEW: 6, FINISHED: 7, ABANDONED: 8,
 } as const;
 
 export interface PhaseView {
@@ -50,6 +50,10 @@ export interface PhaseView {
     active_player_count: number;
     submit_count: number;
     continue_count: number;
+    final_wager_count: number;
+    easy_vote_count: number;
+    medium_vote_count: number;
+    hard_vote_count: number;
 }
 
 interface PackView {
@@ -337,6 +341,8 @@ export class ScriptedPlayer {
      * Play the whole game with a fixed strategy, polling the chain. Resolves
      * when the game reaches Finished. `answer` is what we submit for every
      * regular/final question (pass a wrong answer to exercise overturns).
+     * A test can hold its difficulty vote briefly to inspect the live
+     * distribution after the UI player has voted.
      */
     async playUntilFinished(gameId: bigint, opts: {
         answer: string;
@@ -344,6 +350,7 @@ export class ScriptedPlayer {
         finalWager?: number;
         difficultyVote?: number;
         onStage?: (phase: PhaseView) => void;
+        beforeDifficultyVote?: () => Promise<void>;
     }): Promise<void> {
         const done = new Set<string>();
         const deadline = Date.now() + 480_000;
@@ -359,13 +366,19 @@ export class ScriptedPlayer {
                         return;
                     case STAGE.ANSWER:
                         if (!done.has(key)) {
-                            await this.tx("submitAnswer", [gameId, opts.answer, opts.wager ?? 5]);
+                            await this.tx("submitAnswer", [gameId, opts.answer, opts.wager ?? 1]);
+                            done.add(key);
+                        }
+                        break;
+                    case STAGE.FINAL_WAGER:
+                        if (!done.has(key)) {
+                            await this.tx("submitFinalWager", [gameId, opts.finalWager ?? 0]);
                             done.add(key);
                         }
                         break;
                     case STAGE.FINAL_ANSWER:
                         if (!done.has(key)) {
-                            await this.tx("submitAnswer", [gameId, opts.answer, opts.finalWager ?? 0]);
+                            await this.tx("submitFinalAnswer", [gameId, opts.answer]);
                             done.add(key);
                         }
                         break;
@@ -378,6 +391,7 @@ export class ScriptedPlayer {
                         break;
                     case STAGE.VOTE:
                         if (!done.has(key)) {
+                            await opts.beforeDifficultyVote?.();
                             await this.tx("voteDifficulty", [gameId, opts.difficultyVote ?? 0]);
                             done.add(key);
                         }

@@ -128,15 +128,16 @@ const STAGE_LOBBY = 0;
 const STAGE_ANSWER = 1;
 const STAGE_REVIEW = 2;
 const STAGE_VOTE = 3;
-const STAGE_FINAL_ANSWER = 4;
-const STAGE_FINAL_REVIEW = 5;
-const STAGE_FINISHED = 6;
-const STAGE_ABANDONED = 7;
+const STAGE_FINAL_WAGER = 4;
+const STAGE_FINAL_ANSWER = 5;
+const STAGE_FINAL_REVIEW = 6;
+const STAGE_FINISHED = 7;
+const STAGE_ABANDONED = 8;
 const FINAL_QKEY = 255;
 const FINAL_SLOT_BASE = 0xf0;
 const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
-const MAX_GAME_QUESTIONS = 10;
+const MAX_GAME_QUESTIONS = 20;
 const POLL_FALLBACK_MS = 8_000;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
@@ -170,6 +171,8 @@ const SESSION_STATE_CONFIRM_DELAY_MS = 750;
 // on the product account even when instant actions are enabled.
 const SESSION_GAME_METHODS = new Set([
     "submitAnswer",
+    "submitFinalWager",
+    "submitFinalAnswer",
     "voteCorrect",
     "readyContinue",
     "voteDifficulty",
@@ -212,6 +215,10 @@ interface PhaseView {
     slot: number;
     submit_count: number;
     continue_count: number;
+    final_wager_count: number;
+    easy_vote_count: number;
+    medium_vote_count: number;
+    hard_vote_count: number;
     /** Historical roster size; use active_player_count for action progress. */
     player_count: number;
     active_player_count: number;
@@ -244,6 +251,10 @@ interface LiveGameView extends GameView, PhaseView {
     players: string[];
     scores: (number | bigint)[];
     player_names: string[];
+    difficulty_choices: (number | bigint)[];
+    difficulty_vote_locked: boolean[];
+    final_wagers: (number | bigint)[];
+    final_wager_locked: boolean[];
     submissions: SubmissionView[];
 }
 
@@ -263,6 +274,12 @@ interface Snapshot {
     /** Optional on-chain names, parallel to `players`. */
     playerNames: string[];
     scores: number[];
+    /** Per-roster-player difficulty choice and whether it is locked. */
+    difficultyChoices: number[];
+    difficultyVoteLocked: boolean[];
+    /** Per-roster-player final wagers and whether their choice is locked. */
+    finalWagers: number[];
+    finalWagerLocked: boolean[];
     submissions: SubmissionView[];
     questionText: string;
     /** Canonical answer — only fetched during review stages. */
@@ -386,6 +403,9 @@ function reconcileActionGuards(snap: Snapshot): void {
     const mine = snap.submissions.find((submission) => submission.player.toLowerCase() === myAddress);
     if (mine?.submitted) clearActionSent("submit");
     if (mine?.continue_ready) clearActionSent("continue");
+    const myIndex = snap.players.indexOf(myAddress);
+    if (myIndex >= 0 && snap.difficultyVoteLocked[myIndex]) clearActionSent("difficulty");
+    if (myIndex >= 0 && snap.finalWagerLocked[myIndex]) clearActionSent("final-wager");
     const now = Date.now();
     for (const [action, sentAt] of actionSentAt) {
         if (now - sentAt < 18_000) continue;
@@ -414,7 +434,9 @@ let awaitingFirstGameSnapshot = false;
 let wagerOutcomes = new Map<number, boolean>();
 let wagerHistoryLoadedUpTo = -1;
 let selectedWager: number | null = null;
+let selectedDifficulty: number | null = null;
 let activeAnswerKey = "";
+let activeFinalWagerKey = "";
 // Optimistic local echo of my in-flight answer, shown until the chain
 // confirms it (rolled back if the tx fails).
 let optimisticAnswer: { qkey: number; answer: string; wager: number } | null = null;
@@ -454,7 +476,7 @@ let publishingDraftId: string | null = null;
 
 // ── Screen switching ─────────────────────────────────────────────────
 
-const SCREENS = ["boot", "home", "pack-select", "configure", "builder", "lobby", "question", "review", "vote", "results", "abandoned"] as const;
+const SCREENS = ["boot", "home", "pack-select", "configure", "builder", "lobby", "question", "review", "vote", "final-wager", "results", "abandoned"] as const;
 type Screen = (typeof SCREENS)[number];
 const $appShell = document.querySelector<HTMLElement>("main");
 let visibleScreen: Screen | null = null;
@@ -464,10 +486,9 @@ function showScreen(name: Screen): void {
         getEl(`screen-${s}`).classList.toggle("active", s === name);
     }
     const isPackPicker = name === "pack-select";
-    const isGameStage = name === "question" || name === "review" || name === "vote";
+    const isGameStage = name === "question" || name === "review" || name === "vote" || name === "final-wager";
     document.body.classList.toggle("pack-picker-open", isPackPicker);
     document.body.classList.toggle("game-stage-open", isGameStage);
-    if (name !== "question") document.body.classList.remove("answer-input-focused");
     $appShell?.classList.toggle("pack-picker-open", isPackPicker);
     $appShell?.classList.toggle("game-stage-open", isGameStage);
     const changed = visibleScreen !== name;
@@ -3332,6 +3353,10 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             slot: NO_SLOT,
             submit_count: 0,
             continue_count: 0,
+            final_wager_count: 0,
+            easy_vote_count: 0,
+            medium_vote_count: 0,
+            hard_vote_count: 0,
             player_count: 1,
             active_player_count: 1,
         },
@@ -3348,6 +3373,10 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
         players: [myAddress],
         playerNames: [myDisplayName],
         scores: [0],
+        difficultyChoices: [0],
+        difficultyVoteLocked: [false],
+        finalWagers: [0],
+        finalWagerLocked: [false],
         submissions: [],
         questionText: "",
         answerText: "",
@@ -3400,13 +3429,15 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     wagerOutcomes = new Map();
     wagerHistoryLoadedUpTo = -1;
     selectedWager = null;
+    selectedDifficulty = null;
     activeAnswerKey = "";
+    activeFinalWagerKey = "";
     optimisticAnswer = null;
     lastRank = -1;
     behindStreak = 0;
     latestObservedAt = initialSnapshot ? Date.now() : 0;
     getEl<HTMLInputElement>("answer-input").value = "";
-    getEl<HTMLInputElement>("wager-final").value = "0";
+    getEl<HTMLInputElement>("final-wager-input").value = "0";
     setGameActions("hidden");
     renderResumeCard();
     if (initialSnapshot) {
@@ -3429,7 +3460,9 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     pendingAbandonedForfeit = null;
     latest = null;
     selectedWager = null;
+    selectedDifficulty = null;
     activeAnswerKey = "";
+    activeFinalWagerKey = "";
     optimisticAnswer = null;
     latestObservedAt = 0;
     gameEntryMark = null;
@@ -3598,6 +3631,10 @@ async function poll(): Promise<void> {
             slot: Number(live.slot),
             submit_count: Number(live.submit_count),
             continue_count: Number(live.continue_count),
+            final_wager_count: Number(live.final_wager_count),
+            easy_vote_count: Number(live.easy_vote_count),
+            medium_vote_count: Number(live.medium_vote_count),
+            hard_vote_count: Number(live.hard_vote_count),
             player_count: Number(live.player_count),
             active_player_count: Number(live.active_player_count),
         };
@@ -3614,6 +3651,10 @@ async function poll(): Promise<void> {
         const players = live.players.map((player) => String(player).toLowerCase());
         const playerNames = live.player_names.map((name) => String(name));
         const scores = live.scores.map(Number);
+        const difficultyChoices = live.difficulty_choices.map(Number);
+        const difficultyVoteLocked = live.difficulty_vote_locked.map(Boolean);
+        const finalWagers = live.final_wagers.map(Number);
+        const finalWagerLocked = live.final_wager_locked.map(Boolean);
         const submissions = live.submissions.map((submission) => ({
             ...submission,
             player: String(submission.player).toLowerCase(),
@@ -3661,6 +3702,10 @@ async function poll(): Promise<void> {
             players,
             playerNames: normalizedPlayerNames,
             scores,
+            difficultyChoices,
+            difficultyVoteLocked,
+            finalWagers,
+            finalWagerLocked,
             submissions,
             questionText: qText,
             answerText: aText,
@@ -3694,6 +3739,7 @@ async function poll(): Promise<void> {
             actionsSent.clear();
             actionSentAt.clear();
             optimisticAnswer = null;
+            selectedDifficulty = null;
         }
         const isAnswerStage =
             latest.phase.stage === STAGE_ANSWER || latest.phase.stage === STAGE_FINAL_ANSWER;
@@ -3702,7 +3748,13 @@ async function poll(): Promise<void> {
             activeAnswerKey = answerKey;
             selectedWager = null;
             getEl<HTMLInputElement>("answer-input").value = "";
-            getEl<HTMLInputElement>("wager-final").value = "0";
+        }
+        const finalWagerKey = `${polledGameId}:${latest.phase.stage}:${latest.phase.cursor}`;
+        if (latest.phase.stage === STAGE_FINAL_WAGER && finalWagerKey !== activeFinalWagerKey) {
+            activeFinalWagerKey = finalWagerKey;
+            getEl<HTMLInputElement>("final-wager-input").value = "0";
+        } else if (latest.phase.stage !== STAGE_FINAL_WAGER) {
+            activeFinalWagerKey = "";
         }
         // chain caught up with the optimistic echo
         if (optimisticAnswer && mySubmission(latest)?.submitted) {
@@ -3755,6 +3807,9 @@ function render(snap: Snapshot): void {
         case STAGE_VOTE:
             renderVote(snap);
             break;
+        case STAGE_FINAL_WAGER:
+            renderFinalWager(snap);
+            break;
         case STAGE_FINISHED:
             renderResults(snap);
             break;
@@ -3765,14 +3820,6 @@ function render(snap: Snapshot): void {
 }
 
 // ── Lobby ────────────────────────────────────────────────────────────
-
-function prefetchQuestion(packId: number, slot: number): void {
-    const key = registryQuestionCacheKey(packId, slot);
-    if (questionCache.has(key)) return;
-    void questionText(packId, slot).catch(() => {
-        // The normal poll remains the source of truth and will retry later.
-    });
-}
 
 function renderLobby(snap: Snapshot): void {
     const lobbyGameId = gameId;
@@ -3938,7 +3985,7 @@ function countdownText(snap: Snapshot): string {
 setInterval(() => {
     if (!latest) return;
     const text = countdownText(latest);
-    for (const id of ["question-countdown", "review-countdown", "vote-countdown"]) {
+    for (const id of ["question-countdown", "review-countdown", "vote-countdown", "final-wager-countdown"]) {
         const el = getEl(id);
         el.textContent = text;
         el.classList.toggle("urgent", text !== "" && text !== "time's up" && Number.parseInt(text.slice(1)) <= 15);
@@ -3947,14 +3994,36 @@ setInterval(() => {
 
 // ── Question screen ──────────────────────────────────────────────────
 
-const $wagerButtons = [...document.querySelectorAll<HTMLButtonElement>(".wager-btn")];
-for (const btn of $wagerButtons) {
-    btn.addEventListener("click", () => {
-        const value = Number(btn.dataset.wager);
-        if (wagerOutcomes.has(value)) return; // already spent
-        selectedWager = value;
-        paintWagerGrid();
-    });
+let $wagerButtons: HTMLButtonElement[] = [];
+
+/** Render exactly one regular-wager choice for every question in this game. */
+function ensureWagerButtons(numQuestions: number): void {
+    const count = Math.max(1, Math.min(MAX_GAME_QUESTIONS, Math.trunc(numQuestions)));
+    if ($wagerButtons.length === count) return;
+
+    if (selectedWager !== null && selectedWager > count) selectedWager = null;
+    const buttons: HTMLButtonElement[] = [];
+    for (let value = 1; value <= count; value += 1) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "wager-btn";
+        btn.dataset.wager = String(value);
+        btn.dataset.testid = `wager-${value}`;
+        btn.textContent = String(value);
+        // On a phone this preserves the focused answer field while the wager
+        // click lands, so a first tap cannot be swallowed by a blur/reflow.
+        btn.addEventListener("pointerdown", (event) => {
+            if (document.activeElement === $answerInput) event.preventDefault();
+        });
+        btn.addEventListener("click", () => {
+            if (wagerOutcomes.has(value)) return; // already spent
+            selectedWager = value;
+            paintWagerGrid();
+        });
+        buttons.push(btn);
+    }
+    $wagerButtons = buttons;
+    getEl("wager-grid").replaceChildren(...buttons);
 }
 
 function paintWagerGrid(): void {
@@ -3995,16 +4064,17 @@ function renderQuestion(snap: Snapshot): void {
 
     if (!answered && amActive) {
         getEl("wager-grid-block").style.display = isFinal ? "none" : "";
-        getEl("wager-final-row").style.display = isFinal ? "" : "none";
+        getEl("final-wager-locked").style.display = isFinal ? "flex" : "none";
         if (isFinal) {
             const myIdx = snap.players.indexOf(myAddress);
-            const myScore = myIdx >= 0 ? snap.scores[myIdx] : 0;
-            getEl("wager-final-max").textContent = String(myScore);
-            getEl<HTMLInputElement>("wager-final").max = String(myScore);
+            const finalWager = myIdx >= 0 ? snap.finalWagers[myIdx] ?? 0 : 0;
+            getEl("final-wager-locked-value").textContent = String(finalWager);
         } else {
+            ensureWagerButtons(snap.game.num_questions);
             paintWagerGrid();
         }
     } else {
+        getEl("final-wager-locked").style.display = "none";
         // Sporcle Party-style live reveal: players can see answers and wagers
         // as teammates lock in, while correctness stays hidden until review.
         renderList(
@@ -4043,17 +4113,11 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
     let wager: number;
     if (isFinal) {
         const myIndex = latest.players.indexOf(myAddress);
-        const maxWager = myIndex >= 0 ? latest.scores[myIndex] : 0;
-        const parsedWager = parseIntegerInRange(
-            getEl<HTMLInputElement>("wager-final").value,
-            0,
-            maxWager,
-        );
-        if (parsedWager === null) {
-            $err.textContent = `Final wager must be a whole number from 0 to ${maxWager}.`;
+        if (myIndex < 0 || !latest.finalWagerLocked[myIndex]) {
+            $err.textContent = "Your final wager has not been locked yet.";
             return;
         }
-        wager = parsedWager;
+        wager = latest.finalWagers[myIndex] ?? 0;
     } else {
         if (selectedWager === null) {
             $err.textContent = "Pick a wager first — each number can be used once per game.";
@@ -4068,7 +4132,11 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
     render(latest);
     busy = true;
     try {
-        await sendTx(game, "submitAnswer", gameId, answer, wager);
+        if (isFinal) {
+            await sendTx(game, "submitFinalAnswer", gameId, answer);
+        } else {
+            await sendTx(game, "submitAnswer", gameId, answer, wager);
+        }
         selectedWager = null;
         getEl<HTMLInputElement>("answer-input").value = "";
         void poll();
@@ -4090,13 +4158,11 @@ getEl<HTMLInputElement>("answer-input").addEventListener("keydown", (event) => {
 });
 
 // Mobile browsers may scroll a focused text input into view after opening the
-// software keyboard. The answer dock is already within the visual viewport;
-// reset only its internal scroll region so the question stays above it. Use a
-// class rather than :has() for older mobile engines, then repeat after the
-// viewport animation finishes (some Android/iOS browsers resize late).
+// software keyboard. Keep the one stable answer layout and only reset the
+// internal question scroller; no focus-only content swap is needed.
 const $answerInput = getEl<HTMLInputElement>("answer-input");
 function keepQuestionVisibleForKeyboard(): void {
-    if (!document.body.classList.contains("answer-input-focused")) return;
+    if (document.activeElement !== $answerInput) return;
     getEl("screen-question").querySelector<HTMLElement>(".game-stage-content")
         ?.scrollTo({ top: 0, behavior: "auto" });
 }
@@ -4108,13 +4174,84 @@ function scheduleQuestionVisibilityForKeyboard(): void {
 }
 $answerInput.addEventListener("focus", () => {
     if (!window.matchMedia("(max-width: 599px)").matches) return;
-    document.body.classList.add("answer-input-focused");
     scheduleQuestionVisibilityForKeyboard();
 });
-$answerInput.addEventListener("blur", () => {
-    document.body.classList.remove("answer-input-focused");
-});
 window.visualViewport?.addEventListener("resize", scheduleQuestionVisibilityForKeyboard);
+
+// ── Final wager ─────────────────────────────────────────────────────
+
+function renderFinalWager(snap: Snapshot): void {
+    const myIndex = snap.players.indexOf(myAddress);
+    const amActive = mySubmission(snap)?.active ?? false;
+    const score = myIndex >= 0 ? snap.scores[myIndex] ?? 0 : 0;
+    const wager = myIndex >= 0 ? snap.finalWagers[myIndex] ?? 0 : 0;
+    const locked = myIndex >= 0 && Boolean(snap.finalWagerLocked[myIndex]);
+    const $input = getEl<HTMLInputElement>("final-wager-input");
+    const $button = getEl<HTMLButtonElement>("btn-confirm-final-wager");
+
+    getEl("final-wager-countdown").textContent = countdownText(snap);
+    getEl("final-wager-score").textContent = String(score);
+    getEl("final-wager-max").textContent = String(score);
+    $input.max = String(score);
+    $input.disabled = locked || !amActive || busy;
+    if (locked) $input.value = String(wager);
+
+    const waiting = `${snap.phase.final_wager_count}/${snap.phase.active_player_count} active players locked in`;
+    getEl("final-wager-status").textContent = locked
+        ? `Your wager is locked · ${waiting}`
+        : actionsSent.has("final-wager")
+          ? "Locking in your wager…"
+          : waiting;
+    $button.disabled = locked || !amActive || busy || actionsSent.has("final-wager");
+    $button.textContent = !amActive
+        ? "You left this quiz"
+        : locked
+          ? "Wager locked"
+          : "Lock in wager";
+
+    // Once this player has locked their own wager, warming the chosen prompt
+    // removes the final-round loading beat without revealing it to anyone
+    // who is still deciding their stake.
+    if (locked && snap.phase.final_difficulty >= 0 && snap.phase.final_difficulty < 3) {
+        void questionText(snap.game.pack_id, FINAL_SLOT_BASE + snap.phase.final_difficulty).catch(() => {
+            // The final-answer snapshot remains the source of truth and will retry.
+        });
+    }
+
+    setGameActions("active");
+    showScreen("final-wager");
+}
+
+getEl("btn-confirm-final-wager").addEventListener("click", async () => {
+    if (busy || gameId === null || !productAccount || !latest) return;
+    if (latest.phase.stage !== STAGE_FINAL_WAGER || !mySubmission(latest)?.active) return;
+    if (actionsSent.has("final-wager")) return;
+
+    const $error = getEl("final-wager-error");
+    const myIndex = latest.players.indexOf(myAddress);
+    const score = myIndex >= 0 ? latest.scores[myIndex] ?? 0 : 0;
+    const wager = parseIntegerInRange(getEl<HTMLInputElement>("final-wager-input").value, 0, score);
+    if (wager === null) {
+        $error.textContent = `Choose a whole-number wager from 0 to ${score}.`;
+        return;
+    }
+
+    $error.textContent = "";
+    markActionSent("final-wager");
+    busy = true;
+    render(latest);
+    try {
+        await sendTx(game, "submitFinalWager", gameId, wager);
+        void poll();
+    } catch (e) {
+        clearActionSent("final-wager");
+        $error.textContent = txError(e);
+        if (latest) render(latest);
+    } finally {
+        busy = false;
+        if (latest) render(latest);
+    }
+});
 
 // ── Review screen ────────────────────────────────────────────────────
 
@@ -4237,19 +4374,45 @@ getEl("btn-continue").addEventListener("click", async () => {
 
 function renderVote(snap: Snapshot): void {
     const amActive = mySubmission(snap)?.active ?? false;
+    const myIndex = snap.players.indexOf(myAddress);
+    const voteLocked = myIndex >= 0 && Boolean(snap.difficultyVoteLocked[myIndex]);
+    const lockedChoice = myIndex >= 0 ? snap.difficultyChoices[myIndex] : null;
+    const counts = [
+        snap.phase.easy_vote_count,
+        snap.phase.medium_vote_count,
+        snap.phase.hard_vote_count,
+    ];
+    const countNames = ["easy", "medium", "hard"];
+    const total = counts.reduce((sum, count) => sum + count, 0);
+    const leading = Math.max(...counts);
+    const denominator = Math.max(1, snap.phase.active_player_count);
+
     getEl("vote-countdown").textContent = countdownText(snap);
     getEl("vote-status").textContent =
-        `${snap.phase.submit_count}/${snap.phase.active_player_count} active players voted` +
-        (actionsSent.has("difficulty") ? " — your vote is in" : "");
+        `${total}/${snap.phase.active_player_count} active players voted` +
+        (voteLocked || actionsSent.has("difficulty") ? " — your vote is in" : "");
+    getEl("vote-distribution-total").textContent = `${total} ${total === 1 ? "vote" : "votes"}`;
+    for (let difficulty = 0; difficulty < counts.length; difficulty += 1) {
+        const count = counts[difficulty];
+        const name = countNames[difficulty];
+        const row = getEl(`vote-distribution-${name}`);
+        const bar = getEl(`vote-distribution-${name}-bar`);
+        const output = getEl(`vote-distribution-${name}-count`);
+        row.classList.toggle("is-leading", total > 0 && count === leading);
+        bar.style.width = `${Math.round((count / denominator) * 100)}%`;
+        output.textContent = String(count);
+        output.setAttribute("aria-label", `${DIFFICULTY_NAMES[difficulty]}: ${count} ${count === 1 ? "vote" : "votes"}`);
+    }
     for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty")) {
-        btn.disabled = actionsSent.has("difficulty") || !amActive;
+        const difficulty = Number(btn.dataset.difficulty);
+        const selected = voteLocked ? lockedChoice === difficulty : selectedDifficulty === difficulty;
+        btn.disabled = voteLocked || actionsSent.has("difficulty") || !amActive || busy;
+        btn.classList.toggle("is-selected", selected);
+        btn.setAttribute("aria-pressed", String(selected));
     }
-    // The winning difficulty is not known yet, but all three final cards are
-    // immutable and tiny. Fetching them during the vote removes a visible
-    // delay from the final reveal without exposing any canonical answer.
-    for (let difficulty = 0; difficulty < 3; difficulty++) {
-        prefetchQuestion(snap.game.pack_id, FINAL_SLOT_BASE + difficulty);
-    }
+    // Keep the final prompt out of the client until the wager phase is over.
+    // The normal final-answer snapshot fetches its chosen question just in
+    // time, preserving the intended "wager before prompt" party flow.
     setGameActions("active");
     showScreen("vote");
 }
@@ -4258,7 +4421,10 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
     btn.addEventListener("click", async () => {
         if (busy || gameId === null || !productAccount || actionsSent.has("difficulty")) return;
         if (!latest || !mySubmission(latest)?.active) return;
+        const myIndex = latest.players.indexOf(myAddress);
+        if (myIndex >= 0 && latest.difficultyVoteLocked[myIndex]) return;
         // optimistic: lock the vote in visually, roll back on error
+        selectedDifficulty = Number(btn.dataset.difficulty);
         markActionSent("difficulty");
         if (latest) render(latest);
         busy = true;
@@ -4269,8 +4435,10 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
             const message = txError(e);
             if (message.includes("AlreadyVoted")) {
                 getEl("vote-error").textContent = "Your vote is already recorded.";
+                void poll();
             } else {
                 clearActionSent("difficulty");
+                selectedDifficulty = null;
                 getEl("vote-error").textContent = message;
             }
             if (latest) render(latest);

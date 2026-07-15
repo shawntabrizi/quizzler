@@ -133,15 +133,27 @@ fn review_advances_to_next_question_or_vote() {
 }
 
 #[test]
+fn difficulty_vote_flows_through_final_wager_before_revealing_final_question() {
+    let (wager, crossed_vote) = roll(clock(STAGE_VOTE, 2, 200), &CFG, 205);
+    assert!(crossed_vote);
+    assert_eq!(wager, clock(STAGE_FINAL_WAGER, 2, 205));
+
+    let (answer, crossed_vote) = roll(wager, &CFG, 215);
+    assert!(!crossed_vote);
+    assert_eq!(answer, clock(STAGE_FINAL_ANSWER, 2, 215));
+}
+
+#[test]
 fn roll_across_many_stages_with_nobody_playing() {
     // From the start of question 0, elapse everything: 3×(10+5) answer/review
-    // + 5 vote + 10 final answer + 5 final review = 65 blocks to Finished.
-    let (c, crossed_vote) = roll(clock(STAGE_ANSWER, 0, 0), &CFG, 65);
+    // + 5 vote + 10 final wager + 10 final answer + 5 final review = 75 blocks
+    // to Finished.
+    let (c, crossed_vote) = roll(clock(STAGE_ANSWER, 0, 0), &CFG, 75);
     assert_eq!(c.stage, STAGE_FINISHED);
     assert!(crossed_vote, "roll must report crossing the vote stage");
     // one block earlier we are still in the final review
-    let (c, _) = roll(clock(STAGE_ANSWER, 0, 0), &CFG, 64);
-    assert_eq!(c, clock(STAGE_FINAL_REVIEW, 2, 60));
+    let (c, _) = roll(clock(STAGE_ANSWER, 0, 0), &CFG, 74);
+    assert_eq!(c, clock(STAGE_FINAL_REVIEW, 2, 70));
 }
 
 #[test]
@@ -158,6 +170,7 @@ fn lobby_and_finished_do_not_roll() {
 fn deadlines() {
     assert_eq!(stage_deadline(&clock(STAGE_ANSWER, 0, 100), &CFG), 110);
     assert_eq!(stage_deadline(&clock(STAGE_REVIEW, 0, 110), &CFG), 115);
+    assert_eq!(stage_deadline(&clock(STAGE_FINAL_WAGER, 2, 115), &CFG), 125);
     assert_eq!(stage_deadline(&clock(STAGE_LOBBY, 0, 0), &CFG), u64::MAX);
     assert_eq!(stage_deadline(&clock(STAGE_FINISHED, 0, 0), &CFG), u64::MAX);
 }

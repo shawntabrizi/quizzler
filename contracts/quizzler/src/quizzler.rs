@@ -25,8 +25,8 @@ use alloc::string::String;
 
 use logic::{DIFFICULTY_UNSET, GameClock, PhaseConfig};
 use logic::{
-    STAGE_ABANDONED, STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY,
-    STAGE_REVIEW, STAGE_VOTE,
+    STAGE_ABANDONED, STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_FINAL_WAGER,
+    STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE,
 };
 use pvm::{Decode, Encode, HostFn};
 use pvm_contract as pvm;
@@ -37,10 +37,9 @@ const MAX_ANSWER_BYTES: usize = 64;
 /// player-facing app always uses this deployment's documented ceiling.
 const MAX_PLAYERS: u8 = 24;
 const MAX_STAGE_BLOCKS: u32 = 600;
-const MAX_WAGER: u32 = 10;
-/// Each wager value 1..=10 is usable once per game (Sporcle's system), so a
-/// game holds at most 10 regular questions.
-const MAX_GAME_QUESTIONS: u8 = 10;
+/// Each regular wager value 1..=num_questions is usable exactly once. The
+/// u32 mask below therefore supports this deployment's 20-question ceiling.
+const MAX_GAME_QUESTIONS: u8 = 20;
 /// The registry reserves regular slots 0..200 and final-question slots above
 /// that range. Keeping this bound here makes the per-game shuffle allocation
 /// safe even if a differently configured registry is supplied at deployment.
@@ -106,6 +105,14 @@ struct PhaseView {
     slot: u8,
     submit_count: u32,
     continue_count: u32,
+    /// Number of active players that have explicitly locked a final wager.
+    /// This is non-zero only during `STAGE_FINAL_WAGER`.
+    final_wager_count: u32,
+    /// Live difficulty-vote totals. They are zero outside `STAGE_VOTE` so a
+    /// client never renders stale choices after the final question is set.
+    easy_vote_count: u32,
+    medium_vote_count: u32,
+    hard_vote_count: u32,
     /// Historical roster size (all lobby players, or all participants after
     /// the game starts).
     player_count: u8,
@@ -147,6 +154,10 @@ struct LiveGameView {
     slot: u8,
     submit_count: u32,
     continue_count: u32,
+    final_wager_count: u32,
+    easy_vote_count: u32,
+    medium_vote_count: u32,
+    hard_vote_count: u32,
     player_count: u8,
     active_player_count: u8,
     players: alloc::vec::Vec<pvm::Address>,
@@ -154,6 +165,21 @@ struct LiveGameView {
     /// Parallel to `players`; an empty string means the client should fall
     /// back to its normal abbreviated address label.
     player_names: alloc::vec::Vec<String>,
+    /// Parallel to `players`. A zero is meaningful only when the matching
+    /// `difficulty_vote_locked` entry is true; otherwise the player has not
+    /// voted yet. This lets a refreshed client keep its own vote disabled.
+    difficulty_choices: alloc::vec::Vec<u8>,
+    /// Parallel to `players`; true after that player has cast a difficulty
+    /// vote. It is intentionally included in the live snapshot so a client
+    /// never has to infer personal state from aggregate vote totals.
+    difficulty_vote_locked: alloc::vec::Vec<bool>,
+    /// Parallel to `players`. An unselected wager is zero; `final_wager_locked`
+    /// distinguishes a still-selectable zero from an explicit or timed-out
+    /// locked zero.
+    final_wagers: alloc::vec::Vec<u32>,
+    /// Parallel to `players`. The timer closing logically locks every missing
+    /// final wager at zero, without requiring a write from every player.
+    final_wager_locked: alloc::vec::Vec<bool>,
     /// Current question (or final-question) submissions in roster order.
     submissions: alloc::vec::Vec<SubmissionView>,
 }
@@ -194,8 +220,13 @@ struct Storage {
     // The individual choice lets a later forfeit remove an already-cast vote
     // from both the live quorum and the final difficulty resolution.
     difficulty_choice: pvm::storage::Mapping<(u64, [u8; 20]), u8>,
-    // bitmask of wager values (bits 1..=10) already spent by a player
-    used_wagers: pvm::storage::Mapping<(u64, [u8; 20]), u16>,
+    // Explicit final-wager selections. An absent entry is a durable logical
+    // zero after the final-wager timer closes, so a player who times out can
+    // still submit a final answer without another transaction.
+    final_wagers: pvm::storage::Mapping<(u64, [u8; 20]), u32>,
+    // Bitmask of regular wager values (bits 1..=num_questions) already spent
+    // by a player. MAX_GAME_QUESTIONS is 20, so a u32 is sufficient.
+    used_wagers: pvm::storage::Mapping<(u64, [u8; 20]), u32>,
     // (creator, client-selected nonce) → game code. This stays stable under
     // concurrent creation from the same account.
     created_game_of: pvm::storage::Mapping<([u8; 20], u64), u64>,
@@ -526,6 +557,18 @@ fn active_submission_count_in(game_id: u64, question_key: u8, players: &[[u8; 20
         .count() as u32
 }
 
+fn active_final_wager_count_in(game_id: u64, players: &[[u8; 20]]) -> u32 {
+    players
+        .iter()
+        .filter(|player| {
+            !Storage::forfeited()
+                .get(&(game_id, **player))
+                .unwrap_or(false)
+        })
+        .filter(|player| Storage::final_wagers().contains(&(game_id, **player)))
+        .count() as u32
+}
+
 fn active_continue_count_in(game_id: u64, question_key: u8, players: &[[u8; 20]]) -> u32 {
     players
         .iter()
@@ -606,6 +649,11 @@ fn require_active_player(game_id: u64, who: &[u8; 20]) -> u32 {
 fn active_submission_count(game_id: u64, question_key: u8) -> u32 {
     let players = load_players(game_id);
     active_submission_count_in(game_id, question_key, &players)
+}
+
+fn active_final_wager_count(game_id: u64) -> u32 {
+    let players = load_players(game_id);
+    active_final_wager_count_in(game_id, &players)
 }
 
 fn active_continue_count(game_id: u64, question_key: u8) -> u32 {
@@ -722,6 +770,54 @@ fn game_view_from(game_id: u64, m: &GameMeta, players: &[[u8; 20]]) -> GameView 
     }
 }
 
+/// Once this stage has closed, missing final-wager selections are permanently
+/// interpreted as zero. Keeping that default implicit avoids a storage write
+/// for every player merely because the timer elapsed, while preserving the
+/// same result across refreshes and later final-answer submissions.
+fn final_wager_stage_closed(stage: u8) -> bool {
+    matches!(
+        stage,
+        STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW | logic::STAGE_FINISHED
+    )
+}
+
+fn difficulty_choices_from(game_id: u64, players: &[[u8; 20]]) -> (Vec<u8>, Vec<bool>) {
+    let mut choices = Vec::with_capacity(players.len());
+    let mut locked = Vec::with_capacity(players.len());
+    for player in players {
+        match Storage::difficulty_choice().get(&(game_id, *player)) {
+            Some(choice) => {
+                choices.push(choice);
+                locked.push(true);
+            }
+            None => {
+                choices.push(0);
+                locked.push(false);
+            }
+        }
+    }
+    (choices, locked)
+}
+
+fn final_wagers_from(game_id: u64, m: &GameMeta, players: &[[u8; 20]]) -> (Vec<u32>, Vec<bool>) {
+    let default_locked = final_wager_stage_closed(m.stage);
+    let mut wagers = Vec::with_capacity(players.len());
+    let mut locked = Vec::with_capacity(players.len());
+    for player in players {
+        match Storage::final_wagers().get(&(game_id, *player)) {
+            Some(wager) => {
+                wagers.push(wager);
+                locked.push(true);
+            }
+            None => {
+                wagers.push(0);
+                locked.push(default_locked);
+            }
+        }
+    }
+    (wagers, locked)
+}
+
 fn phase_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -> PhaseView {
     let clock = clock_of(m);
     let question_key = logic::question_key(&clock);
@@ -731,10 +827,15 @@ fn phase_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -
         }
         _ => 0xff,
     };
-    let submit_count = if m.stage == STAGE_VOTE {
-        active_difficulty_total_in(game_id, players)
+    let difficulty_counts = if m.stage == STAGE_VOTE {
+        active_difficulty_counts_in(game_id, players)
     } else {
-        active_submission_count_in(game_id, question_key, players)
+        [0; 3]
+    };
+    let submit_count = match m.stage {
+        STAGE_VOTE => difficulty_counts.iter().sum(),
+        STAGE_FINAL_WAGER => active_final_wager_count_in(game_id, players),
+        _ => active_submission_count_in(game_id, question_key, players),
     };
     PhaseView {
         stage: m.stage,
@@ -745,6 +846,14 @@ fn phase_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -
         slot,
         submit_count,
         continue_count: active_continue_count_in(game_id, question_key, players),
+        final_wager_count: if m.stage == STAGE_FINAL_WAGER {
+            active_final_wager_count_in(game_id, players)
+        } else {
+            0
+        },
+        easy_vote_count: difficulty_counts[0],
+        medium_vote_count: difficulty_counts[1],
+        hard_vote_count: difficulty_counts[2],
         player_count: players.len() as u8,
         active_player_count: active_player_count_in(game_id, players) as u8,
     }
@@ -807,6 +916,8 @@ fn player_names_from(players: &[[u8; 20]]) -> Vec<String> {
 fn live_game_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -> LiveGameView {
     let phase = phase_view_from(game_id, m, now, players);
     let question_key = logic::question_key(&clock_of(m));
+    let (difficulty_choices, difficulty_vote_locked) = difficulty_choices_from(game_id, players);
+    let (final_wagers, final_wager_locked) = final_wagers_from(game_id, m, players);
     LiveGameView {
         pack_id: m.pack_id,
         creator: pvm::Address::from(m.creator),
@@ -822,6 +933,10 @@ fn live_game_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]
         slot: phase.slot,
         submit_count: phase.submit_count,
         continue_count: phase.continue_count,
+        final_wager_count: phase.final_wager_count,
+        easy_vote_count: phase.easy_vote_count,
+        medium_vote_count: phase.medium_vote_count,
+        hard_vote_count: phase.hard_vote_count,
         player_count: phase.player_count,
         active_player_count: phase.active_player_count,
         players: players
@@ -833,6 +948,10 @@ fn live_game_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]
             .map(|player| Storage::scores().get(&(game_id, *player)).unwrap_or(0))
             .collect(),
         player_names: player_names_from(players),
+        difficulty_choices,
+        difficulty_vote_locked,
+        final_wagers,
+        final_wager_locked,
         submissions: submission_views_from(game_id, question_key, players),
     }
 }
@@ -860,6 +979,7 @@ fn collapse_if_everyone_ready(game_id: u64, m: &mut GameMeta) {
     let question_key = logic::question_key(&clock_of(m));
     let ready = match m.stage {
         STAGE_ANSWER | STAGE_FINAL_ANSWER => active_submission_count(game_id, question_key),
+        STAGE_FINAL_WAGER => active_final_wager_count(game_id),
         STAGE_REVIEW | STAGE_FINAL_REVIEW => active_continue_count(game_id, question_key),
         STAGE_VOTE => active_difficulty_total(game_id),
         _ => return,
@@ -891,6 +1011,22 @@ fn active_slot(game_id: u64, m: &GameMeta) -> u8 {
     }
 }
 
+/// Validate, normalize, and score-match a plaintext answer for the currently
+/// active question. The game intentionally keeps this public and casual; the
+/// bounds simply keep a malformed payload from consuming unbounded storage.
+fn evaluate_answer(game_id: u64, m: &GameMeta, answer: &str) -> (String, bool) {
+    if answer.len() > MAX_ANSWER_BYTES {
+        fail("AnswerTooLong");
+    }
+    let normalized = logic::normalize(answer);
+    if normalized.len() > MAX_ANSWER_BYTES {
+        fail("AnswerTooLong");
+    }
+    let accepted = registry_answers(m.pack_id, active_slot(game_id, m));
+    let correct = !normalized.is_empty() && logic::answer_matches(&normalized, &accepted);
+    (normalized, correct)
+}
+
 // ── Contract ─────────────────────────────────────────────────────────
 
 #[pvm::contract]
@@ -898,17 +1034,17 @@ mod quizzler {
     // NOTE: no glob import — #[pvm::contract] injects its own String/Vec
     // imports into the module, which a `use super::*` would collide with.
     use super::{
-        DIFFICULTY_UNSET, GameMeta, GameView, LiveGameView, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS,
-        MAX_PLAYERS, MAX_REGULAR_SLOTS, MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ABANDONED,
-        STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW,
+        DIFFICULTY_UNSET, GameMeta, GameView, LiveGameView, MAX_GAME_QUESTIONS, MAX_PLAYERS,
+        MAX_REGULAR_SLOTS, MAX_STAGE_BLOCKS, PhaseView, STAGE_ABANDONED, STAGE_ANSWER,
+        STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_FINAL_WAGER, STAGE_LOBBY, STAGE_REVIEW,
         STAGE_VOTE, Storage, Submission, SubmissionView, active_continue_count,
-        active_difficulty_total, active_slot, active_submission_count, apply_overturn_if_quorum,
-        caller20, clock_of, collapse, collapse_if_everyone_ready, current_block, emit_game_created,
-        fail, game_view_from, gen_game_code, is_active_player, is_roster_player,
-        live_game_view_from, load_game, load_players, logic, main_caller, phase_view_from,
-        player_for_caller, player_names_from, pvm, reconcile_overturns_after_forfeit,
-        registry_answers, registry_pack_status, require_active_player, save_game, settle,
-        settle_at, shuffled_regular_slots, submission_views_from,
+        active_difficulty_total, active_final_wager_count, active_submission_count,
+        apply_overturn_if_quorum, clock_of, collapse, collapse_if_everyone_ready, current_block,
+        emit_game_created, evaluate_answer, fail, game_view_from, gen_game_code, is_active_player,
+        is_roster_player, live_game_view_from, load_game, load_players, logic, main_caller,
+        phase_view_from, player_for_caller, player_names_from, pvm,
+        reconcile_overturns_after_forfeit, registry_pack_status, require_active_player, save_game,
+        settle, settle_at, shuffled_regular_slots, submission_views_from,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -1115,7 +1251,7 @@ mod quizzler {
     pub fn submit_answer(game_id: u64, answer: String, wager: u32) {
         let mut meta = load_game(game_id);
         settle(game_id, &mut meta);
-        if meta.stage != STAGE_ANSWER && meta.stage != STAGE_FINAL_ANSWER {
+        if meta.stage != STAGE_ANSWER {
             fail("NotAcceptingAnswers");
         }
         let who = player_for_caller();
@@ -1126,49 +1262,100 @@ mod quizzler {
             fail("AlreadyAnswered");
         }
 
-        let score = Storage::scores().get(&(game_id, who)).unwrap_or(0);
-        let is_final = meta.stage == STAGE_FINAL_ANSWER;
-        if is_final {
-            if wager > score {
-                fail("WagerExceedsScore");
-            }
-        } else {
-            if wager == 0 || wager > MAX_WAGER {
-                fail("BadWager");
-            }
-            // Sporcle's wager system: each value 1..=10 is spent once per game
-            let mask = Storage::used_wagers().get(&(game_id, who)).unwrap_or(0);
-            let bit = 1u16 << wager;
-            if mask & bit != 0 {
-                fail("WagerAlreadyUsed");
-            }
-            Storage::used_wagers().insert(&(game_id, who), &(mask | bit));
+        if wager == 0 || wager > u32::from(meta.num_questions) {
+            fail("BadWager");
         }
+        // Each regular wager value is usable exactly once. The game accepts
+        // 1..=num_questions, rather than a global set unrelated to the pack.
+        let mask = Storage::used_wagers().get(&(game_id, who)).unwrap_or(0);
+        let bit = 1u32 << wager;
+        if mask & bit != 0 {
+            fail("WagerAlreadyUsed");
+        }
+        Storage::used_wagers().insert(&(game_id, who), &(mask | bit));
 
-        // Bound raw input before normalization. This preserves the casual
-        // plaintext model while preventing a punctuation-only payload from
-        // allocating far more memory than the durable normalized answer.
-        if answer.len() > MAX_ANSWER_BYTES {
-            fail("AnswerTooLong");
-        }
-        let norm = logic::normalize(&answer);
-        if norm.len() > MAX_ANSWER_BYTES {
-            fail("AnswerTooLong");
-        }
-        let accepted = registry_answers(meta.pack_id, active_slot(game_id, &meta));
-        let correct = !norm.is_empty() && logic::answer_matches(&norm, &accepted);
+        let score = Storage::scores().get(&(game_id, who)).unwrap_or(0);
+        let (answer, correct) = evaluate_answer(game_id, &meta, &answer);
 
         if correct {
             Storage::scores().insert(&(game_id, who), &(score.saturating_add(wager)));
-        } else if is_final {
-            // wager ≤ score was checked above, so this cannot underflow
+        }
+
+        Storage::submissions().insert(
+            &(game_id, qkey, who),
+            &Submission {
+                answer,
+                wager,
+                correct,
+            },
+        );
+        if active_submission_count(game_id, qkey) >= active_count {
+            collapse(game_id, &mut meta);
+        }
+        save_game(game_id, &meta);
+    }
+
+    /// Lock the wager for the final question before its text is revealed.
+    /// Zero is a valid no-risk choice; a missing selection becomes that same
+    /// zero when the timer closes.
+    #[pvm::method]
+    pub fn submit_final_wager(game_id: u64, wager: u32) {
+        let mut meta = load_game(game_id);
+        settle(game_id, &mut meta);
+        if meta.stage != STAGE_FINAL_WAGER {
+            fail("NotInFinalWager");
+        }
+        let who = player_for_caller();
+        let active_count = require_active_player(game_id, &who);
+        if Storage::final_wagers().contains(&(game_id, who)) {
+            fail("FinalWagerLocked");
+        }
+        let score = Storage::scores().get(&(game_id, who)).unwrap_or(0);
+        if wager > score {
+            fail("WagerExceedsScore");
+        }
+        Storage::final_wagers().insert(&(game_id, who), &wager);
+        if active_final_wager_count(game_id) >= active_count {
+            collapse(game_id, &mut meta);
+        }
+        save_game(game_id, &meta);
+    }
+
+    /// Submit the final answer using the wager already locked in the prior
+    /// stage. A player who did not choose in time uses the durable zero
+    /// default, so this call never asks them to recreate a past choice.
+    #[pvm::method]
+    pub fn submit_final_answer(game_id: u64, answer: String) {
+        let mut meta = load_game(game_id);
+        settle(game_id, &mut meta);
+        if meta.stage != STAGE_FINAL_ANSWER {
+            fail("NotAcceptingFinalAnswer");
+        }
+        let who = player_for_caller();
+        let active_count = require_active_player(game_id, &who);
+        let qkey = logic::question_key(&clock_of(&meta));
+        if Storage::submissions().contains(&(game_id, qkey, who)) {
+            fail("AlreadyAnswered");
+        }
+
+        let wager = Storage::final_wagers().get(&(game_id, who)).unwrap_or(0);
+        let score = Storage::scores().get(&(game_id, who)).unwrap_or(0);
+        // A selected wager was checked against this score in the prior phase.
+        // Keep the guard for storage-level safety if an invariant ever changes.
+        if wager > score {
+            fail("WagerExceedsScore");
+        }
+        let (answer, correct) = evaluate_answer(game_id, &meta, &answer);
+        if correct {
+            Storage::scores().insert(&(game_id, who), &(score.saturating_add(wager)));
+        } else {
             Storage::scores().insert(&(game_id, who), &(score - wager));
         }
 
         Storage::submissions().insert(
             &(game_id, qkey, who),
             &Submission {
-                answer: norm,
+                answer,
                 wager,
                 correct,
             },
@@ -1268,7 +1455,8 @@ mod quizzler {
         let mut meta = load_game(game_id);
         settle(game_id, &mut meta);
         match meta.stage {
-            STAGE_ANSWER | STAGE_REVIEW | STAGE_VOTE | STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => {}
+            STAGE_ANSWER | STAGE_REVIEW | STAGE_VOTE | STAGE_FINAL_WAGER | STAGE_FINAL_ANSWER
+            | STAGE_FINAL_REVIEW => {}
             STAGE_LOBBY => fail("UseLeaveLobby"),
             _ => fail("GameNotActive"),
         }

@@ -53,8 +53,8 @@ pub fn valid_player_name(name: &str) -> bool {
 // ── Stages ───────────────────────────────────────────────────────────
 //
 // A game moves through stages paced purely by block number:
-//   Lobby → [Answer → Review] × num_questions → Vote → FinalAnswer →
-//   FinalReview → Finished
+//   Lobby → [Answer → Review] × num_questions → Vote → FinalWager →
+//   FinalAnswer → FinalReview → Finished
 //
 // An explicit lobby departure can also reach Abandoned (empty lobby), as can
 // the last active participant forfeiting a running quiz.
@@ -66,12 +66,14 @@ pub const STAGE_LOBBY: u8 = 0;
 pub const STAGE_ANSWER: u8 = 1;
 pub const STAGE_REVIEW: u8 = 2;
 pub const STAGE_VOTE: u8 = 3;
-pub const STAGE_FINAL_ANSWER: u8 = 4;
-pub const STAGE_FINAL_REVIEW: u8 = 5;
-pub const STAGE_FINISHED: u8 = 6;
+/// Players lock their final wager before the final question is revealed.
+pub const STAGE_FINAL_WAGER: u8 = 4;
+pub const STAGE_FINAL_ANSWER: u8 = 5;
+pub const STAGE_FINAL_REVIEW: u8 = 6;
+pub const STAGE_FINISHED: u8 = 7;
 /// Everyone explicitly left before the quiz could finish. Unlike Finished,
 /// this is not a scored result, but it is equally terminal and untimed.
-pub const STAGE_ABANDONED: u8 = 7;
+pub const STAGE_ABANDONED: u8 = 8;
 
 /// Question-slot key used for the final question in per-question storage maps
 /// (regular questions use their index 0..num_questions).
@@ -101,7 +103,7 @@ pub struct PhaseConfig {
 /// (the lobby waits for its current starter; terminal stages do not roll).
 pub fn stage_duration(stage: u8, cfg: &PhaseConfig) -> Option<u64> {
     match stage {
-        STAGE_ANSWER | STAGE_FINAL_ANSWER => Some(cfg.answer_blocks),
+        STAGE_ANSWER | STAGE_FINAL_WAGER | STAGE_FINAL_ANSWER => Some(cfg.answer_blocks),
         STAGE_REVIEW | STAGE_VOTE | STAGE_FINAL_REVIEW => Some(cfg.review_blocks),
         _ => None,
     }
@@ -119,7 +121,8 @@ pub fn next_stage(stage: u8, cursor: u8, num_questions: u8) -> (u8, u8) {
                 (STAGE_VOTE, cursor)
             }
         }
-        STAGE_VOTE => (STAGE_FINAL_ANSWER, cursor),
+        STAGE_VOTE => (STAGE_FINAL_WAGER, cursor),
+        STAGE_FINAL_WAGER => (STAGE_FINAL_ANSWER, cursor),
         STAGE_FINAL_ANSWER => (STAGE_FINAL_REVIEW, cursor),
         STAGE_FINAL_REVIEW => (STAGE_FINISHED, cursor),
         other => (other, cursor),

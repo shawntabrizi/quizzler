@@ -92,6 +92,7 @@
         #screen-question,
         #screen-review,
         #screen-vote,
+        #screen-final-wager,
         #screen-results,
         #screen-abandoned {
             max-width: 720px;
@@ -216,12 +217,15 @@
         #answer-form.game-action-dock { grid-template-columns: minmax(0, 1fr) auto; }
         #answer-form.game-action-dock > input,
         #answer-form.game-action-dock > #wager-grid-block,
-        #answer-form.game-action-dock > #wager-final-row,
+        #answer-form.game-action-dock > #final-wager-locked,
         #answer-form.game-action-dock > .error-text { grid-column: 1 / -1; }
         #answer-form.game-action-dock > #btn-submit-answer { min-width: 148px; }
         .review-action-dock { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
         .review-action-dock .error-text { grid-column: 1 / -1; }
         .vote-action-dock .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .final-wager-action-dock { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+        .final-wager-action-dock .error-text,
+        .final-wager-action-dock #final-wager-status { grid-column: 1 / -1; }
 
         .card {
             background: var(--bg-surface-container);
@@ -787,10 +791,8 @@
         .countdown { color: var(--fg-secondary); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
         .countdown.urgent { color: var(--fg-warning); }
 
-        .wager-row { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
-
-        /* Once-per-game wager pool: pick a number, spent ones stay colored
-           by outcome (green correct / red wrong), like Sporcle Party. */
+        /* Once-per-game wager pool: JavaScript adds exactly one choice per
+           regular question, and spent choices keep their outcome color. */
         .wager-grid {
             display: grid;
             grid-template-columns: repeat(5, minmax(44px, 1fr));
@@ -822,6 +824,129 @@
         .wager-btn.used-wrong { background: var(--fg-error); border-color: var(--fg-error); }
         .wager-btn.used-correct:hover { background: var(--fg-success); }
         .wager-btn.used-wrong:hover { background: var(--fg-error); }
+
+        .final-wager-card {
+            display: grid;
+            gap: 18px;
+        }
+        .final-wager-eyebrow {
+            color: var(--fg-tertiary);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .final-wager-heading {
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .final-wager-heading h2 { margin: 3px 0 0; }
+        .final-wager-score {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 15px 16px;
+            background: var(--bg-surface-nested);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-nested);
+        }
+        .final-wager-score span {
+            color: var(--fg-secondary);
+            font-size: 0.85rem;
+        }
+        .final-wager-score strong {
+            font-size: 1.8rem;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+        .final-wager-input-wrap { display: grid; gap: 6px; }
+        .final-wager-input-wrap input {
+            min-height: 54px;
+            font-size: 1.2rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .final-wager-note { color: var(--fg-secondary); font-size: 0.82rem; }
+        #final-wager-status {
+            min-height: 1.25em;
+            color: var(--fg-secondary);
+            font-size: 0.82rem;
+        }
+        .final-wager-locked {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            background: var(--bg-surface-nested);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-nested);
+            color: var(--fg-secondary);
+            font-size: 0.85rem;
+        }
+        .final-wager-locked strong {
+            color: var(--fg-primary);
+            font-size: 1.05rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Vote totals are safe to show before the final question. Their bars
+           are presentation only; the text count remains the accessible fact. */
+        .vote-distribution {
+            display: grid;
+            gap: 11px;
+            margin-top: 18px;
+            padding: 14px;
+            background: var(--bg-surface-nested);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-nested);
+        }
+        .vote-distribution-heading {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .vote-distribution-heading h3 { font-size: 0.9rem; }
+        .vote-distribution-heading span { color: var(--fg-secondary); font-size: 0.78rem; }
+        .vote-distribution-list { display: grid; gap: 8px; }
+        .vote-distribution-row {
+            display: grid;
+            grid-template-columns: 58px minmax(0, 1fr) minmax(2ch, auto);
+            align-items: center;
+            gap: 8px;
+            color: var(--fg-secondary);
+            font-size: 0.82rem;
+        }
+        .vote-distribution-row.is-leading { color: var(--fg-primary); font-weight: 600; }
+        .vote-distribution-track {
+            height: 10px;
+            overflow: hidden;
+            background: var(--bg-selection-container-active);
+            border-radius: var(--radius-full);
+        }
+        .vote-distribution-fill {
+            display: block;
+            width: 0%;
+            min-width: 0;
+            height: 100%;
+            border-radius: inherit;
+            transition: width 180ms ease-out;
+        }
+        .vote-distribution-row[data-difficulty="0"] .vote-distribution-fill { background: #22c55e; }
+        .vote-distribution-row[data-difficulty="1"] .vote-distribution-fill { background: #eab308; }
+        .vote-distribution-row[data-difficulty="2"] .vote-distribution-fill { background: #ef4444; }
+        .vote-distribution-count {
+            min-width: 2ch;
+            color: var(--fg-primary);
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
+        .btn-difficulty.is-selected {
+            color: var(--fg-primary-inverted);
+            background: var(--bg-action-primary);
+        }
 
         /* Review: the canonical answer, revealed */
         .answer-panel {
@@ -927,12 +1052,24 @@
             main.game-stage-open > header { margin-bottom: 12px; }
             .game-stage-content { padding-bottom: 12px; }
             .game-action-dock { margin-top: 8px; padding-top: 10px; }
-            #answer-form.game-action-dock { grid-template-columns: 1fr; }
-            #answer-form.game-action-dock > #btn-submit-answer { width: 100%; }
+            /* Keep this composition identical before and after the software
+               keyboard opens. The input and submit action share a compact
+               row, while the wager grid stays in the fixed bottom dock. */
+            #answer-form.game-action-dock { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+            #answer-form.game-action-dock > input { grid-column: auto; }
+            #answer-form.game-action-dock > #btn-submit-answer {
+                grid-column: auto;
+                width: auto;
+                min-width: 104px;
+                padding-inline: 12px;
+            }
             .review-action-dock { grid-template-columns: 1fr; align-items: stretch; }
             .review-action-dock #btn-continue { width: 100%; }
             .review-action-dock #continue-status { text-align: center; }
-            .vote-action-dock .row { grid-template-columns: 1fr; }
+            .vote-action-dock .row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+            .vote-action-dock .btn-difficulty { min-width: 0; padding-inline: 8px; font-size: 0.78rem; }
+            .final-wager-action-dock { grid-template-columns: 1fr; }
+            .final-wager-action-dock #btn-confirm-final-wager { width: 100%; }
             .card { padding: 18px; }
             .lobby-card { padding: 20px 18px; }
             .lobby-code-panel { margin: 16px 0 20px; padding: 22px 12px 18px; }
@@ -987,66 +1124,37 @@
                 min-height: 48px;
             }
             ul.list li { align-items: flex-start; }
-            .wager-row { align-items: stretch; flex-direction: column; }
-            #wager-final { width: 100% !important; }
+            .final-wager-card { gap: 14px; }
+            .final-wager-score strong { font-size: 1.55rem; }
         }
 
-        /* A software keyboard can leave only a few hundred pixels of visual
-           viewport on a phone. Keep the question in that space by trading
-           away the non-essential header and compacting the answer controls
-           only while the answer field has focus. The wager choices remain
-           visible and comfortably tappable, so typing an answer never makes
-           the prompt disappear behind the dock. */
+        /* A keyboard shrinks the visual viewport on a phone. The question
+           content scrolls independently, but the answer dock does not change
+           structure on focus or blur — avoiding a first tap being lost to a
+           layout reflow. */
         @media (max-width: 599px) {
             body.game-stage-open { overflow: hidden; overscroll-behavior: none; }
-            body.answer-input-focused main.game-stage-open > header { display: none; }
-            body.answer-input-focused main.game-stage-open .game-stage-content { padding-bottom: 6px; }
-            body.answer-input-focused main.game-stage-open .game-stage-content .card {
-                padding: 14px 16px;
-                margin-bottom: 0;
+            .game-stage-content { scroll-padding-top: 4px; }
+            #wager-label { margin: 0; font-size: 0.75rem; }
+            /* With a software keyboard open, a 20-question wager pool must
+               not consume the whole visual viewport. The dock stays put,
+               while just its bubble list becomes independently scrollable. */
+            #answer-form.game-action-dock > #wager-grid-block {
+                max-height: min(26dvh, 220px);
+                min-height: 0;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scrollbar-width: thin;
+                -webkit-overflow-scrolling: touch;
             }
-            body.answer-input-focused main.game-stage-open .question-text {
-                margin: 8px 0 2px;
-                font-size: 1.12rem;
-            }
-            body.answer-input-focused main.game-stage-open #answer-form.game-action-dock {
-                grid-template-columns: minmax(0, 1fr) auto;
-                gap: 8px;
-                margin-top: 4px;
-                padding-top: 8px;
-                padding-bottom: max(8px, env(safe-area-inset-bottom));
-            }
-            body.answer-input-focused main.game-stage-open #answer-form.game-action-dock > input {
-                grid-column: auto;
-            }
-            body.answer-input-focused main.game-stage-open #answer-form.game-action-dock > #btn-submit-answer {
-                grid-column: auto;
-                width: auto;
-                min-width: 108px;
-            }
-            body.answer-input-focused main.game-stage-open #wager-label {
-                margin: 0;
-                font-size: 0.75rem;
-            }
-            body.answer-input-focused main.game-stage-open .wager-grid {
+            .wager-grid {
                 grid-template-columns: repeat(5, minmax(40px, 1fr));
-                width: min(100%, 254px);
+                width: min(100%, 270px);
                 gap: 6px;
-                margin: 6px 0 0;
+                margin: 6px 0;
             }
-            body.answer-input-focused main.game-stage-open .wager-btn { min-height: 40px; }
-            body.answer-input-focused main.game-stage-open #wager-final-row {
-                align-items: center;
-                flex-direction: row;
-                gap: 8px;
-                margin: 0;
-            }
-            body.answer-input-focused main.game-stage-open #wager-final { width: 100% !important; }
-            body.answer-input-focused main.game-stage-open #question-error:empty { display: none; }
-        }
-
-        @media (max-width: 359px) {
-            .wager-grid { grid-template-columns: repeat(4, minmax(44px, 1fr)); }
+            .wager-btn { min-height: 40px; }
+            .vote-distribution-row { grid-template-columns: 54px minmax(0, 1fr) minmax(2ch, auto); }
         }
 
         #boot-log { font-size: 0.85rem; color: var(--fg-secondary); }
@@ -1184,7 +1292,7 @@
                         <div>
                             <label for="cfg-questions">Questions</label>
                             <select id="cfg-questions" data-testid="cfg-questions" aria-describedby="cfg-questions-hint"></select>
-                            <p id="cfg-questions-hint" class="field-hint">Up to 10 regular questions from this pack.</p>
+                            <p id="cfg-questions-hint" class="field-hint">Up to 20 regular questions from this pack.</p>
                         </div>
                         <div>
                             <label for="cfg-answer-blocks">Answer time</label>
@@ -1320,22 +1428,12 @@
                 <button id="btn-submit-answer" class="primary" data-testid="btn-submit-answer">Submit answer</button>
                 <div id="wager-grid-block" role="group" aria-labelledby="wager-label">
                     <p id="wager-label" class="hint" style="margin-top: 2px;">Wager points — each number can be used once per game</p>
-                    <div class="wager-grid" id="wager-grid" data-testid="wager-grid">
-                        <button class="wager-btn" data-wager="1" data-testid="wager-1">1</button>
-                        <button class="wager-btn" data-wager="2" data-testid="wager-2">2</button>
-                        <button class="wager-btn" data-wager="3" data-testid="wager-3">3</button>
-                        <button class="wager-btn" data-wager="4" data-testid="wager-4">4</button>
-                        <button class="wager-btn" data-wager="5" data-testid="wager-5">5</button>
-                        <button class="wager-btn" data-wager="6" data-testid="wager-6">6</button>
-                        <button class="wager-btn" data-wager="7" data-testid="wager-7">7</button>
-                        <button class="wager-btn" data-wager="8" data-testid="wager-8">8</button>
-                        <button class="wager-btn" data-wager="9" data-testid="wager-9">9</button>
-                        <button class="wager-btn" data-wager="10" data-testid="wager-10">10</button>
-                    </div>
+                    <!-- Choices are generated from the game's question count. -->
+                    <div class="wager-grid" id="wager-grid" data-testid="wager-grid"></div>
                 </div>
-                <div class="wager-row" id="wager-final-row" style="display: none;">
-                    <label for="wager-final" style="margin: 0;">Final wager (0–<span id="wager-final-max"></span>)</label>
-                    <input type="number" id="wager-final" data-testid="wager-final" min="0" value="0" style="width: 100px;" />
+                <div class="final-wager-locked" id="final-wager-locked" data-testid="final-wager-locked" role="status" style="display: none;">
+                    <span>Final wager locked</span>
+                    <strong><span id="final-wager-locked-value">—</span> points</strong>
                 </div>
                 <div class="error-text" id="question-error" data-testid="question-error" role="alert"></div>
             </div>
@@ -1377,6 +1475,29 @@
                         <span class="countdown" id="vote-countdown" data-testid="vote-countdown" style="margin-left: auto;"></span>
                     </div>
                     <p class="hint">Majority picks the difficulty of the final question. Ties break harder.</p>
+                    <div id="vote-distribution" class="vote-distribution" data-testid="vote-distribution" aria-labelledby="vote-distribution-title">
+                        <div class="vote-distribution-heading">
+                            <h3 id="vote-distribution-title">Live votes</h3>
+                            <span id="vote-distribution-total" data-testid="vote-distribution-total" aria-live="polite">0 votes</span>
+                        </div>
+                        <div class="vote-distribution-list">
+                            <div class="vote-distribution-row" data-difficulty="0" data-testid="vote-distribution-easy">
+                                <span>Easy</span>
+                                <span class="vote-distribution-track" aria-hidden="true"><span id="vote-distribution-easy-bar" class="vote-distribution-fill"></span></span>
+                                <output id="vote-distribution-easy-count" class="vote-distribution-count" data-testid="vote-distribution-easy-count">0</output>
+                            </div>
+                            <div class="vote-distribution-row" data-difficulty="1" data-testid="vote-distribution-medium">
+                                <span>Medium</span>
+                                <span class="vote-distribution-track" aria-hidden="true"><span id="vote-distribution-medium-bar" class="vote-distribution-fill"></span></span>
+                                <output id="vote-distribution-medium-count" class="vote-distribution-count" data-testid="vote-distribution-medium-count">0</output>
+                            </div>
+                            <div class="vote-distribution-row" data-difficulty="2" data-testid="vote-distribution-hard">
+                                <span>Hard</span>
+                                <span class="vote-distribution-track" aria-hidden="true"><span id="vote-distribution-hard-bar" class="vote-distribution-fill"></span></span>
+                                <output id="vote-distribution-hard-count" class="vote-distribution-count" data-testid="vote-distribution-hard-count">0</output>
+                            </div>
+                        </div>
+                    </div>
                     <p class="hint" id="vote-status" data-testid="vote-status" style="margin-top: 12px;"></p>
                     <div class="error-text" id="vote-error" role="alert"></div>
                 </div>
@@ -1387,6 +1508,36 @@
                     <button data-difficulty="1" class="btn-difficulty" data-testid="btn-difficulty-medium">Medium</button>
                     <button data-difficulty="2" class="btn-difficulty" data-testid="btn-difficulty-hard">Hard</button>
                 </div>
+            </div>
+        </section>
+
+        <!-- Final wager: set locally before the final prompt is revealed. -->
+        <section id="screen-final-wager" class="screen game-stage" data-testid="screen-final-wager">
+            <div class="game-stage-content">
+                <div class="card final-wager-card">
+                    <div class="row final-wager-heading">
+                        <div>
+                            <p class="final-wager-eyebrow">Final round</p>
+                            <h2>Set your final wager</h2>
+                        </div>
+                        <span class="countdown" id="final-wager-countdown" data-testid="final-wager-countdown"></span>
+                    </div>
+                    <p class="hint">Choose your stake before the final question is revealed.</p>
+                    <div class="final-wager-score">
+                        <span>Your score</span>
+                        <strong id="final-wager-score" data-testid="final-wager-score">—</strong>
+                    </div>
+                    <div class="final-wager-input-wrap">
+                        <label for="final-wager-input">Wager points (0–<span id="final-wager-max" data-testid="final-wager-max">0</span>)</label>
+                        <input type="number" id="final-wager-input" data-testid="final-wager-input" min="0" value="0" inputmode="numeric" autocomplete="off" />
+                        <p class="final-wager-note">Your wager will be locked in before the final question appears.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="game-action-dock final-wager-action-dock">
+                <button id="btn-confirm-final-wager" class="primary" data-testid="btn-confirm-final-wager">Lock in wager</button>
+                <p id="final-wager-status" data-testid="final-wager-status" role="status" aria-live="polite"></p>
+                <div class="error-text" id="final-wager-error" data-testid="final-wager-error" role="alert"></div>
             </div>
         </section>
 
