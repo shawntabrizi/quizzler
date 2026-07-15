@@ -1,7 +1,7 @@
 {
     "registry": "0x3cba0d0bcdaa0b73a61d0a06969454d7c71e686a",
-    "sessionRegistry": "0xf1f5a611d028a88c7e84fc661a52013565ed8b94",
-    "game": "0xab3e39bccd061d46db8aaa4533f47768823c6b6f",
+    "sessionRegistry": "0x6d4118ce0d7de45301bfca5243c838780930f18b",
+    "game": "0x017aa0ae3a13c15f0d9a6e32f32309d984a1e738",
     "chain": "paseo-asset-hub",
-    "deployedAt": "2026-07-15T17:00:40.669Z"
+    "deployedAt": "2026-07-15T18:48:05.087Z"
 }
