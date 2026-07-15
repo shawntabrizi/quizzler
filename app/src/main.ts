@@ -338,7 +338,9 @@ function setConnectionStatus(label: string, state: "pending" | "ok" | "err"): vo
 }
 
 function showActiveAccount(address: string): void {
-    $chainAccount.textContent = truncateAddress(address);
+    // Keep this compact enough for the phone header. CSS must not ellipsize an
+    // already shortened value, otherwise it reads like two nested truncations.
+    $chainAccount.textContent = truncateAddress(address, 4, 3);
     $chainAccount.title = `Active account: ${address}`;
     $chainAccount.setAttribute("aria-label", `Active account: ${address}`);
 }
