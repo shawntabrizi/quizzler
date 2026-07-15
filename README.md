@@ -76,6 +76,8 @@ pnpm deploy:contract      # fresh registry + paired game deployment for the app
 pnpm deploy:e2e-contracts # fresh, isolated contract pair for public LIVE_E2E
 pnpm seed:packs           # seed shared/packs/*.json into the active registry (resume-safe)
 pnpm dev                  # vite dev server on :5301
+pnpm build                # production build into dist/
+pnpm deploy:dot           # build + publish dist/ as quizzler.dot (Bulletin + DotNS)
 LIVE_E2E=1 pnpm test:e2e  # destructive Playwright run against public Paseo
 ```
 
@@ -97,6 +99,30 @@ The E2E host uses its own Vite server on port 5302 and fails rather than
 falling back to an active player-facing profile or server.
 
 Current deployment: see `app/src/contract-address.json`.
+
+## Publishing
+
+`pnpm deploy:dot` builds the app and publishes `dist/` through the Polkadot
+Bulletin Chain, then points the `quizzler.dot` DotNS name at the new CID.
+Propagation takes a minute or two (IPFS pin + DotNS confirmation + gateway
+cache). Bulletin storage has a **~2-week retention window** — the content
+stays addressable only while a provider serves it, so re-run `pnpm deploy:dot`
+at least every couple of weeks (or after any contract redeploy) to keep the
+hosted app alive.
+
+## Troubleshooting
+
+- **App boots but every read/write fails after a contract change** — the
+  generated ABIs no longer match the deployed pair. Run `pnpm verify:deployment`,
+  and redeploy with `pnpm deploy:contract` (or `pnpm deploy:game-upgrade` to
+  keep the seeded registry).
+- **`test:e2e` exits immediately** — the suite is destructive against public
+  Paseo and requires the explicit `LIVE_E2E=1` opt-in plus an isolated profile
+  from `pnpm deploy:e2e-contracts`.
+- **Contract build fails on a fresh machine** — the contracts need the pinned
+  Rust nightly with `rust-src` and the `cargo-pvm-contract` CLI from the
+  `charles/cdm-integration` branch (see `.github/workflows/ci.yml` for the
+  exact install step).
 
 ## Creating a pack
 

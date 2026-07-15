@@ -75,3 +75,51 @@ jobs:
 
       - name: Run pure logic tests
         run: cargo test --locked --manifest-path contracts/logic/Cargo.toml
+
+  # The three deployed PolkaVM crates were previously never compiled in CI,
+  # so a contract-breaking change could land green.
+  contracts:
+    name: Contract builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up nightly Rust (build-std needs rust-src)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-pvm-contract
+            contracts/quizzler/target
+            contracts/registry/target
+            contracts/session-registry/target
+          key: ${{ runner.os }}-cargo-contracts-${{ hashFiles('contracts/*/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-contracts-
+
+      - name: Install cargo-pvm-contract
+        # Same branch the contracts' pvm_contract dependency is pinned to.
+        run: |
+          command -v cargo-pvm-contract >/dev/null 2>&1 || \
+            cargo install --git https://github.com/paritytech/cargo-pvm-contract \
+              --branch charles/cdm-integration cargo-pvm-contract --locked
+
+      - name: Build game contract
+        run: cargo pvm-contract build
+        working-directory: contracts/quizzler
+
+      - name: Build registry contract
+        run: cargo pvm-contract build
+        working-directory: contracts/registry
+
+      - name: Build session-registry contract
+        run: cargo pvm-contract build
+        working-directory: contracts/session-registry
