@@ -31,9 +31,8 @@ use pvm_contract as pvm;
 use quizzler_logic as logic;
 
 const MAX_ANSWER_BYTES: usize = 64;
-/// Upper roster ceiling for this version of the game contract. The ABI keeps
-/// `max_players` for backwards compatibility; the player-facing app always
-/// uses this deployment's documented ceiling.
+/// Upper roster ceiling for this version of the game contract. The
+/// player-facing app always uses this deployment's documented ceiling.
 const MAX_PLAYERS: u8 = 24;
 const MAX_STAGE_BLOCKS: u32 = 600;
 const MAX_WAGER: u32 = 10;
@@ -185,11 +184,8 @@ struct Storage {
     difficulty_choice: pvm::storage::Mapping<(u64, [u8; 20]), u8>,
     // bitmask of wager values (bits 1..=10) already spent by a player
     used_wagers: pvm::storage::Mapping<(u64, [u8; 20]), u16>,
-    // creator → newest game they created (codes shift under reorgs, so
-    // clients resolve through this instead of scanning)
-    latest_game_of: pvm::storage::Mapping<[u8; 20], u64>,
-    // (creator, client-selected nonce) → game code. This is stable under
-    // concurrent creation from the same account, unlike the latest pointer.
+    // (creator, client-selected nonce) → game code. This stays stable under
+    // concurrent creation from the same account.
     created_game_of: pvm::storage::Mapping<([u8; 20], u64), u64>,
     // Optional, global social label for an account. A blank mapping value is
     // intentionally represented by an absent entry so legacy UI can retain
@@ -249,8 +245,8 @@ fn indexed_u64(value: u64) -> [u8; 32] {
     topic
 }
 
-/// Emit the code with the creator in indexed topics so a party client or
-/// indexer can resolve a creation without racing against `my_latest_game`.
+/// Emit the code with the creator in indexed topics for party clients and
+/// indexers that want to observe game creation.
 /// The currently locked contract SDK exposes raw logs but does not include
 /// event declarations in generated ABI JSON, so this intentionally follows
 /// the standard `GameCreated(address,uint64)` EVM wire format directly.
@@ -799,7 +795,7 @@ mod quizzler {
         answer_blocks: u32,
         review_blocks: u32,
         max_players: u8,
-        creation_nonce: Option<u64>,
+        creation_nonce: u64,
     ) {
         let pack = registry_pack_status(pack_id);
         if !pack.exists || !pack.sealed {
@@ -822,10 +818,8 @@ mod quizzler {
         }
 
         let creator = caller20();
-        if let Some(nonce) = creation_nonce {
-            if Storage::created_game_of().contains(&(creator, nonce)) {
-                fail("CreationNonceUsed");
-            }
+        if Storage::created_game_of().contains(&(creator, creation_nonce)) {
+            fail("CreationNonceUsed");
         }
         let seq = Storage::game_count().get().unwrap_or(0);
         let next_seq = match seq.checked_add(1) {
@@ -849,36 +843,15 @@ mod quizzler {
         let players: Vec<[u8; 20]> = alloc::vec![creator];
         Storage::players().insert(&id, &players);
         Storage::scores().insert(&(id, creator), &0);
-        Storage::latest_game_of().insert(&creator, &id);
-        if let Some(nonce) = creation_nonce {
-            Storage::created_game_of().insert(&(creator, nonce), &id);
-        }
+        Storage::created_game_of().insert(&(creator, creation_nonce), &id);
         Storage::game_count().set(&next_seq);
         emit_game_created(creator, id);
     }
 
     // ── Game lifecycle ───────────────────────────────────────────
 
-    #[pvm::method]
-    pub fn create_game(
-        pack_id: u32,
-        num_questions: u8,
-        answer_blocks: u32,
-        review_blocks: u32,
-        max_players: u8,
-    ) {
-        create_game_record(
-            pack_id,
-            num_questions,
-            answer_blocks,
-            review_blocks,
-            max_players,
-            None,
-        );
-    }
-
     /// Concurrent tabs can use a unique nonce and resolve the durable join
-    /// code with `get_game_for_creation`, instead of racing on latest game.
+    /// code with `get_game_for_creation` after the transaction is included.
     #[pvm::method]
     pub fn create_game_with_nonce(
         pack_id: u32,
@@ -894,7 +867,7 @@ mod quizzler {
             answer_blocks,
             review_blocks,
             max_players,
-            Some(creation_nonce),
+            creation_nonce,
         );
     }
 
@@ -1138,16 +1111,6 @@ mod quizzler {
     #[pvm::method]
     pub fn game_count() -> u64 {
         Storage::game_count().get().unwrap_or(0)
-    }
-
-    /// Newest game created by `who` (0 when none — codes are never 0).
-    /// Codes are assigned at execution time, so clients resolve their own
-    /// creations through this view.
-    #[pvm::method]
-    pub fn my_latest_game(who: pvm::Address) -> u64 {
-        Storage::latest_game_of()
-            .get(&who.to_fixed_bytes())
-            .unwrap_or(0)
     }
 
     /// Resolve a game created with `create_game_with_nonce`; 0 means this

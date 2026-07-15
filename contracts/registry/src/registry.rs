@@ -91,9 +91,8 @@ struct Storage {
     questions: pvm::storage::Mapping<(u32, u8), Question>,
     // (pack, slot, i) — normalized accepted answers
     accepted: pvm::storage::Mapping<(u32, u8, u8), String>,
-    latest_pack_of: pvm::storage::Mapping<[u8; 20], u32>,
-    // (creator, client-selected nonce) → pack id. Unlike `latest_pack_of`,
-    // this remains unambiguous when one account publishes from multiple tabs.
+    // (creator, client-selected nonce) → pack id. The nonce makes a creation
+    // durable and unambiguous when one account publishes from multiple tabs.
     created_pack_of: pvm::storage::Mapping<([u8; 20], u64), u32>,
 }
 
@@ -244,7 +243,7 @@ mod registry {
         }
     }
 
-    fn create_pack_record(title: String, emoji: String, creation_nonce: Option<u64>) {
+    fn create_pack_record(title: String, emoji: String, creation_nonce: u64) {
         if !valid_display_text(&title, MAX_TITLE_BYTES) {
             fail("BadTitle");
         }
@@ -252,10 +251,8 @@ mod registry {
             fail("BadEmoji");
         }
         let creator = caller20();
-        if let Some(nonce) = creation_nonce {
-            if Storage::created_pack_of().contains(&(creator, nonce)) {
-                fail("CreationNonceUsed");
-            }
+        if Storage::created_pack_of().contains(&(creator, creation_nonce)) {
+            fail("CreationNonceUsed");
         }
         let id = Storage::pack_count().get().unwrap_or(0);
         Storage::pack_meta().insert(
@@ -269,10 +266,7 @@ mod registry {
                 sealed: false,
             },
         );
-        Storage::latest_pack_of().insert(&creator, &id);
-        if let Some(nonce) = creation_nonce {
-            Storage::created_pack_of().insert(&(creator, nonce), &id);
-        }
+        Storage::created_pack_of().insert(&(creator, creation_nonce), &id);
         let next_id = match id.checked_add(1) {
             Some(next) => next,
             None => fail("PackIdExhausted"),
@@ -287,35 +281,13 @@ mod registry {
         Ok(())
     }
 
-    /// Create a pack with immutable, creator-selected display artwork.
-    ///
-    /// `emoji` is intentionally stored as raw UTF-8 rather than an artwork
-    /// enum. That keeps pack identity portable between clients and supports
-    /// multi-codepoint emoji such as flags and skin-tone/ZWJ sequences.
-    #[pvm::method]
-    pub fn create_pack(title: String, emoji: String) {
-        create_pack_record(title, emoji, None);
-    }
-
     /// Create a pack with a caller-chosen nonce, then resolve its assigned id
-    /// through `get_pack_for_creation`. This avoids the race inherent in a
-    /// mutable "latest pack" pointer when one account has concurrent tabs.
+    /// through `get_pack_for_creation`. `emoji` is stored as raw UTF-8 so
+    /// every client can render the same artwork, including multi-codepoint
+    /// emoji such as flags and skin-tone/ZWJ sequences.
     #[pvm::method]
     pub fn create_pack_with_nonce(title: String, emoji: String, creation_nonce: u64) {
-        create_pack_record(title, emoji, Some(creation_nonce));
-    }
-
-    #[pvm::method]
-    pub fn add_question(
-        pack_id: u32,
-        text: String,
-        answers: Vec<String>,
-        is_final: bool,
-        difficulty: u8,
-    ) {
-        let mut meta = editable_pack(pack_id);
-        add_question_to_pack(pack_id, &mut meta, text, answers, is_final, difficulty);
-        Storage::pack_meta().insert(&pack_id, &meta);
+        create_pack_record(title, emoji, creation_nonce);
     }
 
     /// Append a small, atomic import chunk. A publisher can safely resume a
@@ -426,15 +398,6 @@ mod registry {
             }
         }
         out
-    }
-
-    /// Newest pack created by `who` (u32::MAX when none) — ids are assigned
-    /// at execution time, so clients resolve their own creations here.
-    #[pvm::method]
-    pub fn my_latest_pack(who: pvm::Address) -> u32 {
-        Storage::latest_pack_of()
-            .get(&who.to_fixed_bytes())
-            .unwrap_or(u32::MAX)
     }
 
     /// Resolve a pack created with `create_pack_with_nonce`; `u32::MAX` means
