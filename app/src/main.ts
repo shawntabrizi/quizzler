@@ -37,7 +37,12 @@ import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
-import { deploymentCatalog, resolveDeployment, type ContractDeployment } from "./deployments";
+import {
+    deploymentCatalog,
+    LEGACY_MAX_LOBBY_PLAYERS,
+    resolveDeployment,
+    type ContractDeployment,
+} from "./deployments";
 import {
     clearPendingGameCreation,
     readPendingGameCreation,
@@ -92,7 +97,14 @@ const hasContractOverride = configuredRegistry !== undefined || configuredGame !
 const configuredDeployments: ContractDeployment[] = hasContractOverride
     && isContractAddress(configuredRegistry)
     && isContractAddress(configuredGame)
-    ? [{ id: "build-override", registry: configuredRegistry, game: configuredGame }]
+    ? [{
+        id: "build-override",
+        registry: configuredRegistry,
+        game: configuredGame,
+        // Isolated test deployments are built from this source tree, so they
+        // use the latest contract ceiling rather than the live legacy pair.
+        maxPlayers: MAX_LOBBY_PLAYERS,
+    }]
     : hasContractOverride
       ? []
       : deploymentCatalog(contractInfo);
@@ -437,6 +449,11 @@ function readSavedGameForDeployment(deployment: ContractDeployment): bigint | nu
 function selectDeployment(deployment: ContractDeployment): void {
     activeDeployment = deployment;
     activeContracts = { registry: deployment.registry, game: deployment.game };
+}
+
+/** The manifest binds each address pair to the ceiling that contract supports. */
+function activeLobbyPlayerCap(): number {
+    return activeDeployment?.maxPlayers ?? LEGACY_MAX_LOBBY_PLAYERS;
 }
 
 /** Prefer the current deployment, then a saved room on an allowlisted older one. */
@@ -1717,8 +1734,8 @@ function gameConfigArgs(config: CreatedGameConfig): readonly unknown[] {
         config.answerBlocks,
         config.reviewBlocks,
         // The deployed contract keeps this ABI argument as a bounded safety
-        // ceiling. It is deliberately no longer a host-facing game option.
-        MAX_LOBBY_PLAYERS,
+        // ceiling. It is deployment metadata, not a host-facing game option.
+        activeLobbyPlayerCap(),
     ];
 }
 
@@ -1903,6 +1920,8 @@ async function joinGameById(id: bigint, error: HTMLElement): Promise<boolean> {
         }
         error.textContent = msg.includes("GameAlreadyStarted")
             ? "This game has already started."
+            : msg.includes("GameFull")
+                ? "This lobby is full."
             : msg;
         return false;
     } finally {
@@ -2512,7 +2531,7 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             num_questions: config.numQuestions,
             answer_blocks: config.answerBlocks,
             review_blocks: config.reviewBlocks,
-            max_players: MAX_LOBBY_PLAYERS,
+            max_players: activeLobbyPlayerCap(),
             player_count: 1,
             active_player_count: 1,
         },

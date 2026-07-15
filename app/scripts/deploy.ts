@@ -31,7 +31,7 @@ import { ss58ToH160 } from "@parity/product-sdk-address";
 import { encodeAbiParameters, hexToBytes } from "viem";
 
 import { instantiatedContractAddress } from "../src/deployment-events";
-import { promoteDeploymentConfig } from "../src/deployment-history";
+import { NEW_GAME_MAX_LOBBY_PLAYERS, promoteDeploymentConfig } from "../src/deployment-history";
 import type { ContractDeploymentConfig } from "../src/deployments";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -392,6 +392,7 @@ async function main(): Promise<void> {
                 {
                     registry,
                     game,
+                    maxPlayers: NEW_GAME_MAX_LOBBY_PLAYERS,
                     chain: "paseo-asset-hub",
                     deployedAt: new Date().toISOString(),
                     profile: "e2e",
@@ -412,6 +413,7 @@ async function main(): Promise<void> {
                     ...promoteDeploymentConfig(existingConfig, {
                         registry,
                         game,
+                        maxPlayers: NEW_GAME_MAX_LOBBY_PLAYERS,
                         deployedAt: new Date().toISOString(),
                     }),
                     chain: "paseo-asset-hub",

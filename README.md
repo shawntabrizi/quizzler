@@ -85,6 +85,11 @@ not automatically migrated. Promotion retains the prior registry/game pair in th
 an invite link can continue to open that known older room. The browser still presents one
 resumable quiz at a time; this is continuity, not a multi-game mode.
 
+The lobby ceiling is also deployment metadata, not a host configuration field. The current
+checked-in game contract remains capped at 16; newly built game contracts are capped at 24.
+Promotion records that value alongside the addresses, so do not manually change an active
+deployment's `maxPlayers` before the matching game contract has been deployed.
+
 The e2e suite (`app/e2e/`) runs the app inside `@parity/host-api-test-sdk`'s test host
 against public Paseo — `game.spec.ts` plays a complete two-player game (one player through
 the UI, one scripted straight against the contract). It creates permanent testnet packs and

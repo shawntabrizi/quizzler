@@ -28,10 +28,10 @@ export const REVIEW_BLOCK_PRESETS: readonly BlockPreset[] = [
 ];
 
 /**
- * A fixed contract safety ceiling. It is intentionally not a host setting:
- * invite whoever you want, then start the lobby whenever the party is ready.
+ * The safety ceiling for newly deployed game contracts. It is intentionally
+ * not a host setting; older deployments retain their own documented cap.
  */
-export const MAX_LOBBY_PLAYERS = 16;
+export const MAX_LOBBY_PLAYERS = 24;
 
 function durationLabel(seconds: number): string {
     const minutes = Math.floor(seconds / 60);

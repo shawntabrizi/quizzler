@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { starterPacks } from "./starter-packs";
 import { starterCatalogFingerprint } from "./catalog-fingerprint";
-import { promoteDeploymentConfig } from "../src/deployment-history";
+import { NEW_GAME_MAX_LOBBY_PLAYERS, promoteDeploymentConfig } from "../src/deployment-history";
 import type { ContractDeploymentConfig } from "../src/deployments";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -115,6 +115,7 @@ async function main(): Promise<void> {
     const promotedConfig = promoteDeploymentConfig(currentConfig, {
         registry: state.registry,
         game: state.game,
+        maxPlayers: NEW_GAME_MAX_LOBBY_PLAYERS,
         deployedAt: state.deployedAt,
     });
 

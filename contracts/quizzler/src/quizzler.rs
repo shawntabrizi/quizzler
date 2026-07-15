@@ -31,7 +31,10 @@ use pvm_contract as pvm;
 use quizzler_logic as logic;
 
 const MAX_ANSWER_BYTES: usize = 64;
-const MAX_PLAYERS: u8 = 16;
+/// Upper roster ceiling for this version of the game contract. The ABI keeps
+/// `max_players` for backwards compatibility; the player-facing app always
+/// uses this deployment's documented ceiling.
+const MAX_PLAYERS: u8 = 24;
 const MAX_STAGE_BLOCKS: u32 = 600;
 const MAX_WAGER: u32 = 10;
 /// Each wager value 1..=10 is usable once per game (Sporcle's system), so a

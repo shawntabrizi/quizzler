@@ -23,7 +23,7 @@ describe("game configuration presets", () => {
     });
 
     it("keeps one non-configurable contract safety ceiling for lobbies", () => {
-        expect(MAX_LOBBY_PLAYERS).toBe(16);
+        expect(MAX_LOBBY_PLAYERS).toBe(24);
     });
 
     it("caps question choices to the selected pack", () => {
