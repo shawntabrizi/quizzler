@@ -180,6 +180,95 @@
         .card h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.25; margin-bottom: 12px; }
         .card .hint { color: var(--fg-secondary); font-size: 0.85rem; margin-bottom: 12px; }
 
+        /* Lobby: the join code is the job-to-be-done, so it gets its own
+           high-contrast panel instead of hiding in body copy. */
+        .lobby-card { padding: 28px; }
+        .lobby-kicker {
+            margin-bottom: 4px;
+            color: var(--fg-secondary);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .lobby-card .lobby-title { margin-bottom: 0; font-size: 1.35rem; }
+        .lobby-code-panel {
+            margin: 20px 0 24px;
+            padding: 26px 22px 22px;
+            overflow: hidden;
+            color: #fff;
+            background:
+                radial-gradient(circle at 50% -15%, rgba(167, 139, 250, 0.36), transparent 54%),
+                linear-gradient(135deg, #312e81, #1d1b4b 58%, #18181b);
+            border: 1px solid rgba(196, 181, 253, 0.46);
+            border-radius: var(--radius-container);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.11), var(--shadow-2);
+            text-align: center;
+        }
+        .lobby-code-label {
+            color: #ddd6fe;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+        #lobby-game-id {
+            display: block;
+            margin: 5px 0 12px;
+            padding-left: 0.12em;
+            color: #fff;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: clamp(3.5rem, 10vw, 6.25rem);
+            font-variant-numeric: tabular-nums;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            line-height: 0.95;
+            text-shadow: 0 3px 20px rgba(15, 23, 42, 0.55);
+            white-space: nowrap;
+        }
+        .lobby-code-hint { color: #ddd6fe; font-size: 0.84rem; }
+        .lobby-share-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-height: 52px;
+            margin-top: 16px;
+        }
+        .lobby-share {
+            min-height: 38px;
+            padding: 7px 13px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.13);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 0.8rem;
+        }
+        .lobby-share:hover { background: rgba(255, 255, 255, 0.21); }
+        .lobby-share-feedback { min-height: 1.2em; color: #ddd6fe; font-size: 0.76rem; }
+        .lobby-share-link {
+            width: min(100%, 430px);
+            min-height: 34px;
+            color: #fff;
+            background: rgba(15, 23, 42, 0.42);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: var(--radius-small);
+            padding: 7px 9px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.72rem;
+        }
+        .lobby-players-heading {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .lobby-players-heading h3 { font-size: 0.9rem; font-weight: 600; }
+        .lobby-players-heading p { color: var(--fg-secondary); font-size: 0.78rem; text-align: right; }
+        .lobby-actions { margin-top: 18px; }
+        .lobby-actions #lobby-waiting { flex: 1; }
+        .lobby-actions #btn-leave-lobby { margin-left: auto; }
+
         .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .row + .row { margin-top: 8px; }
         .grow { flex: 1; min-width: 120px; }
@@ -668,6 +757,16 @@
             #game-actions { grid-column: 1 / -1; width: 100%; gap: 8px; }
             #game-actions button { flex: 1 1 0; min-width: 0; }
             .card { padding: 18px; }
+            .lobby-card { padding: 20px 18px; }
+            .lobby-code-panel { margin: 16px 0 20px; padding: 22px 12px 18px; }
+            #lobby-game-id { font-size: clamp(3.15rem, 16vw, 4.5rem); }
+            .lobby-share-row { min-height: 50px; margin-top: 14px; }
+            .lobby-players-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
+            .lobby-players-heading p { text-align: left; }
+            .lobby-actions { display: grid; grid-template-columns: 1fr; }
+            .lobby-actions #btn-start-game,
+            .lobby-actions #btn-leave-lobby { width: 100%; margin-left: 0; }
+            .lobby-actions #lobby-waiting { text-align: center; }
             input[type="text"], input[type="number"], input[type="search"], select { font-size: 16px; }
             ul.pack-grid { grid-template-columns: 1fr; }
             .pack-card { min-height: 104px; }
@@ -907,11 +1006,25 @@
 
         <!-- Lobby -->
         <section id="screen-lobby" class="screen" data-testid="screen-lobby">
-            <div class="card">
-                <h2 id="lobby-title" data-testid="lobby-title">Lobby</h2>
-                <p class="hint">Game code: <strong id="lobby-game-id" data-testid="lobby-game-id"></strong> — share it so friends can join.</p>
+            <div class="card lobby-card">
+                <p class="lobby-kicker">Your lobby</p>
+                <h2 id="lobby-title" class="lobby-title" data-testid="lobby-title">Lobby</h2>
+                <section class="lobby-code-panel" aria-labelledby="lobby-code-label">
+                    <p id="lobby-code-label" class="lobby-code-label">Game code</p>
+                    <strong id="lobby-game-id" data-testid="lobby-game-id"></strong>
+                    <p class="lobby-code-hint">Share this code, or send an invite link to your friends.</p>
+                    <div class="lobby-share-row">
+                        <button id="btn-share-lobby" class="lobby-share" data-testid="btn-share-lobby">Share invite</button>
+                        <span id="lobby-share-feedback" class="lobby-share-feedback" data-testid="lobby-share-feedback" role="status"></span>
+                        <input id="lobby-share-link" class="lobby-share-link" data-testid="lobby-share-link" type="text" aria-label="Invite link" readonly hidden />
+                    </div>
+                </section>
+                <div class="lobby-players-heading">
+                    <h3>Players</h3>
+                    <p>Invite friends, then start when you’re ready.</p>
+                </div>
                 <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
-                <div class="row">
+                <div class="row lobby-actions">
                     <button id="btn-start-game" class="primary" data-testid="btn-start-game" style="display: none;">Start game</button>
                     <span class="muted" id="lobby-waiting" data-testid="lobby-waiting">Waiting for the lobby starter…</span>
                     <button id="btn-leave-lobby" class="quiet" data-testid="btn-leave-lobby">Leave lobby</button>

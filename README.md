@@ -50,6 +50,10 @@ replace it when someone tries to join another room. The contract itself does not
 one-game-per-account rule, so this stays a lightweight party-game UX choice rather than permanent
 on-chain account state.
 
+Hosts can share the lobby's invite link (`?join=<six-digit-code>`) as well as the visible game
+code. Opening a valid link starts the normal signed join flow after connection; an existing saved
+quiz still takes precedence, so an invite never silently replaces a player's current table.
+
 ## Development
 
 Contract (needs Rust nightly + `cargo-pvm-contract`):

@@ -35,6 +35,7 @@ import {
 } from "./game-config";
 import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
+import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
 import {
     packPresentation,
@@ -56,6 +57,16 @@ const configuredGame = import.meta.env.VITE_QUIZZLER_GAME;
 const activeContracts = configuredRegistry || configuredGame
     ? { registry: configuredRegistry, game: configuredGame }
     : contractInfo;
+// Consume an invite once per page load so a refresh while a signer prompt is
+// open cannot prompt the player to join the same room twice.
+const sharedLobbyInvite = consumeSharedLobbyInvite(window.location.href);
+if (sharedLobbyInvite.present) {
+    try {
+        window.history.replaceState(window.history.state, "", sharedLobbyInvite.cleanedUrl);
+    } catch {
+        // A host can disallow history writes; the join flow itself still works.
+    }
+}
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -722,10 +733,25 @@ async function init(): Promise<void> {
     const packsReady = refreshPacks();
     const resume = await resumeSavedGame();
     if (resume === "resumed") return;
+    let inviteError = "";
+    if (sharedLobbyInvite.present) {
+        if (sharedLobbyInvite.gameId === null) {
+            inviteError = "This invite link doesn’t contain a valid six-digit game code.";
+        } else if (savedGameId === null) {
+            getEl<HTMLInputElement>("join-game-id").value = sharedLobbyInvite.gameId.toString();
+            bootLog(`Joining shared lobby ${sharedLobbyInvite.gameId}…`);
+            if (await joinGameById(sharedLobbyInvite.gameId, $homeError)) return;
+            // Catalog refreshes run in parallel and may clear the home error.
+            // Save it until the home screen is ready to show it.
+            inviteError = $homeError.textContent || "Couldn’t join this shared lobby.";
+        }
+    }
     await packsReady;
     showScreen("home");
     renderResumeCard();
-    if (resume === "unavailable") {
+    if (inviteError) {
+        $homeError.textContent = inviteError;
+    } else if (resume === "unavailable") {
         $homeError.textContent = "Couldn’t reopen your saved quiz yet. Try Resume when the connection recovers.";
     }
 }
@@ -1209,6 +1235,49 @@ function canStartAnotherQuiz(error = $homeError): boolean {
     return false;
 }
 
+/** Join or reopen a room, shared by the manual form and `?join=` invites. */
+async function joinGameById(id: bigint, error: HTMLElement): Promise<boolean> {
+    if (!productAccount || busy) return false;
+    busy = true;
+    try {
+        if (savedGameId !== null) {
+            if (savedGameId === id) {
+                const result = await resumeSavedGame();
+                if (result === "resumed") return true;
+                error.textContent = result === "not-active"
+                    ? "You are no longer an active player in that quiz."
+                    : "Couldn’t reopen that quiz yet. Try again when the connection recovers.";
+                return false;
+            }
+            canStartAnotherQuiz(error);
+            return false;
+        }
+
+        await sendTx(game, "joinGame", id);
+        enterGame(id);
+        return true;
+    } catch (e) {
+        const msg = txError(e);
+        // Rejoining from the lobby is always safe. Once a game starts,
+        // `GameAlreadyStarted` is also returned to strangers, so verify that
+        // this account already belongs to the game before entering its UI.
+        if (msg.includes("AlreadyJoined")) {
+            enterGame(id);
+            return true;
+        }
+        if (msg.includes("GameAlreadyStarted") && await amActivePlayerInGame(id)) {
+            enterGame(id);
+            return true;
+        }
+        error.textContent = msg.includes("GameAlreadyStarted")
+            ? "This game has already started."
+            : msg;
+        return false;
+    } finally {
+        busy = false;
+    }
+}
+
 getEl("btn-create-game").addEventListener("click", async () => {
     if (busy || selectedPackId === null || selectedPack === null || !productAccount) return;
     if (createGamePreflightTimer) {
@@ -1255,35 +1324,10 @@ getEl("btn-join-game").addEventListener("click", async () => {
         $homeError.textContent = "Enter a six-digit game code.";
         return;
     }
-    if (savedGameId !== null) {
-        if (savedGameId === id) {
-            void resumeSavedGame();
-            return;
-        }
-        canStartAnotherQuiz();
-        return;
-    }
-    busy = true;
     setLoading("btn-join-game", true);
     try {
-        await sendTx(game, "joinGame", id);
-        enterGame(id);
-    } catch (e) {
-        const msg = txError(e);
-        // Rejoining from the lobby is always safe. Once a game starts,
-        // `GameAlreadyStarted` is also returned to strangers, so verify that
-        // this account already belongs to the game before entering its UI.
-        if (msg.includes("AlreadyJoined")) {
-            enterGame(id);
-        } else if (msg.includes("GameAlreadyStarted") && await amActivePlayerInGame(id)) {
-            enterGame(id);
-        } else if (msg.includes("GameAlreadyStarted")) {
-            $homeError.textContent = "This game has already started.";
-        } else {
-            $homeError.textContent = msg;
-        }
+        await joinGameById(id, $homeError);
     } finally {
-        busy = false;
         setLoading("btn-join-game", false);
     }
 });
@@ -1985,6 +2029,54 @@ function renderLobby(snap: Snapshot): void {
         // The fallback title is intentionally sufficient.
     });
 }
+
+async function shareLobbyInvite(): Promise<void> {
+    if (gameId === null) return;
+    const $button = getEl<HTMLButtonElement>("btn-share-lobby");
+    const $feedback = getEl("lobby-share-feedback");
+    const $shareLink = getEl<HTMLInputElement>("lobby-share-link");
+    const packTitle = getEl("lobby-title").textContent?.trim() || "Quizzler";
+    const url = sharedLobbyInviteUrl(window.location.href, gameId);
+    const shareData = {
+        title: "Join my Quizzler game",
+        text: `Join my ${packTitle} quiz on Quizzler. Game code: ${gameId}.`,
+        url,
+    };
+
+    $feedback.textContent = "";
+    $shareLink.hidden = true;
+    $button.disabled = true;
+    try {
+        if (typeof navigator.share === "function") {
+            try {
+                await navigator.share(shareData);
+                $feedback.textContent = "Invite shared.";
+                return;
+            } catch (e) {
+                // Cancelling the native share sheet is intentional, not an error.
+                if (e instanceof DOMException && e.name === "AbortError") return;
+            }
+        }
+
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard is unavailable");
+        await navigator.clipboard.writeText(url);
+        $feedback.textContent = "Invite link copied.";
+    } catch {
+        // Some embedded hosts block the Clipboard API. Leave a focused,
+        // selected field so the player can still copy the exact public link.
+        $shareLink.value = url;
+        $shareLink.hidden = false;
+        $shareLink.focus();
+        $shareLink.select();
+        $feedback.textContent = "Copy the selected invite link.";
+    } finally {
+        $button.disabled = false;
+    }
+}
+
+getEl<HTMLButtonElement>("btn-share-lobby").addEventListener("click", () => {
+    void shareLobbyInvite();
+});
 
 /**
  * `startGame` has just landed in a best block. The lobby snapshot already
