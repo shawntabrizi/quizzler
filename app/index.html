@@ -1283,7 +1283,10 @@
                 </div>
                 <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
                 <div id="lobby-instant-play" class="instant-play-row" data-testid="lobby-instant-play" style="display: none;">
-                    <p id="lobby-instant-play-status" role="status" aria-live="polite"></p>
+                    <div>
+                        <p id="lobby-instant-play-status" role="status" aria-live="polite"></p>
+                        <p id="lobby-instant-play-error" class="error-text" role="alert"></p>
+                    </div>
                     <button id="btn-retry-instant-play" class="quiet" data-testid="btn-retry-instant-play" style="display: none;">Try instant actions</button>
                 </div>
                 <div class="row lobby-actions">
