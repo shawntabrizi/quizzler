@@ -18,6 +18,7 @@
         "validate:packs": "tsx scripts/validate-packs.ts",
         "deploy:contract": "tsx scripts/deploy.ts",
         "deploy:game-upgrade": "REUSE_ACTIVE_REGISTRY=1 tsx scripts/deploy.ts",
+        "verify:deployment": "tsx scripts/verify-deployment.ts",
         "deploy:dot": "playground deploy --domain quizzler --no-build --buildDir dist --signer dev --env paseo-next-v2",
         "deploy:e2e-contracts": "DEPLOY_E2E_PROFILE=1 tsx scripts/deploy.ts",
         "seed:packs": "tsx scripts/seed-packs.ts",
