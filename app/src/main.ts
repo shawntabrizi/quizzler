@@ -824,19 +824,29 @@ function createContractHandles(client: any, descriptor: any): void {
     if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
         throw new Error("Contract addresses are not configured.");
     }
+    if (!productAccount) {
+        throw new Error("Product account is not ready.");
+    }
+    // A SignerManager may have a primary account selected that is different
+    // from the app-scoped product account. Keep every dry-run and transaction
+    // rooted in the account we just mapped for this product.
+    const accountOptions = {
+        defaultOrigin: productAccount.address,
+        defaultSigner: productAccount.getSigner(),
+    };
     registry = createContractFromClient(
         client.raw.assetHub,
         descriptor,
         activeContracts.registry,
         registryAbi as never,
-        { signerManager: manager },
+        accountOptions,
     );
     game = createContractFromClient(
         client.raw.assetHub,
         descriptor,
         activeContracts.game,
         gameAbi as never,
-        { signerManager: manager },
+        accountOptions,
     );
 }
 
@@ -904,23 +914,10 @@ async function init(): Promise<void> {
     const chainReadyMark = performanceMark("chain:ready");
     performanceMeasure("chain:open", descriptorReadyMark, chainReadyMark);
 
-    createContractHandles(client, paseo_asset_hub);
-    bootLog("Contract handles ready (registry + game)", "ok");
-
-    if (!await verifyActiveContractPair()) {
-        setConnectionStatus("contract mismatch", "err");
-        bootLog("The game contract is not linked to this registry deployment.", "err");
-        return;
-    }
-
-    // Sealed packs are immutable. Restore their last known metadata for an
-    // instant picker on a return visit, then reconcile the current registry
-    // window in the background below.
-    hydratePackCatalogCache();
-    void refreshPacks();
-
     // One-time SS58 → H160 mapping required by pallet-revive for .tx().
-    // Idempotent: costs one signature the first time, free afterwards.
+    // It must happen before any product-account contract dry-run, including
+    // the pair check immediately below. Idempotent: costs one signature the
+    // first time, free afterwards.
     try {
         bootLog("Ensuring account is mapped on pallet-revive…");
         const runtime = createContractRuntimeFromClient(client.raw.assetHub, paseo_asset_hub);
@@ -935,6 +932,21 @@ async function init(): Promise<void> {
         bootLog(`Account mapping failed: ${txError(e)}`, "err");
         return;
     }
+
+    createContractHandles(client, paseo_asset_hub);
+    bootLog("Contract handles ready (registry + game)", "ok");
+
+    if (!await verifyActiveContractPair()) {
+        setConnectionStatus("contract mismatch", "err");
+        bootLog("The game contract is not linked to this registry deployment.", "err");
+        return;
+    }
+
+    // Sealed packs are immutable. Restore their last known metadata for an
+    // instant picker on a return visit, then reconcile the current registry
+    // window in the background below.
+    hydratePackCatalogCache();
+    void refreshPacks();
 
     // Prime the best-block nonce without holding up the home screen. It is
     // shared with the first action if the player gets there before it returns.

@@ -4,9 +4,16 @@ test("boots inside the host and reaches the home screen", async ({ testHost }) =
     await testHost.waitForConnection();
     const frame = testHost.productFrame();
 
-    // Boot completes: signer connect → product account → chain client →
-    // contract handle → account mapping (may cost one auto-signed tx).
+    // Mapping must precede every product-account contract dry-run. A fresh
+    // Desktop-derived account otherwise makes pair verification look like a
+    // contract mismatch.
     await expect(frame.getByTestId("conn-pill")).toHaveText("connected", { timeout: 120_000 });
+    const bootLog = await frame.getByTestId("boot-log").textContent() ?? "";
+    const mappingAt = bootLog.indexOf("Ensuring account is mapped");
+    const handlesAt = bootLog.indexOf("Contract handles ready");
+    expect(mappingAt).toBeGreaterThanOrEqual(0);
+    expect(handlesAt).toBeGreaterThan(mappingAt);
+    expect(bootLog).not.toContain("contract mismatch");
     await expect(frame.getByTestId("chain-account")).toHaveText(/^[^.]+\.\.\.[^.]+$/);
     await expect(frame.getByTestId("chain-block")).toHaveText(/^#\d/);
     await expect(frame.getByTestId("screen-home")).toBeVisible();
