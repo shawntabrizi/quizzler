@@ -71,24 +71,20 @@ pnpm install
 pnpm test                 # normalize-parity unit tests
 pnpm typecheck:tools      # type-check scripts, Playwright config, and E2E helpers
 pnpm validate:packs       # validate all starter-pack files offline
-pnpm deploy:contract      # routine game redeploy; refuses registry ABI changes
+pnpm deploy:contract      # fresh registry + paired game deployment for the app
 pnpm deploy:e2e-contracts # fresh, isolated contract pair for public LIVE_E2E
-pnpm seed:packs           # seed shared/packs/*.json on-chain (resume-safe)
+pnpm seed:packs           # seed shared/packs/*.json into the active registry (resume-safe)
 pnpm dev                  # vite dev server on :5301
 LIVE_E2E=1 pnpm test:e2e  # destructive Playwright run against public Paseo
 ```
 
 `deploy:contract` waits for finalized inclusion before it records a contract address. It is a
-fresh game-contract cutover: existing unfinished rooms remain on the old game contract and are
-not automatically migrated. Promotion retains the prior registry/game pair in the bounded
-`previousDeployments` allowlist in `src/contract-address.json`, so a saved browser session or
-an invite link can continue to open that known older room. The browser still presents one
-resumable quiz at a time; this is continuity, not a multi-game mode.
+fresh registry-and-game cutover: existing unfinished rooms remain on the old pair and are not
+automatically migrated. The active app configuration and generated ABIs are updated together
+only after both deployments finalize.
 
-The lobby ceiling is also deployment metadata, not a host configuration field. The current
-checked-in game contract remains capped at 16; newly built game contracts are capped at 24.
-Promotion records that value alongside the addresses, so do not manually change an active
-deployment's `maxPlayers` before the matching game contract has been deployed.
+A newly deployed registry starts empty, so run `pnpm seed:packs` before asking players to host
+from it. The seed command is resume-safe and can be rerun after an interrupted batch.
 
 The e2e suite (`app/e2e/`) runs the app inside `@parity/host-api-test-sdk`'s test host
 against public Paseo — `game.spec.ts` plays a complete two-player game (one player through
@@ -96,7 +92,7 @@ the UI, one scripted straight against the contract). It creates permanent testne
 games, so it requires the explicit `LIVE_E2E=1` opt-in and an isolated contract profile from
 `pnpm deploy:e2e-contracts`. That command writes only the ignored
 `app/.quizzler-e2e-contract-address.json`; it never changes the player-facing deployment.
-Run it after the active ABI files have been promoted for the current contract build.
+Run it after `pnpm deploy:contract` has refreshed the active ABI files for the current contract build.
 The E2E host uses its own Vite server on port 5302 and fails rather than
 falling back to an active player-facing profile or server.
 
@@ -127,45 +123,3 @@ The optional top-level `emoji` is preserved on import; authors can also choose
 or paste any raw emoji in Pack studio. The publisher normalizes equivalent
 answer variants before batching them to the registry, and keeps a local resume
 cursor if a publish is interrupted.
-
-## Fresh registry migration
-
-Registry content is immutable: a clean catalog (including a registry ABI
-change such as pack emoji metadata) must use a new registry and a new game
-bound to it. The migration commands stage that pair first, so the active app,
-existing games, and the E2E host continue using `src/contract-address.json`
-until the starter catalog is fully verified.
-
-From `app/`, after building both contracts:
-
-```sh
-pnpm deploy:registry-migration
-pnpm seed:registry-migration
-CONFIRM_PROMOTE_REGISTRY=1 pnpm promote:registry-migration
-```
-
-The first command writes only the ignored
-`app/.quizzler-registry-migration.json`; it does not replace active addresses
-or ABI files. The seed command uses the newly-built registry ABI, creates the
-ten packs with the immutable emoji declared in
-`shared/starter-pack-metadata.json`, and verifies their title, emoji, question
-count, finals, and sealed state. It is resume-safe. `SEED_ONLY` is useful for
-recovery, but intentionally does not mark a migration ready for promotion.
-If the paired game deployment is interrupted after the registry is created,
-rerunning the first command reuses that staged registry rather than creating
-another one.
-
-The staged state pins the generated registry/game artifacts and a fingerprint
-of every starter-pack source file plus its emoji metadata. Seeding and
-promotion refuse artifact or catalog drift. A full seed also verifies that the
-fresh registry contains exactly the ten canonical starter packs at IDs 0–9;
-use the same `DEPLOY_DEV_ACCOUNT` for deploy and seed so they have one
-canonical creator.
-
-Promotion requires the explicit confirmation variable and a completed seed
-marker. It copies the generated ABI files, swaps in the staged registry and
-game addresses, and retains the old pair as a known historical deployment for
-invite/resume continuity. Rebuild/redeploy the app and commit those updated
-tracked files afterwards. The old registry and its games remain on-chain; this
-flow does not delete or mutate them. The staging file is ignored and never
-read by the app or E2E suite, keeping unpromoted deployments isolated.

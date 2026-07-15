@@ -2,11 +2,11 @@
  * Seed starter packs from `shared/packs/*.json` into a Quizzler registry on
  * Paseo Asset Hub.
  *
- * Strategy: per pack — one `createPack` tx, then all `addQuestion` calls
- * dry-run (exact gas + early revert detection) and submitted as individual
- * `Revive.call` extrinsics with manually assigned nonces, in parallel
- * batches, finishing with `sealPack`. Sequential submission of ~2,000 txs
- * would take hours; nonce-parallel batches land ~25 per block-pair.
+ * Strategy: per pack — one nonce-addressed `createPackWithNonce` tx, then
+ * bounded `addQuestions` calls dry-run (exact gas + early revert detection)
+ * and submit as individual `Revive.call` extrinsics with manually assigned
+ * nonces, finishing with `sealPack`. Parallel batches keep the starter
+ * catalog practical while every contract call remains resumable.
  *
  * Resume-safe: packs whose title already exists on-chain sealed are skipped;
  * a partially-seeded pack continues from its on-chain `regular_count`, and
@@ -16,12 +16,11 @@
  *   pnpm seed:packs                       # dev //Alice
  *   DEPLOY_DEV_ACCOUNT=Bob pnpm seed:packs
  *   SEED_ONLY=03 pnpm seed:packs          # only files starting "03"
- *   pnpm seed:registry-migration           # seed the staged fresh registry
  */
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { AccountId, Binary, createClient, type PolkadotSigner } from "polkadot-api";
@@ -32,40 +31,21 @@ import { ss58ToH160 } from "@parity/product-sdk-address";
 import { encodeFunctionData, decodeFunctionResult, hexToBytes, type Abi } from "viem";
 
 import { normalizeAcceptedAnswers, validatePack, type PackFile } from "../src/pack-validation";
-import { starterCatalogFingerprint } from "./catalog-fingerprint";
 import { starterPackEmoji, validateStarterPackMetadata } from "./starter-packs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKS_DIR = join(__dirname, "..", "..", "shared", "packs");
 const ACTIVE_ADDRESS_FILE = join(__dirname, "..", "src", "contract-address.json");
 const ACTIVE_ABI_FILE = join(__dirname, "..", "src", "abi-registry.json");
-const MIGRATION_FILE = join(__dirname, "..", ".quizzler-registry-migration.json");
-const MIGRATION_ABI_FILE = join(__dirname, "..", "..", "contracts", "registry", "target", "quizzler-registry.release.abi.json");
-const MIGRATION_CODE_FILE = join(__dirname, "..", "..", "contracts", "registry", "target", "quizzler-registry.release.polkavm");
 const RPC = process.env.PASEO_AH_RPC ?? "wss://paseo-asset-hub-next-rpc.polkadot.io";
 const DEV_ACCOUNT = (process.env.DEPLOY_DEV_ACCOUNT ?? "Alice") as Parameters<typeof createDevSigner>[0];
 const BATCH = positiveEnvInt("SEED_BATCH", 8, 32);
-/** addQuestion calls packed into one Utility.batch_all extrinsic. */
-const INNER = positiveEnvInt("SEED_INNER", 16, 32);
+/** Must stay within the registry's bounded `addQuestions` contract batch. */
+const QUESTIONS_PER_CALL = 8;
 const TX_TIMEOUT_MS = 120_000;
-const SEED_REGISTRY_MIGRATION = process.env.SEED_REGISTRY_MIGRATION === "1";
 
 interface DeploymentTarget {
     registry?: string;
-    deployer?: string;
-    migration?: {
-        kind?: string;
-        status?: string;
-        starterPacksSeededAt?: string | null;
-        starterPackFiles?: string[];
-        catalogSha256?: string;
-        artifacts?: {
-            registryAbiSha256?: string;
-            registryCodeSha256?: string;
-            gameAbiSha256?: string;
-            gameCodeSha256?: string;
-        };
-    };
 }
 
 interface PackView {
@@ -83,98 +63,68 @@ interface ExpectedStarterPack {
     emoji: string;
 }
 
-function pathFromEnv(name: string, fallback: string): string {
-    const value = process.env[name];
-    if (!value) return fallback;
-    return isAbsolute(value) ? value : resolve(process.cwd(), value);
+interface QuestionInput {
+    text: string;
+    answers: string[];
+    is_final: boolean;
+    difficulty: number;
 }
 
-function sha256(contents: Uint8Array): string {
-    return createHash("sha256").update(contents).digest("hex");
+/** Stable per-file nonce makes a rerun resolve its own created pack safely. */
+function creationNonceFor(file: string): bigint {
+    return createHash("sha256")
+        .update("quizzler-starter-pack-v1\0")
+        .update(file)
+        .digest()
+        .readBigUInt64BE(0);
 }
 
-function hasEmojiCreatePack(abi: Abi): boolean {
-    return abi.some((entry) =>
+function hasPackPublishingApi(abi: Abi): boolean {
+    const canCreate = abi.some((entry) =>
         entry.type === "function"
-        && entry.name === "createPack"
-        && entry.inputs.length === 2
+        && entry.name === "createPackWithNonce"
+        && entry.inputs.length === 3
         && entry.inputs[0]?.type === "string"
-        && entry.inputs[1]?.type === "string",
+        && entry.inputs[1]?.type === "string"
+        && entry.inputs[2]?.type === "uint64",
     );
+    const canAdd = abi.some((entry) =>
+        entry.type === "function"
+        && entry.name === "addQuestions"
+        && entry.inputs.length === 2
+        && entry.inputs[0]?.type === "uint32"
+        && entry.inputs[1]?.type === "tuple[]",
+    );
+    const canResolve = abi.some((entry) =>
+        entry.type === "function"
+        && entry.name === "getPackForCreation"
+        && entry.inputs.length === 2
+        && entry.inputs[0]?.type === "address"
+        && entry.inputs[1]?.type === "uint64",
+    );
+    return canCreate && canAdd && canResolve;
 }
 
 async function loadTarget(): Promise<{
     abi: Abi;
     dest: `0x${string}`;
-    expectedSeeder?: string;
-    stateFile?: string;
 }> {
-    const defaultAddressFile = SEED_REGISTRY_MIGRATION ? MIGRATION_FILE : ACTIVE_ADDRESS_FILE;
-    const defaultAbiFile = SEED_REGISTRY_MIGRATION ? MIGRATION_ABI_FILE : ACTIVE_ABI_FILE;
-    const addressFile = pathFromEnv("SEED_ADDRESS_FILE", defaultAddressFile);
-    const abiFile = pathFromEnv("SEED_ABI_FILE", defaultAbiFile);
-    const target = JSON.parse(await readFile(addressFile, "utf8")) as DeploymentTarget;
-    if (!target.registry) throw new Error(`No registry address in ${addressFile} — deploy it first`);
-    if (
-        SEED_REGISTRY_MIGRATION
-        && (
-            target.migration?.kind !== "fresh-registry"
-            || (target.migration.status !== "deployed" && target.migration.status !== "seeded")
-        )
-    ) {
-        throw new Error(`${addressFile} is not a fully deployed fresh registry migration state file`);
+    const target = JSON.parse(await readFile(ACTIVE_ADDRESS_FILE, "utf8")) as DeploymentTarget;
+    const registry = target.registry;
+    if (typeof registry !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(registry)) {
+        throw new Error(`No valid registry address in ${ACTIVE_ADDRESS_FILE} — deploy it first`);
     }
-    if (SEED_REGISTRY_MIGRATION && !/^0x[0-9a-fA-F]{40}$/.test(target.deployer ?? "")) {
-        throw new Error(`${addressFile} has no valid migration deployer address`);
-    }
-    const abiRaw = await readFile(abiFile);
-    if (SEED_REGISTRY_MIGRATION) {
-        const codeRaw = await readFile(MIGRATION_CODE_FILE);
-        if (
-            target.migration?.artifacts?.registryAbiSha256 !== sha256(abiRaw)
-            || target.migration.artifacts.registryCodeSha256 !== sha256(codeRaw)
-        ) {
-            throw new Error(
-                `Registry artifacts no longer match the staged deployment. Rebuild/re-stage before seeding.`,
-            );
-        }
-    }
+    const abiRaw = await readFile(ACTIVE_ABI_FILE);
     const abi = JSON.parse(abiRaw.toString("utf8")) as Abi;
-    if (!hasEmojiCreatePack(abi)) {
+    if (!hasPackPublishingApi(abi)) {
         throw new Error(
-            `Registry ABI at ${abiFile} does not support createPack(title, emoji). Build the upgraded registry first.`,
+            `Registry ABI at ${ACTIVE_ABI_FILE} does not support nonce-addressed pack publishing. Build and deploy the current registry first.`,
         );
     }
     return {
         abi,
-        dest: target.registry.toLowerCase() as `0x${string}`,
-        expectedSeeder: SEED_REGISTRY_MIGRATION ? target.deployer?.toLowerCase() : undefined,
-        stateFile: SEED_REGISTRY_MIGRATION ? addressFile : undefined,
+        dest: registry.toLowerCase() as `0x${string}`,
     };
-}
-
-async function markMigrationSeeded(
-    stateFile: string,
-    dest: `0x${string}`,
-    files: readonly string[],
-    catalogSha256: string,
-): Promise<void> {
-    const state = JSON.parse(await readFile(stateFile, "utf8")) as DeploymentTarget;
-    if (
-        state.registry?.toLowerCase() !== dest
-        || state.migration?.kind !== "fresh-registry"
-        || (state.migration.status !== "deployed" && state.migration.status !== "seeded")
-    ) {
-        throw new Error(`migration state changed while seeding; refusing to mark ${stateFile} ready`);
-    }
-    state.migration = {
-        ...state.migration,
-        status: "seeded",
-        starterPacksSeededAt: new Date().toISOString(),
-        starterPackFiles: [...files],
-        catalogSha256,
-    };
-    await writeFile(stateFile, `${JSON.stringify(state, null, 4)}\n`);
 }
 
 function positiveEnvInt(name: string, fallback: number, max: number): number {
@@ -203,8 +153,7 @@ function revertText(v: string | Uint8Array): string {
 }
 
 async function main(): Promise<void> {
-    const catalog = await starterCatalogFingerprint();
-    const files = catalog.files;
+    const files = (await readdir(PACKS_DIR)).filter((file) => file.endsWith(".json")).sort();
     validateStarterPackMetadata(files);
     const starterPacks: ExpectedStarterPack[] = await Promise.all(files.map(async (file) => {
         const pack = validatePack(
@@ -219,8 +168,8 @@ async function main(): Promise<void> {
         throw new Error(`SEED_ONLY=${JSON.stringify(only)} did not match a starter-pack filename`);
     }
     console.log(`Seeding ${selected.length} pack file(s) from ${PACKS_DIR}`);
-    const { abi, dest, expectedSeeder, stateFile } = await loadTarget();
-    console.log(`Target registry: ${dest}${SEED_REGISTRY_MIGRATION ? " (staged migration)" : ""}`);
+    const { abi, dest } = await loadTarget();
+    console.log(`Target registry: ${dest}`);
 
     const client = createClient(getWsProvider(RPC));
     const api = client.getTypedApi(paseo_asset_hub);
@@ -232,11 +181,6 @@ async function main(): Promise<void> {
     const address = AccountId(0).dec(getDevPublicKey(DEV_ACCOUNT));
     const accountH160 = ss58ToH160(address).toLowerCase();
     console.log(`Signing as //${DEV_ACCOUNT} (${address}) on ${RPC}`);
-    if (expectedSeeder && expectedSeeder !== accountH160) {
-        throw new Error(
-            `The staged migration was deployed by ${expectedSeeder}. Re-run with the same DEPLOY_DEV_ACCOUNT to avoid duplicate starter packs.`,
-        );
-    }
 
     await ensureAccountMapped(address, signer, {
         addressIsMapped: async (addr: string) =>
@@ -318,10 +262,9 @@ async function main(): Promise<void> {
         }) as T;
     }
 
-    async function myLatestPack(): Promise<number> {
-        const id = Number(await query<number | bigint>("myLatestPack", [accountH160]));
-        if (id === 0xffffffff) throw new Error("could not locate the pack just created");
-        return id;
+    async function packForCreation(creationNonce: bigint): Promise<number | null> {
+        const id = Number(await query<number | bigint>("getPackForCreation", [accountH160, creationNonce]));
+        return id === 0xffffffff ? null : id;
     }
 
     // ── seed each pack ───────────────────────────────────────────
@@ -329,93 +272,84 @@ async function main(): Promise<void> {
     for (const { file, pack, emoji } of selected) {
         console.log(`\n── ${file}: ${emoji} "${pack.title}" — ${pack.questions.length} questions + finals`);
 
-        // Find or create this account's pack by title (resume support). A
-        // stranger's same-titled pack must never make us skip or mutate data.
-        const packCount = Number(await query<number | bigint>("packCount", []));
-        let packId: number | null = null;
-        let resumeFrom = 0;
-        for (let id = 0; id < packCount; id++) {
-            const meta = await query<PackView>("getPack", [id]);
-            if (meta.creator.toLowerCase() === accountH160 && meta.title === pack.title) {
-                if (meta.emoji !== emoji) {
-                    throw new Error(
-                        `pack #${id} has emoji ${JSON.stringify(meta.emoji)} but ${file} requires ${JSON.stringify(emoji)}`,
-                    );
-                }
-                if (meta.sealed) {
-                    if (meta.regular_count !== pack.questions.length || meta.finals_set_count !== 3) {
-                        throw new Error(`sealed pack #${id} does not match ${file}'s expected question count`);
-                    }
-                    packId = -1; // sentinel: fully done
-                } else {
-                    packId = id;
-                    resumeFrom = meta.regular_count;
-                }
-                break;
+        const creationNonce = creationNonceFor(file);
+        let packId = await packForCreation(creationNonce);
+
+        if (packId === null) {
+            const data = encodeFunctionData({
+                abi,
+                functionName: "createPackWithNonce",
+                args: [pack.title, emoji, creationNonce],
+            });
+            try {
+                const { gas, deposit } = await dryRun(data);
+                await submitAt(reviveCall(data, gas, deposit), nonce++);
+            } catch (error) {
+                // A connection can drop after inclusion. Resolve the durable
+                // nonce mapping before treating that as a failed creation.
+                packId = await packForCreation(creationNonce);
+                if (packId === null) throw error;
             }
+            packId ??= await packForCreation(creationNonce);
+            if (packId === null) throw new Error("could not locate the pack just created");
+            console.log(`  created pack #${packId}`);
         }
-        if (packId === -1) {
+
+        const existing = await query<PackView>("getPack", [packId]);
+        if (
+            existing.creator.toLowerCase() !== accountH160
+            || existing.title !== pack.title
+            || existing.emoji !== emoji
+        ) {
+            throw new Error(`pack #${packId} does not match ${file}'s creator, title, or emoji`);
+        }
+        if (existing.sealed) {
+            if (existing.regular_count !== pack.questions.length || existing.finals_set_count !== 3) {
+                throw new Error(`sealed pack #${packId} does not match ${file}'s expected question count`);
+            }
             console.log("  already sealed on-chain — skipping");
             continue;
         }
-        if (packId === null) {
-            const data = encodeFunctionData({ abi, functionName: "createPack", args: [pack.title, emoji] });
-            const { gas, deposit } = await dryRun(data);
-            await submitAt(reviveCall(data, gas, deposit), nonce++);
-            packId = await myLatestPack();
-            const created = await query<PackView>("getPack", [packId]);
-            if (
-                created.creator.toLowerCase() !== accountH160
-                || created.title !== pack.title
-                || created.emoji !== emoji
-                || created.sealed
-            ) {
-                throw new Error(`created pack #${packId} could not be verified`);
-            }
-            console.log(`  created pack #${packId}`);
-        } else {
-            console.log(`  resuming pack #${packId} from question ${resumeFrom}`);
+        if (existing.regular_count > pack.questions.length) {
+            throw new Error(`pack #${packId} has more regular questions than ${file}`);
         }
+        const resumeFrom = existing.regular_count;
+        if (resumeFrom > 0) console.log(`  resuming pack #${packId} from question ${resumeFrom}`);
 
-        // Regular questions, then finals (marked with difficulty).
-        const regular: `0x${string}`[] = pack.questions.slice(resumeFrom).map((q) =>
-            encodeFunctionData({
-                abi, functionName: "addQuestion",
-                args: [packId, q.text, normalizeAcceptedAnswers(q.answers), false, 0],
-            }),
-        );
-
-        // One representative dry-run (largest call) prices gas for the lot.
+        // The registry accepts a bounded, atomic addQuestions chunk. Submit
+        // several of those chunks in parallel nonces to keep large starter
+        // catalogs practical while retaining a safe resume point per call.
+        const regular: QuestionInput[] = pack.questions.slice(resumeFrom).map((question) => ({
+            text: question.text,
+            answers: normalizeAcceptedAnswers(question.answers),
+            is_final: false,
+            difficulty: 0,
+        }));
         if (regular.length > 0) {
-            const biggest = regular.reduce((a, b) => (a.length >= b.length ? a : b));
-            const { gas, deposit } = await dryRun(biggest);
-
-            // Pack INNER addQuestion calls per Utility.batch_all extrinsic and
-            // submit those with parallel nonces — ~2,000 individual txs would
-            // otherwise dominate wall-clock time.
-            const batchTxs: { label: string; tx: ReturnType<typeof reviveCall> }[] = [];
-            for (let i = 0; i < regular.length; i += INNER) {
-                const chunk = regular.slice(i, i + INNER);
-                const inner = chunk.map((data) => reviveCall(data, gas, deposit).decodedCall);
-                batchTxs.push({
-                    label: `q${resumeFrom + i}-q${resumeFrom + i + chunk.length - 1}`,
-                    tx: api.tx.Utility.batch_all({ calls: inner }) as ReturnType<typeof reviveCall>,
-                });
-            }
-            for (let i = 0; i < batchTxs.length; i += BATCH) {
-                const group = batchTxs.slice(i, i + BATCH);
+            const batches = Array.from(
+                { length: Math.ceil(regular.length / QUESTIONS_PER_CALL) },
+                (_, index) => regular.slice(index * QUESTIONS_PER_CALL, (index + 1) * QUESTIONS_PER_CALL),
+            );
+            const encoded = batches.map((questions, index) => ({
+                label: `q${resumeFrom + index * QUESTIONS_PER_CALL}-q${resumeFrom + index * QUESTIONS_PER_CALL + questions.length - 1}`,
+                data: encodeFunctionData({ abi, functionName: "addQuestions", args: [packId, questions] }),
+            }));
+            const biggest = encoded.reduce((left, right) => left.data.length >= right.data.length ? left : right);
+            const { gas, deposit } = await dryRun(biggest.data);
+            for (let index = 0; index < encoded.length; index += BATCH) {
+                const group = encoded.slice(index, index + BATCH);
                 console.log(`  ${group[0].label} … ${group[group.length - 1].label} (nonces from ${nonce})`);
                 const results = await Promise.allSettled(
-                    group.map((u) => submitAt(u.tx, nonce++)),
+                    group.map(({ data }) => submitAt(reviveCall(data, gas, deposit), nonce++)),
                 );
                 const failed = results
-                    .map((r, j) => ({ r, u: group[j] }))
-                    .filter(({ r }) => r.status === "rejected");
+                    .map((result, groupIndex) => ({ result, item: group[groupIndex] }))
+                    .filter(({ result }) => result.status === "rejected");
                 if (failed.length > 0) {
-                    for (const { r, u } of failed) {
-                        console.error(`  FAILED ${u.label}: ${(r as PromiseRejectedResult).reason}`);
+                    for (const { result, item } of failed) {
+                        console.error(`  FAILED ${item.label}: ${(result as PromiseRejectedResult).reason}`);
                     }
-                    throw new Error(`${failed.length} batch(es) failed in ${file} — rerun to resume`);
+                    throw new Error(`${failed.length} addQuestions batch(es) failed in ${file} — rerun to resume`);
                 }
             }
             console.log(`  ${regular.length} question(s) submitted`);
@@ -425,8 +359,14 @@ async function main(): Promise<void> {
         // can be tolerated without killing a whole batch.
         for (const [d, name] of (["easy", "medium", "hard"] as const).entries()) {
             const data = encodeFunctionData({
-                abi, functionName: "addQuestion",
-                args: [packId, pack.finals[name].text, normalizeAcceptedAnswers(pack.finals[name].answers), true, d],
+                abi,
+                functionName: "addQuestions",
+                args: [packId, [{
+                    text: pack.finals[name].text,
+                    answers: normalizeAcceptedAnswers(pack.finals[name].answers),
+                    is_final: true,
+                    difficulty: d,
+                } satisfies QuestionInput]],
             });
             try {
                 const price = await dryRun(data);
@@ -452,46 +392,7 @@ async function main(): Promise<void> {
         console.log(`  sealed=${sealed.sealed} regular_count=${sealed.regular_count} ✓`);
     }
 
-    async function assertCleanStarterCatalog(): Promise<void> {
-        const packCount = Number(await query<number | bigint>("packCount", []));
-        if (packCount !== starterPacks.length) {
-            throw new Error(
-                `fresh registry contains ${packCount} packs; expected exactly the ${starterPacks.length} canonical starter packs`,
-            );
-        }
-        for (const [id, expected] of starterPacks.entries()) {
-            const actual = await query<PackView>("getPack", [id]);
-            if (
-                actual.creator.toLowerCase() !== accountH160
-                || actual.title !== expected.pack.title
-                || actual.emoji !== expected.emoji
-                || !actual.sealed
-                || actual.regular_count !== expected.pack.questions.length
-                || actual.finals_set_count !== 3
-            ) {
-                throw new Error(`pack #${id} is not the expected canonical starter pack ${expected.file}`);
-            }
-        }
-        const finalPackCount = Number(await query<number | bigint>("packCount", []));
-        if (finalPackCount !== starterPacks.length) {
-            throw new Error("registry changed while validating the starter catalog; rerun seeding before promotion");
-        }
-    }
-
-    if (stateFile && !only) {
-        await assertCleanStarterCatalog();
-        const finalCatalog = await starterCatalogFingerprint();
-        if (finalCatalog.sha256 !== catalog.sha256) {
-            throw new Error("starter catalog changed during seeding; refusing to mark this migration ready");
-        }
-        await markMigrationSeeded(stateFile, dest, files, catalog.sha256);
-        console.log(`\nAll packs seeded. Staged migration marked ready in ${stateFile}.`);
-        console.log("Next: CONFIRM_PROMOTE_REGISTRY=1 pnpm promote:registry-migration");
-    } else if (stateFile) {
-        console.log("\nSelected packs seeded. The staged migration is not marked ready while SEED_ONLY is set.");
-    } else {
-        console.log("\nAll packs seeded.");
-    }
+    console.log(`\n${only ? "Selected" : "All"} packs seeded.`);
     client.destroy();
 }
 
