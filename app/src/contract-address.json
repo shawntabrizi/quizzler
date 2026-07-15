@@ -1,9 +1,6 @@
 {
     "registry": "0xc68c9c4cc8452019bb7103667b9d8869bd9d7fec",
     "game": "0x9413e4755e483fb979d2b8a2c8f6f525d76525a3",
-    "maxPlayers": 16,
-    "deploymentId": "paseo-july-2026",
-    "previousDeployments": [],
     "chain": "paseo-asset-hub",
     "deployedAt": "2026-07-15T00:12:20.465Z"
 }

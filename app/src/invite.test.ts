@@ -7,7 +7,6 @@ describe("shared lobby invite links", () => {
             .toEqual({
                 present: true,
                 gameId: 466181n,
-                deploymentId: null,
                 cleanedUrl: "https://quizzler.example/play?theme=dark#lobby",
             });
         expect(consumeSharedLobbyInvite("https://quizzler.example/play?join=12345").gameId).toBeNull();
@@ -17,7 +16,7 @@ describe("shared lobby invite links", () => {
     it("builds an invite while preserving the rest of the product URL", () => {
         expect(sharedLobbyInviteUrl("https://quizzler.example/play?show-test-packs=1&theme=dark#lobby", 466181n))
             .toBe("https://quizzler.example/play?theme=dark&join=466181#lobby");
-        expect(sharedLobbyInviteUrl("https://quizzler.example/play?theme=dark#lobby", 466181n, "paseo-july-2026"))
-            .toBe("https://quizzler.example/play?theme=dark&join=466181&d=paseo-july-2026#lobby");
+        expect(sharedLobbyInviteUrl("https://quizzler.example/play?theme=dark&d=old-deployment#lobby", 466181n))
+            .toBe("https://quizzler.example/play?theme=dark&join=466181#lobby");
     });
 });

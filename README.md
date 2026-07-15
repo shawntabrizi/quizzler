@@ -22,8 +22,8 @@ scoring, votes — runs as a smart contract on Paseo Asset Hub.
   `shared/answer-test-vectors.json`.
 - **App** (`app/`): a [Polkadot Triangle](https://github.com/paritytech/product-sdk) product
   app — Vite + TypeScript, `SignerManager` product accounts, contract calls through
-  `@parity/product-sdk-contracts`. The app polls `getPhase` and renders whichever screen
-  the chain says the table is on.
+  `@parity/product-sdk-contracts`. The app polls the compact `getLiveGame` snapshot and
+  renders whichever screen the chain says the table is on.
 - **Starter content** (`shared/packs/`): 10 packs × 200 questions (+ easy/medium/hard
   finals each), seeded on-chain by script.
 
@@ -78,9 +78,8 @@ pnpm dev                  # vite dev server on :5301
 LIVE_E2E=1 pnpm test:e2e  # destructive Playwright run against public Paseo
 ```
 
-`deploy:contract` waits for finalized inclusion before it records a contract address. It is a
-fresh registry-and-game cutover: existing unfinished rooms remain on the old pair and are not
-automatically migrated. The active app configuration and generated ABIs are updated together
+`deploy:contract` waits for finalized inclusion before it records an address. It deploys one
+fresh registry/game pair and updates the active app configuration and generated ABIs together
 only after both deployments finalize.
 
 A newly deployed registry starts empty, so run `pnpm seed:packs` before asking players to host

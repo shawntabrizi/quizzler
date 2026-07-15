@@ -27,10 +27,7 @@ export const REVIEW_BLOCK_PRESETS: readonly BlockPreset[] = [
     { blocks: 30, name: "Take your time" },
 ];
 
-/**
- * The safety ceiling for newly deployed game contracts. It is intentionally
- * not a host setting; older deployments retain their own documented cap.
- */
+/** Fixed safety ceiling enforced by the game contract, never a host setting. */
 export const MAX_LOBBY_PLAYERS = 24;
 
 function durationLabel(seconds: number): string {

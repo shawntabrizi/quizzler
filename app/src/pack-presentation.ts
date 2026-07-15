@@ -1,8 +1,8 @@
 export interface PackListItem {
     id: number;
     title: string;
-    /** Immutable creator-selected artwork returned by the upgraded registry. */
-    emoji?: string;
+    /** Immutable creator-selected artwork returned by the registry. */
+    emoji: string;
     regular_count: number;
     finals_set_count?: number;
 }
@@ -26,8 +26,8 @@ interface StarterPack extends PackPresentation {
  * the same title. Artwork intentionally does not participate in that check:
  * the creator-selected raw emoji from the registry is the source of truth.
  *
- * The emoji values here are only a compatibility fallback for the legacy
- * registry. The upgraded registry supplies the creator-selected emoji itself.
+ * The creator-selected emoji in the registry remains the visual source of
+ * truth; starter metadata supplies only the category and ordering.
  */
 const STARTER_PACKS: readonly StarterPack[] = [
     { id: 0, title: "General Knowledge", emoji: "🧠", category: "Classic", description: "A little bit of everything.", tone: "violet", featuredOrder: 0 },
@@ -64,11 +64,6 @@ function hashTitle(title: string): number {
     return hash;
 }
 
-function suppliedEmoji(emoji: string | undefined): string | null {
-    const value = emoji?.trim();
-    return value ? value : null;
-}
-
 /** Return curated metadata only for the verified starter record. */
 export function featuredPack<T extends PackListItem>(pack: T): StarterPack | undefined {
     const starter = STARTER_PACKS[pack.id];
@@ -78,16 +73,15 @@ export function featuredPack<T extends PackListItem>(pack: T): StarterPack | und
 
 /**
  * Presentation always favors the raw immutable emoji sent by the registry.
- * The local fallback preserves a usable picker against the legacy registry
- * while a staged migration is being seeded and promoted.
+ * A deterministic fallback merely protects the UI from malformed content.
  */
 export function packPresentation(pack: PackListItem): PackPresentation {
     const featured = featuredPack(pack);
-    const emoji = suppliedEmoji(pack.emoji);
-    if (featured) return { ...featured, emoji: emoji ?? featured.emoji };
+    const emoji = pack.emoji.trim();
+    if (featured) return { ...featured, emoji: emoji || featured.emoji };
     const fallback = FALLBACK_ART[hashTitle(pack.title) % FALLBACK_ART.length];
     return {
-        emoji: emoji ?? fallback.emoji,
+        emoji: emoji || fallback.emoji,
         category: "Community",
         description: "A community-created quiz pack.",
         tone: fallback.tone,

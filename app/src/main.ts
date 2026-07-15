@@ -38,12 +38,6 @@ import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
 import {
-    deploymentCatalog,
-    LEGACY_MAX_LOBBY_PLAYERS,
-    resolveDeployment,
-    type ContractDeployment,
-} from "./deployments";
-import {
     clearPendingGameCreation,
     readPendingGameCreation,
     rememberPendingGameCreation,
@@ -90,35 +84,12 @@ if (sharedLobbyInvite.present) {
     }
 }
 
-// A test host can inject one isolated pair at build time. Player-facing URLs
-// may choose only a deployment explicitly allowlisted in contract-address.json
-// — never arbitrary addresses supplied by a query string.
+// A test host can inject one isolated pair at build time. There is one active
+// contract pair for this unreleased app; lobby links contain only a game code.
 const hasContractOverride = configuredRegistry !== undefined || configuredGame !== undefined;
-const configuredDeployments: ContractDeployment[] = hasContractOverride
-    && isContractAddress(configuredRegistry)
-    && isContractAddress(configuredGame)
-    ? [{
-        id: "build-override",
-        registry: configuredRegistry,
-        game: configuredGame,
-        // Isolated test deployments are built from this source tree, so they
-        // use the latest contract ceiling rather than the live legacy pair.
-        maxPlayers: MAX_LOBBY_PLAYERS,
-    }]
-    : hasContractOverride
-      ? []
-      : deploymentCatalog(contractInfo);
-let activeDeployment = resolveDeployment(
-    configuredDeployments,
-    hasContractOverride ? undefined : sharedLobbyInvite.deploymentId,
-);
-// Keep the deployment the URL/build selected. A saved room may temporarily
-// select an allowlisted historical pair so it can be resumed, but a completed
-// or abandoned room must never strand the player on that old catalog.
-const preferredDeployment = activeDeployment;
-let activeContracts: { registry: string | undefined; game: string | undefined } = activeDeployment
-    ? { registry: activeDeployment.registry, game: activeDeployment.game }
-    : { registry: configuredRegistry, game: configuredGame };
+const activeContracts: { registry: string | undefined; game: string | undefined } = hasContractOverride
+    ? { registry: configuredRegistry, game: configuredGame }
+    : { registry: contractInfo.registry, game: contractInfo.game };
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -164,21 +135,6 @@ function performanceMeasure(name: string, startMark: string, endMark: string): v
 }
 
 const appStartMark = performanceMark("app:start");
-
-interface RuntimeContractCapabilities {
-    /** Atomic imported-question batches and race-free pack IDs. */
-    registryImport: boolean;
-    /** Consolidated game snapshots, names, and race-free game IDs. */
-    gameLiveState: boolean;
-}
-
-// The app's ABI can be newer than an allowlisted deployed contract during a
-// staged rollout. Probe safe view methods once and keep legacy rooms playable
-// instead of assuming every address has just been migrated.
-let contractCapabilities: RuntimeContractCapabilities = {
-    registryImport: false,
-    gameLiveState: false,
-};
 
 // ── Chain-facing types (viem decodes named tuples to objects) ───────
 
@@ -230,8 +186,7 @@ interface LiveGameView extends GameView, PhaseView {
 interface PackView {
     creator: string;
     title: string;
-    /** Present on the fresh registry; optional while a staged migration is live. */
-    emoji?: string;
+    emoji: string;
     regular_count: number;
     finals_set_count: number;
     sealed: boolean;
@@ -378,12 +333,6 @@ const txPreflights = new Map<string, TxPreflight>();
 let createGamePreflightTimer: ReturnType<typeof setTimeout> | null = null;
 let preparedGameCreationNonce: bigint | null = null;
 
-// Game configuration and player membership are immutable once the game has
-// started. Keeping those values avoids two contract reads on every block.
-let cachedGame: GameView | null = null;
-let cachedPlayers: string[] | null = null;
-let cachedPlayerNames: string[] | null = null;
-let preferredQuestionKey: number | null = null;
 let myDisplayName = "";
 
 // Pack studio state. Draft contents are deliberately local until the final
@@ -434,37 +383,6 @@ function gameSessionKey(): string | null {
     return myAddress && isContractAddress(activeContracts.game)
         ? activeGameSessionKey(activeContracts.game, myAddress)
         : null;
-}
-
-function readSavedGameForDeployment(deployment: ContractDeployment): bigint | null {
-    if (!myAddress) return null;
-    try {
-        return parseStoredGameId(window.sessionStorage.getItem(activeGameSessionKey(deployment.game, myAddress)));
-    } catch {
-        return null;
-    }
-}
-
-/** Select a known historical pair before creating its contract handles. */
-function selectDeployment(deployment: ContractDeployment): void {
-    activeDeployment = deployment;
-    activeContracts = { registry: deployment.registry, game: deployment.game };
-}
-
-/** The manifest binds each address pair to the ceiling that contract supports. */
-function activeLobbyPlayerCap(): number {
-    return activeDeployment?.maxPlayers ?? LEGACY_MAX_LOBBY_PLAYERS;
-}
-
-/** Prefer the current deployment, then a saved room on an allowlisted older one. */
-function restoreSavedDeployment(): bigint | null {
-    for (const deployment of configuredDeployments) {
-        const id = readSavedGameForDeployment(deployment);
-        if (id === null) continue;
-        if (activeDeployment?.id !== deployment.id) selectDeployment(deployment);
-        return id;
-    }
-    return readSavedGame();
 }
 
 function readSavedGame(): bigint | null {
@@ -846,39 +764,11 @@ async function packTitle(packId: number): Promise<string> {
     return request;
 }
 
-async function sealedPack(
-    packId: number,
-    registryAtRequest = registry,
-    scope = registryCacheScope(),
-): Promise<PackView | null> {
-    const key = registryPackCacheKey(packId, scope);
-    const cached = sealedPackCache.get(key);
-    if (cached) return cached;
-    try {
-        const res = await registryAtRequest.getPack.query(packId);
-        if (!res.success) return null;
-        const pack = res.value as PackView;
-        if (pack.sealed) {
-            sealedPackCache.set(key, pack);
-            packTitleCache.set(key, pack.title);
-            return pack;
-        }
-    } catch {
-        // A transient query failure should not discard the currently rendered list.
-    }
-    return null;
-}
-
-/**
- * Fetch catalog cards in bounded contract batches when the deployed registry
- * supports it. Legacy pairs retain the one-at-a-time fallback so an older
- * unfinished game remains playable during a staged rollout.
- */
+/** Fetch catalog cards in bounded batches from the active registry. */
 async function sealedPacks(
     packIds: readonly number[],
     registryAtRequest = registry,
     scope = registryCacheScope(),
-    supportsBatch = contractCapabilities.registryImport,
 ): Promise<(PackView | null)[]> {
     const byId = new Map<number, PackView | null>();
     const uncached: number[] = [];
@@ -888,7 +778,7 @@ async function sealedPacks(
         else if (!byId.has(packId)) uncached.push(packId);
     }
 
-    if (supportsBatch && uncached.length > 0) {
+    if (uncached.length > 0) {
         const batches = Array.from(
             { length: Math.ceil(uncached.length / PACK_VIEW_BATCH_SIZE) },
             (_, index) => uncached.slice(index * PACK_VIEW_BATCH_SIZE, (index + 1) * PACK_VIEW_BATCH_SIZE),
@@ -920,16 +810,10 @@ async function sealedPacks(
         }
     }
 
-    const unresolved = uncached.filter((packId) => !byId.has(packId));
-    if (unresolved.length > 0) {
-        const fallback = await mapWithConcurrency(
-            unresolved,
-            PACK_FETCH_CONCURRENCY,
-            (packId) => sealedPack(packId, registryAtRequest, scope),
-        );
-        for (let index = 0; index < unresolved.length; index += 1) {
-            byId.set(unresolved[index], fallback[index]);
-        }
+    // A failed batch maps to an unavailable card rather than falling back to
+    // dozens of individual RPCs. The next catalog refresh retries it.
+    for (const packId of uncached) {
+        if (!byId.has(packId)) byId.set(packId, null);
     }
     return packIds.map((packId) => byId.get(packId) ?? null);
 }
@@ -966,47 +850,13 @@ async function verifyActiveContractPair(): Promise<boolean> {
     }
 }
 
-async function detectContractCapabilities(): Promise<void> {
-    const [registryResult, gameResult] = await Promise.all([
-        registry.getPacks.query([]).catch(() => null),
-        game.getGameForCreation.query(myAddress, 0n).catch(() => null),
-    ]);
-    contractCapabilities = {
-        registryImport: Boolean(registryResult?.success),
-        gameLiveState: Boolean(gameResult?.success),
-    };
-    const $displayNameCard = getEl("display-name-card");
-    $displayNameCard.style.display = contractCapabilities.gameLiveState ? "" : "none";
-}
-
-/** Return from a stale historical session to the pair the URL/build requested. */
-async function activatePreferredDeployment(client: any, descriptor: any): Promise<boolean> {
-    if (preferredDeployment === null || activeDeployment?.id === preferredDeployment.id) return true;
-    selectDeployment(preferredDeployment);
-    resetCatalogForDeployment();
-    createContractHandles(client, descriptor);
-    if (!await verifyActiveContractPair()) {
-        setConnectionStatus("contract mismatch", "err");
-        bootLog("The requested game deployment is not linked to its registry.", "err");
-        return false;
-    }
-    await detectContractCapabilities();
-    hydratePackCatalogCache();
-    void refreshPacks();
-    return true;
-}
-
 async function init(): Promise<void> {
     const bootStartMark = performanceMark("boot:start");
     showScreen("boot");
     if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
         setConnectionStatus("no contract", "err");
-        if (sharedLobbyInvite.deploymentId) {
-            bootLog("This invite points to a deployment this app no longer supports.", "err");
-        } else {
-            bootLog("Contract addresses not configured.", "err");
-            bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
-        }
+        bootLog("Contract addresses not configured.", "err");
+        bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
         return;
     }
 
@@ -1038,7 +888,7 @@ async function init(): Promise<void> {
     }
     productAccount = productRes.value;
     myAddress = ss58ToH160(productAccount.address).toLowerCase();
-    savedGameId = restoreSavedDeployment();
+    savedGameId = readSavedGame();
     showActiveAccount(productAccount.address);
     bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
 
@@ -1062,8 +912,6 @@ async function init(): Promise<void> {
         bootLog("The game contract is not linked to this registry deployment.", "err");
         return;
     }
-
-    await detectContractCapabilities();
 
     // Sealed packs are immutable. Restore their last known metadata for an
     // instant picker on a return visit, then reconcile the current registry
@@ -1095,7 +943,6 @@ async function init(): Promise<void> {
     setConnectionStatus("connected", "ok");
     const resume = await resumeSavedGame();
     if (resume === "resumed") return;
-    if (resume === "not-active" && !await activatePreferredDeployment(client, paseo_asset_hub)) return;
     // A saved active room takes precedence over a recovery marker. If its
     // status is temporarily unavailable, do not risk opening another table.
     const pendingCreation = resume === "unavailable"
@@ -1151,7 +998,7 @@ const $displayName = getEl<HTMLInputElement>("display-name");
 const $displayNameStatus = getEl("display-name-status");
 
 getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", async () => {
-    if (busy || !productAccount || !contractCapabilities.gameLiveState) return;
+    if (busy || !productAccount) return;
     const name = $displayName.value;
     if (name !== "" && (name !== name.trim() || /[\u0000-\u001f\u007f-\u009f]/u.test(name) || utf8ByteLength(name) > 24)) {
         $displayNameStatus.textContent = "Use a trimmed one-line name of up to 24 bytes.";
@@ -1241,10 +1088,6 @@ let starterPacksLoading = false;
 let communityPacksLoading = false;
 let communityPacksRequested = false;
 let lastCommunityRequestAt = 0;
-// An allowlisted historical deployment can be selected briefly to resume a
-// room. Generation guards ensure an old catalog request can never paint packs
-// from that registry after the app returns to the preferred deployment.
-let catalogGeneration = 0;
 // E2E runs can opt in to their disposable packs without exposing them to
 // players on the normal home screen.
 const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
@@ -1253,7 +1096,6 @@ const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
 // the curated catalog available even after a long-lived registry accumulates
 // lots of new packs, without making home-screen refreshes unbounded.
 const PACK_RECENT_LIST_LIMIT = 100;
-const PACK_FETCH_CONCURRENCY = 6;
 const PACK_CATALOG_CACHE_VERSION = 1;
 const PACK_CATALOG_CACHE_LIMIT = STARTER_PACK_COUNT + PACK_RECENT_LIST_LIMIT;
 
@@ -1319,20 +1161,6 @@ function persistPackCatalog(): void {
     }
 }
 
-function resetCatalogForDeployment(): void {
-    catalogGeneration += 1;
-    refreshingPacks = null;
-    communityRefresh = null;
-    catalogPacks = [];
-    knownPackCount = 0;
-    starterPacksLoading = false;
-    communityPacksLoading = false;
-    communityPacksRequested = false;
-    lastCommunityRequestAt = 0;
-    lastPackListSignature = null;
-    renderPackList();
-}
-
 function starterPackIds(count: number): number[] {
     return Array.from({ length: Math.min(count, STARTER_PACK_COUNT) }, (_, id) => id);
 }
@@ -1389,24 +1217,21 @@ function refreshPacks({ includeCommunity = getEl("screen-pack-select").classList
 } = {}): Promise<void> {
     if (includeCommunity) communityPacksRequested = true;
     if (refreshingPacks) return refreshingPacks;
-    const generation = catalogGeneration;
     starterPacksLoading = true;
     renderPackList();
     const error = getEl("screen-pack-select").classList.contains("active")
         ? $packSelectionError
         : $homeError;
     let request: Promise<void>;
-    request = refreshStarterPacks(generation)
+    request = refreshStarterPacks()
         .then(() => {
-            if (generation !== catalogGeneration) return;
             error.textContent = "";
         })
         .catch(() => {
-            if (generation !== catalogGeneration) return;
             error.textContent = "Couldn’t refresh quiz packs. Retrying…";
         })
         .finally(() => {
-            if (generation !== catalogGeneration || refreshingPacks !== request) return;
+            if (refreshingPacks !== request) return;
             starterPacksLoading = false;
             refreshingPacks = null;
             renderPackList();
@@ -1419,20 +1244,17 @@ function refreshPacks({ includeCommunity = getEl("screen-pack-select").classList
     return request;
 }
 
-async function refreshStarterPacks(generation: number): Promise<void> {
+async function refreshStarterPacks(): Promise<void> {
     const startMark = performanceMark("catalog:starters:start");
     const registryAtRequest = registry;
     const scope = registryCacheScope();
-    const supportsBatch = contractCapabilities.registryImport;
     const countRes = await registryAtRequest.packCount.query();
     if (!countRes.success) throw new Error("pack count query failed");
-    if (generation !== catalogGeneration) return;
     const count = Number(countRes.value);
     knownPackCount = count;
     retainCatalogWindow(count);
     const ids = starterPackIds(count);
-    const packs = await sealedPacks(ids, registryAtRequest, scope, supportsBatch);
-    if (generation !== catalogGeneration) return;
+    const packs = await sealedPacks(ids, registryAtRequest, scope);
     mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
     const readyMark = performanceMark("catalog:starters:ready");
     performanceMeasure("catalog:starters", startMark, readyMark);
@@ -1441,10 +1263,8 @@ async function refreshStarterPacks(generation: number): Promise<void> {
 /** Load the larger community window only after someone opens the picker. */
 function requestCommunityPacks(count: number): void {
     if (count <= STARTER_PACK_COUNT || communityRefresh) return;
-    const generation = catalogGeneration;
     const registryAtRequest = registry;
     const scope = registryCacheScope();
-    const supportsBatch = contractCapabilities.registryImport;
     const ids = communityPackIds(count);
     if (ids.length === 0) return;
     lastCommunityRequestAt = Date.now();
@@ -1453,18 +1273,17 @@ function requestCommunityPacks(count: number): void {
     let request: Promise<void>;
     request = (async () => {
         const startMark = performanceMark("catalog:community:start");
-        const packs = await sealedPacks(ids, registryAtRequest, scope, supportsBatch);
-        if (generation !== catalogGeneration) return;
+        const packs = await sealedPacks(ids, registryAtRequest, scope);
         mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
         const readyMark = performanceMark("catalog:community:ready");
         performanceMeasure("catalog:community", startMark, readyMark);
     })().catch(() => {
         // Keep the starter packs usable if a larger background refresh fails.
-        if (generation === catalogGeneration && getEl("screen-pack-select").classList.contains("active")) {
+        if (getEl("screen-pack-select").classList.contains("active")) {
             $packSelectionError.textContent = "Couldn’t load more community packs yet.";
         }
     }).finally(() => {
-        if (generation !== catalogGeneration || communityRefresh !== request) return;
+        if (communityRefresh !== request) return;
         communityPacksLoading = false;
         communityRefresh = null;
         renderPackList();
@@ -1733,15 +1552,14 @@ function gameConfigArgs(config: CreatedGameConfig): readonly unknown[] {
         config.numQuestions,
         config.answerBlocks,
         config.reviewBlocks,
-        // The deployed contract keeps this ABI argument as a bounded safety
-        // ceiling. It is deployment metadata, not a host-facing game option.
-        activeLobbyPlayerCap(),
+        // The contract enforces its fixed lobby ceiling. This is not a host
+        // setting, so players never need to choose it.
+        MAX_LOBBY_PLAYERS,
     ];
 }
 
-function gameCreateCall(config: CreatedGameConfig): { method: string; args: readonly unknown[]; nonce: bigint | null } {
+function gameCreateCall(config: CreatedGameConfig): { method: string; args: readonly unknown[]; nonce: bigint } {
     const args = gameConfigArgs(config);
-    if (!contractCapabilities.gameLiveState) return { method: "createGame", args, nonce: null };
     const nonce = preparedGameCreationNonce ??= creationNonce();
     return { method: "createGameWithNonce", args: [...args, nonce], nonce };
 }
@@ -1760,13 +1578,6 @@ function scheduleCreateGamePreflight(): void {
     }, 250);
 }
 
-async function myLatestGameId(): Promise<bigint | null> {
-    const res = await game.myLatestGame.query(myAddress);
-    if (!res.success) return null;
-    const id = BigInt(res.value);
-    return id === 0n ? null : id;
-}
-
 /** Resolve a creation nonce instead of racing another tab's latest-game pointer. */
 async function resolveCreatedGame(nonce: bigint): Promise<bigint | null> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -1781,7 +1592,7 @@ async function resolveCreatedGame(nonce: bigint): Promise<bigint | null> {
 }
 
 function pendingGameCreation() {
-    if (!contractCapabilities.gameLiveState || !myAddress || !isContractAddress(activeContracts.game)) return null;
+    if (!myAddress || !isContractAddress(activeContracts.game)) return null;
     try {
         return readPendingGameCreation(window.sessionStorage, activeContracts.game, myAddress);
     } catch {
@@ -1951,10 +1762,8 @@ getEl("btn-create-game").addEventListener("click", async () => {
         const call = gameCreateCall(config);
         await sendWarmedTx(game, call.method, call.args);
         $configError.textContent = "Game created — opening your lobby…";
-        if (call.nonce !== null) rememberPendingGameCreationMarker(call.nonce, config);
-        const id = call.nonce === null
-            ? await myLatestGameId()
-            : await resolveCreatedGame(call.nonce);
+        rememberPendingGameCreationMarker(call.nonce, config);
+        const id = await resolveCreatedGame(call.nonce);
         if (id === null) throw new Error("could not locate the created game");
         clearPendingGameCreationMarker();
         enterGame(id, createdLobbySnapshot(config));
@@ -2139,10 +1948,8 @@ function renderPackDraftPreview(): void {
     getEl("builder-preview-meta").textContent =
         `${validation.pack.questions.length} regular ${validation.pack.questions.length === 1 ? "question" : "questions"} · 3 finals · ${validation.emoji}`;
     $builderValidation.textContent = "";
-    $btnPublishPack.disabled = busy || !contractCapabilities.registryImport;
-    if (!contractCapabilities.registryImport) {
-        $builderPublishStatus.textContent = "This deployment needs the batch-publishing contract update before it can publish imported packs.";
-    } else if (canResumePackPublish(draft, validation)) {
+    $btnPublishPack.disabled = busy;
+    if (canResumePackPublish(draft, validation)) {
         $builderPublishStatus.textContent = "A previous publish is ready to resume.";
     } else {
         $builderPublishStatus.textContent = "Ready to publish in bounded batches.";
@@ -2396,10 +2203,6 @@ async function publishPackDraft(): Promise<void> {
         renderPackDraftPreview();
         return;
     }
-    if (!contractCapabilities.registryImport) {
-        $builderError.textContent = "This registry has not been upgraded for safe batch publishing yet.";
-        return;
-    }
     busy = true;
     publishingDraftId = draftId;
     setPackStudioPublishing(true);
@@ -2531,7 +2334,7 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             num_questions: config.numQuestions,
             answer_blocks: config.answerBlocks,
             review_blocks: config.reviewBlocks,
-            max_players: activeLobbyPlayerCap(),
+            max_players: MAX_LOBBY_PLAYERS,
             player_count: 1,
             active_player_count: 1,
         },
@@ -2595,10 +2398,6 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     lastRank = -1;
     behindStreak = 0;
     latestObservedAt = initialSnapshot ? Date.now() : 0;
-    cachedGame = initialSnapshot?.game ?? null;
-    cachedPlayers = initialSnapshot?.players ?? null;
-    cachedPlayerNames = initialSnapshot?.playerNames ?? null;
-    preferredQuestionKey = null;
     getEl<HTMLInputElement>("answer-input").value = "";
     getEl<HTMLInputElement>("wager-final").value = "0";
     setGameActions("hidden");
@@ -2618,10 +2417,6 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     selectedWager = null;
     activeAnswerKey = "";
     optimisticAnswer = null;
-    cachedGame = null;
-    cachedPlayers = null;
-    cachedPlayerNames = null;
-    preferredQuestionKey = null;
     latestObservedAt = 0;
     gameEntryMark = null;
     awaitingFirstGameSnapshot = false;
@@ -2777,130 +2572,40 @@ async function poll(): Promise<void> {
     const polledSession = gameSession;
     pollInFlight = true;
     try {
-        let phase: PhaseView | null = null;
-        let gameView: GameView | null = null;
-        let players: string[] | null = null;
-        let playerNames: string[] | null = null;
-        let scores: number[] | null = null;
-        let submissions: SubmissionView[] | null = null;
-        let usedLiveSnapshot = false;
-
-        // New deployments return an internally consistent table in one read.
-        // If a transient read fails, keep the room usable via the legacy path
-        // below rather than treating an RPC hiccup as a contract migration.
-        if (contractCapabilities.gameLiveState) {
-            try {
-                const liveResult = await game.getLiveGame.query(polledGameId);
-                if (liveResult.success) {
-                    const live = liveResult.value as LiveGameView;
-                    phase = {
-                        stage: Number(live.stage),
-                        cursor: Number(live.cursor),
-                        deadline: BigInt(live.deadline),
-                        current_block: BigInt(live.current_block),
-                        final_difficulty: Number(live.final_difficulty),
-                        slot: Number(live.slot),
-                        submit_count: Number(live.submit_count),
-                        continue_count: Number(live.continue_count),
-                        player_count: Number(live.player_count),
-                        active_player_count: Number(live.active_player_count),
-                    };
-                    gameView = {
-                        pack_id: Number(live.pack_id),
-                        creator: String(live.creator).toLowerCase(),
-                        num_questions: Number(live.num_questions),
-                        answer_blocks: Number(live.answer_blocks),
-                        review_blocks: Number(live.review_blocks),
-                        max_players: Number(live.max_players),
-                        player_count: Number(live.player_count),
-                        active_player_count: Number(live.active_player_count),
-                    };
-                    players = live.players.map((player) => String(player).toLowerCase());
-                    scores = live.scores.map(Number);
-                    playerNames = live.player_names.map((name) => String(name));
-                    submissions = live.submissions.map((submission) => ({
-                        ...submission,
-                        player: String(submission.player).toLowerCase(),
-                        wager: Number(submission.wager),
-                        overturn_votes: Number(submission.overturn_votes),
-                    }));
-                    usedLiveSnapshot = true;
-                }
-            } catch {
-                // Fall through to the older read set for this one refresh.
-            }
-        }
-
-        if (!usedLiveSnapshot) {
-            const wasLobby = latest?.phase.stage === STAGE_LOBBY;
-            const needGame = cachedGame === null || wasLobby;
-            const needPlayers = cachedPlayers === null || wasLobby;
-            const needNames = contractCapabilities.gameLiveState && (cachedPlayerNames === null || needPlayers);
-            // On legacy deployments the immutable game/roster are cached once
-            // play begins. A stage transition needs only one corrective
-            // submissions read, not a second full wave of RPCs.
-            const expectedQuestionKey = preferredQuestionKey ?? (latest ? questionKeyFor(latest.phase) : FINAL_QKEY);
-            const [phaseRes, maybeGameRes, maybePlayersRes, scoresRes, initialSubsRes, maybeNamesRes] = await Promise.all([
-                game.getPhase.query(polledGameId),
-                needGame ? game.getGame.query(polledGameId) : Promise.resolve(null),
-                needPlayers ? game.getPlayers.query(polledGameId) : Promise.resolve(null),
-                game.getScores.query(polledGameId),
-                game.getSubmissions.query(polledGameId, expectedQuestionKey),
-                needNames ? game.getPlayerNames.query(polledGameId) : Promise.resolve(null),
-            ]);
-            if (!isCurrentGame(polledGameId, polledSession)) return;
-            if (!phaseRes.success || !scoresRes.success || !initialSubsRes.success) return;
-            phase = phaseRes.value as PhaseView;
-            const qkey = questionKeyFor(phase);
-
-            let gameRes = maybeGameRes;
-            let playersRes = maybePlayersRes;
-            // A reorg can be the one case where our previous non-lobby cache
-            // is no longer valid. Refresh the mutable lobby state then.
-            if (phase.stage === STAGE_LOBBY && !needGame) {
-                [gameRes, playersRes] = await Promise.all([
-                    game.getGame.query(polledGameId),
-                    game.getPlayers.query(polledGameId),
-                ]);
-            }
-            if (!isCurrentGame(polledGameId, polledSession)) return;
-            if (gameRes) {
-                if (!gameRes.success) return;
-                gameView = gameRes.value as GameView;
-            } else if (cachedGame) {
-                gameView = cachedGame;
-            } else {
-                return;
-            }
-
-            const needFreshPlayers = cachedPlayers === null || cachedPlayers.length !== phase.player_count;
-            if (needFreshPlayers && !playersRes) {
-                playersRes = await game.getPlayers.query(polledGameId);
-                if (!isCurrentGame(polledGameId, polledSession)) return;
-            }
-            if (playersRes) {
-                if (!playersRes.success) return;
-                players = (playersRes.value as string[]).map((player) => player.toLowerCase());
-            } else if (cachedPlayers) {
-                players = cachedPlayers;
-            } else {
-                return;
-            }
-
-            if (maybeNamesRes?.success) playerNames = (maybeNamesRes.value as string[]).map(String);
-            else if (cachedPlayerNames) playerNames = cachedPlayerNames;
-            else playerNames = Array.from({ length: players.length }, () => "");
-            let subsRes = initialSubsRes;
-            if (qkey !== expectedQuestionKey) {
-                subsRes = await game.getSubmissions.query(polledGameId, qkey);
-                if (!isCurrentGame(polledGameId, polledSession) || !subsRes.success) return;
-            }
-            if (qkey === expectedQuestionKey || phase.stage !== STAGE_LOBBY) preferredQuestionKey = null;
-            scores = (scoresRes.value as (number | bigint)[]).map(Number);
-            submissions = subsRes.value as SubmissionView[];
-        }
-
-        if (!phase || !gameView || !players || !playerNames || !scores || !submissions) return;
+        const liveResult = await game.getLiveGame.query(polledGameId);
+        if (!isCurrentGame(polledGameId, polledSession) || !liveResult.success) return;
+        const live = liveResult.value as LiveGameView;
+        const phase: PhaseView = {
+            stage: Number(live.stage),
+            cursor: Number(live.cursor),
+            deadline: BigInt(live.deadline),
+            current_block: BigInt(live.current_block),
+            final_difficulty: Number(live.final_difficulty),
+            slot: Number(live.slot),
+            submit_count: Number(live.submit_count),
+            continue_count: Number(live.continue_count),
+            player_count: Number(live.player_count),
+            active_player_count: Number(live.active_player_count),
+        };
+        const gameView: GameView = {
+            pack_id: Number(live.pack_id),
+            creator: String(live.creator).toLowerCase(),
+            num_questions: Number(live.num_questions),
+            answer_blocks: Number(live.answer_blocks),
+            review_blocks: Number(live.review_blocks),
+            max_players: Number(live.max_players),
+            player_count: Number(live.player_count),
+            active_player_count: Number(live.active_player_count),
+        };
+        const players = live.players.map((player) => String(player).toLowerCase());
+        const playerNames = live.player_names.map((name) => String(name));
+        const scores = live.scores.map(Number);
+        const submissions = live.submissions.map((submission) => ({
+            ...submission,
+            player: String(submission.player).toLowerCase(),
+            wager: Number(submission.wager),
+            overturn_votes: Number(submission.overturn_votes),
+        }));
 
         // Drop snapshots that move the game BACKWARDS unless they persist —
         // a slow read resolving late must not yank the table back a round.
@@ -2913,16 +2618,12 @@ async function poll(): Promise<void> {
         }
         lastRank = rank;
 
-        // `getGame` and `getPlayers` only mutate while a lobby is open. Once
-        // play starts this saves two RPCs per block for every player.
-        cachedGame = gameView;
-        cachedPlayers = players;
-        cachedPlayerNames = playerNames.length === players.length
+        const normalizedPlayerNames = playerNames.length === players.length
             ? playerNames
             : Array.from({ length: players.length }, () => "");
         const myPlayerIndex = players.indexOf(myAddress);
-        if (myPlayerIndex >= 0 && cachedPlayerNames[myPlayerIndex] !== undefined) {
-            myDisplayName = cachedPlayerNames[myPlayerIndex];
+        if (myPlayerIndex >= 0 && normalizedPlayerNames[myPlayerIndex] !== undefined) {
+            myDisplayName = normalizedPlayerNames[myPlayerIndex];
             $displayName.value = myDisplayName;
         }
 
@@ -2944,7 +2645,7 @@ async function poll(): Promise<void> {
             phase,
             game: gameView,
             players,
-            playerNames: cachedPlayerNames,
+            playerNames: normalizedPlayerNames,
             scores,
             submissions,
             questionText: qText,
@@ -3111,7 +2812,7 @@ async function shareLobbyInvite(): Promise<void> {
     const $feedback = getEl("lobby-share-feedback");
     const $shareLink = getEl<HTMLInputElement>("lobby-share-link");
     const packTitle = getEl("lobby-title").textContent?.trim() || "Quizzler";
-    const url = sharedLobbyInviteUrl(window.location.href, gameId, activeDeployment?.id);
+    const url = sharedLobbyInviteUrl(window.location.href, gameId);
     const shareData = {
         title: "Join my Quizzler game",
         text: `Join my ${packTitle} quiz on Quizzler. Game code: ${gameId}.`,
@@ -3198,12 +2899,10 @@ getEl("btn-start-game").addEventListener("click", async () => {
     busy = true;
     setLoading("btn-start-game", true);
     try {
-        preferredQuestionKey = 0;
         await sendWarmedTx(game, "startGame", [gameId]);
         showStartedGame();
         void poll();
     } catch (e) {
-        preferredQuestionKey = null;
         getEl("lobby-error").textContent = txError(e);
     } finally {
         busy = false;
