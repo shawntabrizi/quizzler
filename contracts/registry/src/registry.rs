@@ -393,8 +393,12 @@ mod registry {
         };
         let mut out = Vec::with_capacity(q.answer_count as usize);
         for i in 0..q.answer_count {
-            if let Some(a) = Storage::accepted().get(&(pack_id, slot, i)) {
-                out.push(a);
+            match Storage::accepted().get(&(pack_id, slot, i)) {
+                Some(a) => out.push(a),
+                // The answer_count/accepted invariant broke. Failing loud is
+                // strictly better than the game silently scoring against a
+                // shorter answer set.
+                None => fail("AnswerMissing"),
             }
         }
         out

@@ -10,7 +10,8 @@
 //! submission time. The client decides what to *display* per phase; the
 //! chain only enforces timing, scoring, and votes.
 //! A dedicated session registry resolves short-lived local game keys back to
-//! their product-account owner for the four reversible in-game actions.
+//! their product-account owner for the reversible in-game actions (answers,
+//! wagers, votes, continues) — never for membership or identity changes.
 //!
 //! Phase pacing is a pure function of block number (see `quizzler-logic`):
 //! every mutating call first settles timeout transitions, then applies the
@@ -417,6 +418,16 @@ fn contract_view_call<T: pvm::SolAbi>(
     match result {
         Ok(()) => {
             let written = output_ref.len();
+            // In EVM semantics a call to a codeless (mis-configured) address
+            // SUCCEEDS with empty output, and `abi_decode` has no error
+            // return — feeding it short data traps with an undiagnosable
+            // "contract trapped" instead of this typed revert. Every shape
+            // decoded here is at least one 32-byte word. A reply that fills
+            // the buffer exactly was clipped by `out_cap`; decoding a
+            // truncated prefix must also fail loud.
+            if written < 32 || written == out_cap {
+                fail(error);
+            }
             T::abi_decode(&output_buf[..written], 0)
         }
         Err(_) => fail(error),
@@ -456,10 +467,17 @@ fn session_registry_call<T: pvm::SolAbi>(
 }
 
 fn registry_pack_status(pack_id: u32) -> PackStatus {
+    // PackStatus is 3 static words = 96 bytes; 128 leaves headroom so a full
+    // reply is never mistaken for truncation by the out_cap guard above.
     registry_call("getPackStatus", &["uint32"], &[abi_word_u32(pack_id)], 128)
 }
 
 fn registry_answers(pack_id: u32, slot: u8) -> Vec<String> {
+    // Worst case against the registry's bounds (5 answers × 64 bytes):
+    // head offset 32 + length 32 + 5 × (offset 32 + length 32 + padded 64)
+    // = 704 bytes. A registry configured with more/longer answers hits the
+    // out_cap guard and reverts as RegistryCallFailed instead of silently
+    // scoring against a truncated answer set.
     registry_call(
         "getAnswers",
         &["uint32", "uint8"],
@@ -1093,17 +1111,8 @@ mod quizzler {
         max_players: u8,
         creation_nonce: u64,
     ) {
-        let pack = registry_pack_status(pack_id);
-        if !pack.exists || !pack.sealed {
-            fail("PackNotSealed");
-        }
-        if pack.regular_count > MAX_REGULAR_SLOTS
-            || num_questions == 0
-            || num_questions > pack.regular_count
-            || num_questions > MAX_GAME_QUESTIONS
-        {
-            fail("BadQuestionCount");
-        }
+        // Pack-independent bounds first: they are pure and must not cost a
+        // cross-contract registry read before rejecting bad input.
         if answer_blocks < 2 || answer_blocks > MAX_STAGE_BLOCKS {
             fail("BadAnswerBlocks");
         }
@@ -1112,6 +1121,16 @@ mod quizzler {
         }
         if max_players == 0 || max_players > MAX_PLAYERS {
             fail("BadMaxPlayers");
+        }
+        if num_questions == 0 || num_questions > MAX_GAME_QUESTIONS {
+            fail("BadQuestionCount");
+        }
+        let pack = registry_pack_status(pack_id);
+        if !pack.exists || !pack.sealed {
+            fail("PackNotSealed");
+        }
+        if pack.regular_count > MAX_REGULAR_SLOTS || num_questions > pack.regular_count {
+            fail("BadQuestionCount");
         }
 
         let creator = main_caller();
@@ -1218,6 +1237,9 @@ mod quizzler {
         // A later rejoin is a fresh lobby arrival, even if a future contract
         // version wrote this flag before the lobby began.
         Storage::forfeited().remove(&(game_id, who));
+        // The roster is authoritative; a departed seat's zero score entry
+        // would otherwise be permanent orphaned storage.
+        Storage::scores().remove(&(game_id, who));
         Storage::players().insert(&game_id, &players);
         if players.is_empty() {
             meta.stage = STAGE_ABANDONED;
@@ -1349,7 +1371,10 @@ mod quizzler {
         if correct {
             Storage::scores().insert(&(game_id, who), &(score.saturating_add(wager)));
         } else {
-            Storage::scores().insert(&(game_id, who), &(score - wager));
+            // Guarded by the check above; saturate anyway — this build sets
+            // overflow-checks = false, and a silent wrap here would corrupt
+            // the scorecard rather than trap.
+            Storage::scores().insert(&(game_id, who), &(score.saturating_sub(wager)));
         }
 
         Storage::submissions().insert(
