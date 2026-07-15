@@ -30,6 +30,8 @@ import { createDevSigner, ensureAccountMapped, getDevPublicKey } from "@parity/p
 import { ss58ToH160 } from "@parity/product-sdk-address";
 import { encodeAbiParameters, hexToBytes } from "viem";
 
+import { instantiatedContractAddress } from "../src/deployment-events";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONTRACTS = join(__dirname, "..", "..", "contracts");
 const REGISTRY_BASE = join(CONTRACTS, "registry", "target", "quizzler-registry.release");
@@ -161,12 +163,11 @@ async function assertActiveGameAbiMatchesBuild(): Promise<void> {
 }
 
 /**
- * Contract deployment does not need finality before the next staged step can
- * safely read its address. Resolving at best-block inclusion avoids a long
- * finality wait that can otherwise interrupt a resumable migration before it
- * records the pair's state.
+ * Deployment addresses are durable configuration, so only record them after
+ * finalization. Best-block inclusion can be reorged out; its dry-run address
+ * then describes a contract that never existed on the canonical chain.
  */
-async function submitAtBest(tx: any, signer: PolkadotSigner, label: string): Promise<any> {
+async function submitFinalized(tx: any, signer: PolkadotSigner, label: string): Promise<any> {
     return new Promise((resolve, reject) => {
         let subscription: { unsubscribe(): void } | null = null;
         let settled = false;
@@ -178,11 +179,11 @@ async function submitAtBest(tx: any, signer: PolkadotSigner, label: string): Pro
             if (error) reject(error);
             else resolve(value);
         };
-        const timer = setTimeout(() => finish(new Error(`${label} timed out waiting for a best block`)), 120_000);
+        const timer = setTimeout(() => finish(new Error(`${label} timed out waiting for finalization`)), 120_000);
         try {
             subscription = tx.signSubmitAndWatch(signer).subscribe({
                 next: (event: any) => {
-                    if (event.type !== "txBestBlocksState" || !event.found || event.ok === undefined) return;
+                    if (event.type !== "finalized") return;
                     if (!event.ok) {
                         finish(new Error(`${label} failed: ${JSON.stringify(event.dispatchError, bigintReplacer)}`));
                     } else {
@@ -218,7 +219,6 @@ async function instantiate(
     if (!dryRun.result.success) {
         throw new Error(`${label} dry-run failed: ${JSON.stringify(dryRun.result.value, bigintReplacer)}`);
     }
-    const predicted: string = dryRun.result.value.addr;
     const gas = dryRun.weight_required;
 
     const tx = (api as any).tx.Revive.instantiate_with_code({
@@ -233,16 +233,12 @@ async function instantiate(
         data: constructorData,
         salt: undefined,
     });
-    const result: any = await submitAtBest(tx, signer, `${label} deploy`);
+    const result: any = await submitFinalized(tx, signer, `${label} deploy`);
     if (!result.ok) {
         throw new Error(`${label} deploy failed: ${JSON.stringify(result.dispatchError, bigintReplacer)}`);
     }
-    const instantiated = result.events?.find(
-        (e: { type: string; value: { type: string } }) =>
-            e.type === "Revive" && e.value.type === "Instantiated",
-    );
-    const addr: string = instantiated ? (instantiated.value as any).value.contract : predicted;
-    console.log(`  ${label} at ${addr} (block #${result.block?.number ?? "best"})`);
+    const addr = instantiatedContractAddress(result.events ?? []);
+    console.log(`  ${label} at ${addr} (finalized block #${result.block?.number ?? "unknown"})`);
     return { address: addr, bytecodeSha256: sha256(artifacts.bytecode) };
 }
 
