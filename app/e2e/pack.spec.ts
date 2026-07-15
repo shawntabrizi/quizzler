@@ -36,7 +36,10 @@ test("creates, fills, and seals a pack through the builder UI", async ({ testHos
     await expect(frame.getByTestId("btn-seal-pack")).toBeEnabled();
     await frame.getByTestId("btn-seal-pack").click();
 
-    // sealing returns home and the pack shows up in the browse list
+    // Sealing returns home. The catalog is its own deliberate next step, so
+    // open it before checking that the fresh pack can be selected.
     await expect(frame.getByTestId("screen-home")).toBeVisible({ timeout: 120_000 });
+    await frame.getByTestId("btn-host-game").click();
+    await expect(frame.getByTestId("screen-pack-select")).toBeVisible();
     await expect(frame.getByTestId("pack-list").getByText(title)).toBeVisible();
 });

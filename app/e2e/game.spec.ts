@@ -31,11 +31,15 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         });
 
         // ── create the game from charlie's pack ──────────────────
+        await frame.getByTestId("btn-host-game").click();
+        await expect(frame.getByTestId("screen-pack-select")).toBeVisible();
         await expect(frame.getByTestId(`pack-${packId}`)).toBeVisible({ timeout: 60_000 });
         await frame.getByTestId(`pack-${packId}`).click();
-        await frame.getByTestId("cfg-questions").fill("1");
-        await frame.getByTestId("cfg-answer-secs").fill("90");
-        await frame.getByTestId("cfg-review-secs").fill("60");
+        await frame.getByTestId("btn-pack-continue").click();
+        await expect(frame.getByTestId("screen-configure")).toBeVisible();
+        await frame.getByTestId("cfg-questions").selectOption("1");
+        await frame.getByTestId("cfg-answer-blocks").selectOption("45");
+        await frame.getByTestId("cfg-review-blocks").selectOption("30");
         await frame.getByTestId("btn-create-game").click();
 
         await expect(frame.getByTestId("screen-lobby")).toBeVisible({ timeout: 120_000 });

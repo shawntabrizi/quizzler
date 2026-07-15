@@ -51,13 +51,41 @@
             background: var(--bg-surface-main);
             color: var(--fg-primary);
             min-height: 100vh;
+            min-height: 100dvh;
             font-size: 15px;
             line-height: 1.5;
         }
 
-        main { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+        main {
+            width: 100%;
+            max-width: 1080px;
+            margin: 0 auto;
+            padding:
+                28px max(20px, env(safe-area-inset-right))
+                max(80px, env(safe-area-inset-bottom))
+                max(20px, env(safe-area-inset-left));
+        }
 
-        header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+        /* Setup benefits from a wider catalog, while the moment-to-moment game
+           stays comfortably readable on large displays. */
+        #screen-home,
+        #screen-builder,
+        #screen-lobby,
+        #screen-question,
+        #screen-review,
+        #screen-vote,
+        #screen-results,
+        #screen-abandoned {
+            max-width: 720px;
+            margin-inline: auto;
+        }
+        #screen-pack-select,
+        #screen-configure {
+            max-width: 1040px;
+            margin-inline: auto;
+        }
+
+        header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
         header h1 {
             font-family: Georgia, "Times New Roman", serif;
             font-weight: 400;
@@ -76,7 +104,7 @@
         }
         #conn-pill.ok { color: var(--fg-success); }
         #conn-pill.err { color: var(--fg-error); }
-        #game-actions { display: none; gap: 6px; }
+        #game-actions { display: none; gap: 6px; margin-left: 0; }
         button.quiet {
             padding: 7px 10px;
             color: var(--fg-secondary);
@@ -130,6 +158,7 @@
 
         input[type="text"], input[type="number"], input[type="search"], select {
             width: 100%;
+            min-height: 44px;
             background: var(--bg-surface-nested);
             color: var(--fg-primary);
             border: 1px solid var(--border-divider);
@@ -143,6 +172,7 @@
         input::placeholder { color: var(--fg-tertiary); }
 
         button {
+            min-height: 44px;
             font-family: inherit;
             font-size: 0.9rem;
             font-weight: 600;
@@ -187,12 +217,14 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            min-width: 0;
         }
+        ul.list li > * { min-width: 0; }
         ul.list li.clickable { cursor: pointer; transition: background-color 0.15s ease; }
         ul.list li.clickable:hover { background: var(--bg-selection-container-hover); }
         ul.list li.selected { background: var(--bg-selection-container-active); }
         ul.list li .sub { color: var(--fg-secondary); font-size: 0.8rem; }
-        ul.list li .right { margin-left: auto; text-align: right; }
+        ul.list li .right { min-width: 0; margin-left: auto; overflow-wrap: anywhere; text-align: right; }
 
         /* Pack catalog — cards make a pick feel like choosing a game night,
            while native radios retain the correct single-choice semantics. */
@@ -351,6 +383,82 @@
             color: var(--fg-secondary);
             font-size: 0.84rem;
         }
+        .setup-heading { margin: 0 0 16px; }
+        .setup-heading h2 { font-size: 1.35rem; line-height: 1.2; }
+        .setup-heading .hint { margin-top: 5px; }
+        .setup-step {
+            margin-bottom: 4px;
+            color: var(--fg-tertiary);
+            font-size: 0.76rem;
+            font-weight: 650;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .setup-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .setup-actions .primary { margin-left: auto; }
+        .config-layout {
+            display: grid;
+            grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+            align-items: start;
+            gap: 16px;
+        }
+        .selected-pack-card {
+            position: sticky;
+            top: 20px;
+            overflow: hidden;
+            background: var(--bg-surface-container);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-container);
+            box-shadow: var(--shadow-2);
+        }
+        .config-pack-art {
+            display: grid;
+            min-height: 180px;
+            place-items: center;
+            background: linear-gradient(145deg, #7c3aed, #312e81);
+            color: #fff;
+            font-size: 5rem;
+            line-height: 1;
+            text-shadow: 0 3px 18px rgba(0, 0, 0, 0.32);
+        }
+        .config-pack-art.tone-violet { background: linear-gradient(145deg, #7c3aed, #4c1d95); }
+        .config-pack-art.tone-rose { background: linear-gradient(145deg, #f43f5e, #881337); }
+        .config-pack-art.tone-pink { background: linear-gradient(145deg, #db2777, #831843); }
+        .config-pack-art.tone-green { background: linear-gradient(145deg, #16a34a, #14532d); }
+        .config-pack-art.tone-blue { background: linear-gradient(145deg, #2563eb, #172554); }
+        .config-pack-art.tone-amber { background: linear-gradient(145deg, #d97706, #78350f); }
+        .config-pack-art.tone-orange { background: linear-gradient(145deg, #ea580c, #7c2d12); }
+        .config-pack-art.tone-red { background: linear-gradient(145deg, #dc2626, #7f1d1d); }
+        .config-pack-art.tone-cyan { background: linear-gradient(145deg, #0891b2, #164e63); }
+        .config-pack-art.tone-indigo { background: linear-gradient(145deg, #4f46e5, #312e81); }
+        .config-pack-copy { padding: 18px; }
+        .config-pack-copy h3 { font-size: 1.2rem; line-height: 1.25; }
+        .config-pack-copy .hint { margin-top: 6px; }
+        .config-pack-copy .quiet { margin-top: 14px; }
+        .config-fields {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .field-hint,
+        .timer-note {
+            color: var(--fg-secondary);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        .field-hint { margin-top: 6px; }
+        .timer-note {
+            margin-top: 16px;
+            padding: 10px 12px;
+            background: var(--bg-surface-nested);
+            border-radius: var(--radius-small);
+        }
         .pack-emoji-field { width: 106px; }
         #pack-emoji { text-align: center; }
 
@@ -365,8 +473,9 @@
            by outcome (green correct / red wrong), like Sporcle Party. */
         .wager-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(5, minmax(44px, 1fr));
+            width: 100%;
+            gap: 8px;
             margin: 16px 0;
             max-width: 360px;
         }
@@ -405,7 +514,7 @@
         .answer-panel .answer-text { font-size: 1.35rem; font-weight: 600; line-height: 1.3; }
         .answer-panel .answer-sub { color: var(--fg-secondary); font-size: 0.85rem; margin-top: 6px; }
 
-        .answer-row .player-answer { font-weight: 600; }
+        .answer-row .player-answer { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
         .answer-row .player-answer.correct { color: var(--fg-success); }
         .answer-row .player-answer.wrong { color: var(--fg-error); }
         .wager-badge {
@@ -444,12 +553,60 @@
             *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
 
-        @media (max-width: 480px) {
+        @media (min-width: 900px) {
+            ul.pack-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 599px) {
+            main {
+                padding:
+                    20px max(16px, env(safe-area-inset-right))
+                    max(72px, env(safe-area-inset-bottom))
+                    max(16px, env(safe-area-inset-left));
+            }
+            header {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 6px 10px;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+            header h1 { min-width: 0; font-size: 1.75rem; }
+            header .tagline { grid-column: 1; grid-row: 2; }
+            #conn-pill { grid-column: 2; grid-row: 1; margin-left: 0; justify-self: end; }
+            #game-actions { grid-column: 1 / -1; width: 100%; gap: 8px; }
+            #game-actions button { flex: 1 1 0; min-width: 0; }
             .card { padding: 18px; }
+            input[type="text"], input[type="number"], input[type="search"], select { font-size: 16px; }
             ul.pack-grid { grid-template-columns: 1fr; }
             .pack-card { min-height: 104px; }
             .pack-art { flex-basis: 66px; }
             .pack-emoji-field { width: 88px; }
+            .setup-heading { margin-bottom: 12px; }
+            .config-layout,
+            .config-fields { grid-template-columns: 1fr; }
+            .selected-pack-card {
+                position: static;
+                display: flex;
+                align-items: stretch;
+            }
+            .config-pack-art {
+                flex: 0 0 104px;
+                min-height: 104px;
+                font-size: 3.25rem;
+            }
+            .config-pack-copy { min-width: 0; padding: 14px; }
+            .config-pack-copy .quiet { margin-top: 10px; }
+            .setup-actions { align-items: stretch; }
+            .setup-actions button { flex: 1 1 140px; }
+            .setup-actions .primary { margin-left: 0; }
+            ul.list li { align-items: flex-start; }
+            .wager-row { align-items: stretch; flex-direction: column; }
+            #wager-final { width: 100% !important; }
+        }
+
+        @media (max-width: 359px) {
+            .wager-grid { grid-template-columns: repeat(4, minmax(44px, 1fr)); }
         }
 
         #boot-log { font-size: 0.85rem; color: var(--fg-secondary); }
@@ -502,35 +659,81 @@
 
             <div class="card">
                 <h2>Host a game</h2>
-                <p class="hint">Pick a pack, set the pace, and share the game code.</p>
+                <p class="hint">Choose a pack first, then set the pace for your group.</p>
+                <div class="row">
+                    <button id="btn-host-game" class="primary" data-testid="btn-host-game">Choose a pack</button>
+                    <button id="btn-new-pack" data-testid="btn-new-pack">Make a pack</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Host setup: pack selection -->
+        <section id="screen-pack-select" class="screen" data-testid="screen-pack-select">
+            <div class="setup-heading">
+                <p class="setup-step">Step 1 of 2</p>
+                <h2>Choose a quiz pack</h2>
+                <p class="hint">Pick the theme for tonight’s game.</p>
+            </div>
+            <div class="card pack-select-card">
                 <div class="pack-picker">
                     <label class="sr-only" for="pack-search">Find a quiz pack</label>
                     <input type="search" id="pack-search" data-testid="pack-search" placeholder="Find a pack" autocomplete="off" />
                     <p class="pack-catalog-status" id="pack-catalog-status" role="status" aria-live="polite"></p>
                     <div id="pack-list" data-testid="pack-list"></div>
                 </div>
-                <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to set up your game.</p>
-                <div class="row">
-                    <div class="grow">
-                        <label for="cfg-questions">Questions (max 10)</label>
-                        <input type="number" id="cfg-questions" data-testid="cfg-questions" value="5" min="1" max="10" />
-                    </div>
-                    <div class="grow">
-                        <label for="cfg-answer-secs">Answer time (s)</label>
-                        <input type="number" id="cfg-answer-secs" data-testid="cfg-answer-secs" value="60" min="12" max="1200" />
-                    </div>
-                    <div class="grow">
-                        <label for="cfg-review-secs">Review time (s)</label>
-                        <input type="number" id="cfg-review-secs" data-testid="cfg-review-secs" value="45" min="12" max="1200" />
-                    </div>
-                    <div class="grow">
-                        <label for="cfg-max-players">Max players</label>
-                        <input type="number" id="cfg-max-players" data-testid="cfg-max-players" value="8" min="1" max="16" />
-                    </div>
+                <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to continue.</p>
+                <div class="error-text" id="pack-selection-error" data-testid="pack-selection-error" role="alert"></div>
+                <div class="setup-actions">
+                    <button id="btn-pack-back" class="quiet" data-testid="btn-pack-back">Back home</button>
+                    <button id="btn-new-pack-from-picker" data-testid="btn-new-pack-from-picker">New pack</button>
+                    <button id="btn-pack-continue" class="primary" data-testid="btn-pack-continue" disabled>Continue</button>
                 </div>
-                <div class="row" style="margin-top: 12px;">
-                    <button id="btn-create-game" class="primary" data-testid="btn-create-game" disabled>Create game</button>
-                    <button id="btn-new-pack" data-testid="btn-new-pack">New pack</button>
+            </div>
+        </section>
+
+        <!-- Host setup: game options -->
+        <section id="screen-configure" class="screen" data-testid="screen-configure">
+            <div class="setup-heading">
+                <p class="setup-step">Step 2 of 2</p>
+                <h2>Set up your game</h2>
+                <p class="hint">Choose a comfortable pace, then share the code with your group.</p>
+            </div>
+            <div class="config-layout">
+                <aside class="selected-pack-card" aria-label="Selected pack">
+                    <div id="config-pack-art" class="config-pack-art" aria-hidden="true">✨</div>
+                    <div class="config-pack-copy">
+                        <p class="setup-step">Selected pack</p>
+                        <h3 id="config-pack-title" data-testid="config-pack-title">Choose a pack</h3>
+                        <p id="config-pack-meta" class="hint">Select a pack to configure a game.</p>
+                        <button id="btn-config-back" class="quiet" data-testid="btn-config-back">Change pack</button>
+                    </div>
+                </aside>
+                <div class="card config-card">
+                    <div class="config-fields">
+                        <div>
+                            <label for="cfg-questions">Questions</label>
+                            <select id="cfg-questions" data-testid="cfg-questions" aria-describedby="cfg-questions-hint"></select>
+                            <p id="cfg-questions-hint" class="field-hint">Up to 10 regular questions from this pack.</p>
+                        </div>
+                        <div>
+                            <label for="cfg-answer-blocks">Answer time</label>
+                            <select id="cfg-answer-blocks" data-testid="cfg-answer-blocks"></select>
+                        </div>
+                        <div>
+                            <label for="cfg-review-blocks">Review time</label>
+                            <select id="cfg-review-blocks" data-testid="cfg-review-blocks"></select>
+                        </div>
+                        <div>
+                            <label for="cfg-max-players">Maximum players</label>
+                            <select id="cfg-max-players" data-testid="cfg-max-players"></select>
+                        </div>
+                    </div>
+                    <p class="timer-note">Timers are exact block counts on-chain. Current Paseo estimate: about 2 seconds per block; actual timing can vary.</p>
+                    <div class="error-text" id="config-error" data-testid="config-error" role="alert"></div>
+                    <div class="setup-actions">
+                        <button id="btn-config-back-bottom" class="quiet" data-testid="btn-config-back-bottom">Back to packs</button>
+                        <button id="btn-create-game" class="primary" data-testid="btn-create-game" disabled>Create game</button>
+                    </div>
                 </div>
             </div>
         </section>

@@ -24,6 +24,15 @@ import { ss58ToH160, truncateAddress } from "@parity/product-sdk-address";
 import registryAbi from "./abi-registry.json";
 import gameAbi from "./abi-game.json";
 import contractInfo from "./contract-address.json";
+import {
+    ANSWER_BLOCK_PRESETS,
+    BLOCK_SECONDS_ESTIMATE,
+    isAllowedBlockPreset,
+    PLAYER_CAP_PRESETS,
+    presetLabel,
+    questionCountOptions,
+    REVIEW_BLOCK_PRESETS,
+} from "./game-config";
 import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { normalizeAnswer } from "./normalize";
@@ -62,15 +71,11 @@ const FINAL_QKEY = 255;
 const FINAL_SLOT_BASE = 0xf0;
 const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
-const MAX_STAGE_BLOCKS = 600;
-const MAX_STAGE_SECONDS = MAX_STAGE_BLOCKS * 2;
 const MAX_GAME_QUESTIONS = 10;
-const MAX_PLAYERS = 16;
 const MAX_TITLE_BYTES = 64;
 const MAX_EMOJI_BYTES = 32;
 const MAX_QUESTION_BYTES = 256;
 const MAX_ANSWER_BYTES = 64;
-const SECONDS_PER_BLOCK = 2; // measured on Paseo Asset Hub Next (2026-07)
 const POLL_FALLBACK_MS = 8_000;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
@@ -245,7 +250,7 @@ const builderFinals = [false, false, false];
 
 // ── Screen switching ─────────────────────────────────────────────────
 
-const SCREENS = ["boot", "home", "builder", "lobby", "question", "review", "vote", "results", "abandoned"] as const;
+const SCREENS = ["boot", "home", "pack-select", "configure", "builder", "lobby", "question", "review", "vote", "results", "abandoned"] as const;
 type Screen = (typeof SCREENS)[number];
 
 function showScreen(name: Screen): void {
@@ -681,14 +686,24 @@ async function init(): Promise<void> {
     }
 }
 
-// ── Home: packs & games ──────────────────────────────────────────────
+// ── Home: pack selection & game setup ─────────────────────────────────
 
 const $packList = getEl("pack-list");
 const $packSearch = getEl<HTMLInputElement>("pack-search");
 const $packCatalogStatus = getEl("pack-catalog-status");
 const $selectedPackSummary = getEl("selected-pack-summary");
 const $homeError = getEl("home-error");
+const $packSelectionError = getEl("pack-selection-error");
+const $configError = getEl("config-error");
 const $btnCreateGame = getEl<HTMLButtonElement>("btn-create-game");
+const $btnPackContinue = getEl<HTMLButtonElement>("btn-pack-continue");
+const $questionCount = getEl<HTMLSelectElement>("cfg-questions");
+const $answerBlocks = getEl<HTMLSelectElement>("cfg-answer-blocks");
+const $reviewBlocks = getEl<HTMLSelectElement>("cfg-review-blocks");
+const $maxPlayers = getEl<HTMLSelectElement>("cfg-max-players");
+const $configPackArt = getEl("config-pack-art");
+const $configPackTitle = getEl("config-pack-title");
+const $configPackMeta = getEl("config-pack-meta");
 const $resumeGameCard = getEl("resume-game-card");
 const $resumeGameCode = getEl("resume-game-code");
 
@@ -697,6 +712,65 @@ function renderResumeCard(): void {
     $resumeGameCard.style.display = shouldShow ? "" : "none";
     $resumeGameCode.textContent = shouldShow ? String(savedGameId) : "";
 }
+
+interface SelectOption {
+    value: number;
+    label: string;
+}
+
+function replaceSelectOptions(
+    select: HTMLSelectElement,
+    options: readonly SelectOption[],
+    preferredValue: number,
+): void {
+    const previous = Number(select.value);
+    const target = options.some((option) => option.value === previous)
+        ? previous
+        : options.some((option) => option.value === preferredValue)
+            ? preferredValue
+            : options[0]?.value;
+    select.replaceChildren(
+        ...options.map((option) => {
+            const node = document.createElement("option");
+            node.value = String(option.value);
+            node.textContent = option.label;
+            return node;
+        }),
+    );
+    if (target !== undefined) select.value = String(target);
+}
+
+function renderQuestionCountOptions(maxQuestions: number): void {
+    const options = questionCountOptions(maxQuestions).map((value) => ({
+        value,
+        label: `${value} ${value === 1 ? "question" : "questions"}`,
+    }));
+    replaceSelectOptions($questionCount, options, Math.min(5, maxQuestions));
+}
+
+function configureGameControls(): void {
+    replaceSelectOptions(
+        $answerBlocks,
+        ANSWER_BLOCK_PRESETS.map((preset) => ({ value: preset.blocks, label: presetLabel(preset) })),
+        30,
+    );
+    replaceSelectOptions(
+        $reviewBlocks,
+        REVIEW_BLOCK_PRESETS.map((preset) => ({ value: preset.blocks, label: presetLabel(preset) })),
+        18,
+    );
+    replaceSelectOptions(
+        $maxPlayers,
+        PLAYER_CAP_PRESETS.map((value) => ({
+            value,
+            label: `${value} ${value === 1 ? "player" : "players"}`,
+        })),
+        8,
+    );
+    renderQuestionCountOptions(MAX_GAME_QUESTIONS);
+}
+
+configureGameControls();
 
 type CatalogPack = PackView & PackListItem;
 
@@ -735,11 +809,14 @@ async function mapWithConcurrency<T, U>(
 async function refreshPacks(): Promise<void> {
     if (refreshingPacks) return;
     refreshingPacks = true;
+    const error = getEl("screen-pack-select").classList.contains("active")
+        ? $packSelectionError
+        : $homeError;
     try {
         await refreshPacksInner();
-        $homeError.textContent = "";
+        error.textContent = "";
     } catch {
-        $homeError.textContent = "Couldn’t refresh quiz packs. Retrying…";
+        error.textContent = "Couldn’t refresh quiz packs. Retrying…";
     } finally {
         refreshingPacks = false;
     }
@@ -772,21 +849,28 @@ function finalCountLabel(pack: Pick<PackView, "finals_set_count">): string {
 
 function updateSelectedPackSummary(): void {
     if (selectedPackId === null || selectedPack === null) {
-        $selectedPackSummary.textContent = "Choose a pack to set up your game.";
+        $selectedPackSummary.textContent = "Choose a pack to continue.";
+        $configPackArt.className = "config-pack-art";
+        $configPackArt.textContent = "✨";
+        $configPackTitle.textContent = "Choose a pack";
+        $configPackMeta.textContent = "Select a pack to configure a game.";
         return;
     }
     const presentation = packPresentation({ id: selectedPackId, ...selectedPack });
     $selectedPackSummary.textContent = `Selected: ${presentation.emoji} ${selectedPack.title} · ${questionCountLabel(selectedPack)}`;
+    $configPackArt.className = `config-pack-art tone-${presentation.tone}`;
+    $configPackArt.textContent = presentation.emoji;
+    $configPackTitle.textContent = selectedPack.title;
+    $configPackMeta.textContent = `${questionCountLabel(selectedPack)}${finalCountLabel(selectedPack)} · ${presentation.category}`;
 }
 
 function selectPack(id: number, pack: CatalogPack): void {
     selectedPackId = id;
     selectedPack = pack;
     $btnCreateGame.disabled = false;
-    const qInput = getEl<HTMLInputElement>("cfg-questions");
+    $btnPackContinue.disabled = false;
     const maxQ = Math.min(pack.regular_count, MAX_GAME_QUESTIONS);
-    qInput.max = String(maxQ);
-    if (Number(qInput.value) > maxQ) qInput.value = String(maxQ);
+    renderQuestionCountOptions(maxQ);
     for (const input of $packList.querySelectorAll<HTMLInputElement>('input[name="pack-choice"]')) {
         input.checked = Number(input.value) === id;
     }
@@ -794,6 +878,7 @@ function selectPack(id: number, pack: CatalogPack): void {
         card.classList.toggle("selected", card.htmlFor === `pack-${id}-choice`);
     }
     updateSelectedPackSummary();
+    $packSelectionError.textContent = "";
     scheduleCreateGamePreflight();
 }
 
@@ -915,66 +1000,78 @@ $packSearch.addEventListener("input", () => {
     renderPackList();
 });
 
-// Keep the browse list fresh while the player sits on the home screen —
-// packs published by others should show up without a reload.
+function showPackSelection(): void {
+    $homeError.textContent = "";
+    $packSelectionError.textContent = "";
+    showScreen("pack-select");
+    void refreshPacks();
+}
+
+getEl("btn-host-game").addEventListener("click", showPackSelection);
+
+getEl("btn-pack-back").addEventListener("click", () => {
+    showScreen("home");
+    renderResumeCard();
+});
+
+getEl("btn-pack-continue").addEventListener("click", () => {
+    if (selectedPackId === null || selectedPack === null) {
+        $packSelectionError.textContent = "Choose a pack before continuing.";
+        return;
+    }
+    $configError.textContent = "";
+    updateSelectedPackSummary();
+    showScreen("configure");
+    scheduleCreateGamePreflight();
+});
+
+for (const id of ["btn-config-back", "btn-config-back-bottom"]) {
+    getEl(id).addEventListener("click", () => {
+        $configError.textContent = "";
+        showScreen("pack-select");
+    });
+}
+
+// Keep the browse list fresh while the player compares packs — packs
+// published by others should show up without a reload.
 setInterval(() => {
-    if (registry && getEl("screen-home").classList.contains("active") && !busy) {
+    if (registry && getEl("screen-pack-select").classList.contains("active") && !busy) {
         void refreshPacks();
     }
 }, 5_000);
 
-function secondsToBlocks(seconds: number): number {
-    return Math.max(2, Math.round(seconds / SECONDS_PER_BLOCK));
-}
-
 function readCreatedGameConfig(showErrors = false): CreatedGameConfig | null {
     if (selectedPackId === null || selectedPack === null) return null;
+    const fail = (message: string): null => {
+        if (showErrors) $configError.textContent = message;
+        return null;
+    };
     const maxQuestions = Math.min(selectedPack.regular_count, MAX_GAME_QUESTIONS);
     const numQuestions = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-questions").value,
+        $questionCount.value,
         1,
         maxQuestions,
     );
     if (numQuestions === null) {
-        if (showErrors) $homeError.textContent = `Choose between 1 and ${maxQuestions} questions.`;
-        return null;
+        return fail(`Choose between 1 and ${maxQuestions} questions.`);
     }
-    const answerSeconds = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-answer-secs").value,
-        12,
-        MAX_STAGE_SECONDS,
-    );
-    if (answerSeconds === null) {
-        if (showErrors) {
-            $homeError.textContent = `Answer time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
-        }
-        return null;
+    const answerBlocks = Number($answerBlocks.value);
+    if (!Number.isInteger(answerBlocks) || !isAllowedBlockPreset(answerBlocks, ANSWER_BLOCK_PRESETS)) {
+        return fail("Choose one of the listed answer-time options.");
     }
-    const reviewSeconds = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-review-secs").value,
-        12,
-        MAX_STAGE_SECONDS,
-    );
-    if (reviewSeconds === null) {
-        if (showErrors) {
-            $homeError.textContent = `Review time must be a whole number from 12 to ${MAX_STAGE_SECONDS} seconds.`;
-        }
-        return null;
+    const reviewBlocks = Number($reviewBlocks.value);
+    if (!Number.isInteger(reviewBlocks) || !isAllowedBlockPreset(reviewBlocks, REVIEW_BLOCK_PRESETS)) {
+        return fail("Choose one of the listed review-time options.");
     }
-    const maxPlayers = parseIntegerInRange(
-        getEl<HTMLInputElement>("cfg-max-players").value,
-        1,
-        MAX_PLAYERS,
-    );
-    if (maxPlayers === null) {
-        if (showErrors) $homeError.textContent = `Max players must be a whole number from 1 to ${MAX_PLAYERS}.`;
-        return null;
+    const maxPlayers = Number($maxPlayers.value);
+    if (!Number.isInteger(maxPlayers) || !PLAYER_CAP_PRESETS.some((cap) => cap === maxPlayers)) {
+        return fail("Choose one of the listed player limits.");
     }
     return {
         packId: selectedPackId,
         numQuestions,
-        answerBlocks: secondsToBlocks(answerSeconds),
-        reviewBlocks: secondsToBlocks(reviewSeconds),
+        answerBlocks,
+        reviewBlocks,
         maxPlayers,
     };
 }
@@ -1061,9 +1158,9 @@ async function resumeSavedGame(): Promise<ResumeResult> {
  * account-to-game index — but never silently replace the room a player can
  * resume locally.
  */
-function canStartAnotherQuiz(): boolean {
+function canStartAnotherQuiz(error = $homeError): boolean {
     if (savedGameId === null) return true;
-    $homeError.textContent = "You already have a quiz in progress. Resume it, leave its lobby, or forfeit it before starting another.";
+    error.textContent = "You already have a quiz in progress. Resume it, leave its lobby, or forfeit it before starting another.";
     return false;
 }
 
@@ -1073,28 +1170,31 @@ getEl("btn-create-game").addEventListener("click", async () => {
         clearTimeout(createGamePreflightTimer);
         createGamePreflightTimer = null;
     }
-    $homeError.textContent = "";
-    if (!canStartAnotherQuiz()) return;
+    $configError.textContent = "";
+    if (!canStartAnotherQuiz($configError)) return;
     const config = readCreatedGameConfig(true);
     if (!config) return;
     busy = true;
     setLoading("btn-create-game", true);
     try {
         await sendWarmedTx(game, "createGame", gameConfigArgs(config));
-        $homeError.textContent = "Game created — opening your lobby…";
+        $configError.textContent = "Game created — opening your lobby…";
         const id = await myLatestGameId();
         if (id === null) throw new Error("could not locate the created game");
         enterGame(id, createdLobbySnapshot(config));
     } catch (e) {
-        $homeError.textContent = txError(e);
+        $configError.textContent = txError(e);
     } finally {
         busy = false;
         setLoading("btn-create-game", false);
     }
 });
 
-for (const id of ["cfg-questions", "cfg-answer-secs", "cfg-review-secs", "cfg-max-players"]) {
-    getEl<HTMLInputElement>(id).addEventListener("input", scheduleCreateGamePreflight);
+for (const select of [$questionCount, $answerBlocks, $reviewBlocks, $maxPlayers]) {
+    select.addEventListener("change", () => {
+        $configError.textContent = "";
+        scheduleCreateGamePreflight();
+    });
 }
 
 getEl("btn-join-game").addEventListener("click", async () => {
@@ -1171,7 +1271,7 @@ const $builderProgress = getEl("builder-progress");
 const $btnSeal = getEl<HTMLButtonElement>("btn-seal-pack");
 const $builderAnswerInputs = [...document.querySelectorAll<HTMLInputElement>(".q-answer")];
 
-getEl("btn-new-pack").addEventListener("click", () => {
+function openPackBuilder(): void {
     builderPackId = null;
     builderRegular = 0;
     builderFinals.fill(false);
@@ -1186,7 +1286,11 @@ getEl("btn-new-pack").addEventListener("click", () => {
     renderList(getEl("builder-questions"), []);
     $builderError.textContent = "";
     showScreen("builder");
-});
+}
+
+for (const id of ["btn-new-pack", "btn-new-pack-from-picker"]) {
+    getEl(id).addEventListener("click", openPackBuilder);
+}
 
 getEl("btn-create-pack").addEventListener("click", async () => {
     if (busy || !productAccount) return;
@@ -1902,11 +2006,11 @@ function countdownText(snap: Snapshot): string {
     // `current_block` is a snapshot, not a live clock. Estimate intervening
     // blocks locally so the countdown feels continuous between RPC updates.
     const elapsedBlocks = latestObservedAt > 0
-        ? Math.floor((Date.now() - latestObservedAt) / (SECONDS_PER_BLOCK * 1_000))
+        ? Math.floor((Date.now() - latestObservedAt) / (BLOCK_SECONDS_ESTIMATE * 1_000))
         : 0;
     const blocksLeft = Number(snap.phase.deadline - snap.phase.current_block) - elapsedBlocks;
     if (blocksLeft <= 0) return "time's up";
-    return `~${blocksLeft * SECONDS_PER_BLOCK}s`;
+    return `~${blocksLeft * BLOCK_SECONDS_ESTIMATE}s`;
 }
 
 setInterval(() => {
