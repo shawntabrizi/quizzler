@@ -43,6 +43,7 @@ const BATCH = positiveEnvInt("SEED_BATCH", 8, 32);
 /** Must stay within the registry's bounded `addQuestions` contract batch. */
 const QUESTIONS_PER_CALL = 8;
 const TX_TIMEOUT_MS = 120_000;
+let activeClient: ReturnType<typeof createClient> | null = null;
 
 interface DeploymentTarget {
     registry?: string;
@@ -171,7 +172,7 @@ async function main(): Promise<void> {
     const { abi, dest } = await loadTarget();
     console.log(`Target registry: ${dest}`);
 
-    const client = createClient(getWsProvider(RPC));
+    const client = activeClient = createClient(getWsProvider(RPC));
     const api = client.getTypedApi(paseo_asset_hub);
     // ReviveApi dry-runs go through the unsafe API: the descriptor package
     // lags the live runtime for ReviveApi_call and fails PAPI's compat check
@@ -189,7 +190,11 @@ async function main(): Promise<void> {
 
     // ── helpers ──────────────────────────────────────────────────
 
-    let nonce = await api.apis.AccountNonceApi.account_nonce(address);
+    // Read best-chain state rather than finalized state. This is especially
+    // important when seeding immediately after deployment: finalized address
+    // metadata can be written while the account nonce API's default view is
+    // still one block behind.
+    let nonce = await api.apis.AccountNonceApi.account_nonce(address, { at: "best" });
     console.log(`Starting nonce: ${nonce}`);
 
     async function dryRun(data: `0x${string}`): Promise<{ gas: { ref_time: bigint; proof_size: bigint }; deposit: bigint }> {
@@ -394,9 +399,12 @@ async function main(): Promise<void> {
 
     console.log(`\n${only ? "Selected" : "All"} packs seeded.`);
     client.destroy();
+    activeClient = null;
 }
 
 main().catch((err) => {
     console.error(err);
     process.exitCode = 1;
+}).finally(() => {
+    activeClient?.destroy();
 });
