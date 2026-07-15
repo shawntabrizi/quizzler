@@ -1136,7 +1136,7 @@ async function getSessionKeyManager(): Promise<SessionKeyManager> {
 async function sessionIsRegistered(candidate: SessionAccount): Promise<boolean> {
     if (!sessionRegistry || !productAccount) throw new Error("Instant-action registry is unavailable.");
     const registered = await sessionRegistry.sessionOf.query(myAddress, { origin: productAccount.address });
-    if (!registered.success) throw new Error("Could not verify the instant-action session on-chain.");
+    if (!registered.success) throw new Error("Couldn’t check the instant-action session. Try again in a moment.");
     return String(registered.value).toLowerCase() === candidate.h160Address.toLowerCase();
 }
 
@@ -1145,7 +1145,7 @@ async function sessionActivationPending(candidate: SessionAccount): Promise<bool
     const pending = await sessionRegistry.pendingOwnerOf.query(candidate.h160Address, {
         origin: productAccount.address,
     });
-    if (!pending.success) throw new Error("Could not verify the instant-action setup on-chain.");
+    if (!pending.success) throw new Error("Couldn’t check the instant-action setup. Try again in a moment.");
     return String(pending.value).toLowerCase() === myAddress;
 }
 
@@ -1193,7 +1193,7 @@ function waitForPgasBalance(address: string, minimum: bigint): Promise<boolean> 
 async function sessionKeyCanBeRequested(candidate: SessionAccount): Promise<boolean> {
     if (!sessionRegistry || !productAccount) throw new Error("Instant-action registry is unavailable.");
     const resolved = await sessionRegistry.resolve.query(candidate.h160Address, { origin: productAccount.address });
-    if (!resolved.success) throw new Error("Could not verify the saved instant-action key on-chain.");
+    if (!resolved.success) throw new Error("Couldn’t check the saved instant-action key. Try again in a moment.");
     return String(resolved.value).toLowerCase() === candidate.h160Address.toLowerCase();
 }
 
@@ -1237,7 +1237,7 @@ async function ensureQuickPlayAllowance(): Promise<void> {
             outcome,
             outcome === "Rejected"
                 ? "Instant actions were skipped."
-                : "This wallet does not support instant actions right now.",
+                : "Instant actions aren’t available here right now.",
         );
     }
     if (outcome !== "Allocated") {
@@ -1416,7 +1416,7 @@ async function activatePendingQuickPlay(
     await submitStandaloneTx(reviveCall(sessionRegistryAddress, activationData, limits), actor);
     assertInstantPlaySetupCurrent(canContinue);
     if (!await waitForSessionRegistration(session)) {
-        throw new Error("Instant actions were not confirmed on-chain. Please try again.");
+        throw new Error("Instant actions weren’t confirmed in time. Please try again.");
     }
     assertInstantPlaySetupCurrent(canContinue);
     sessionAccount = session;
@@ -3363,7 +3363,7 @@ async function reconcilePublishResume(
     const pack = packResult.value as PackView;
     if (pack.creator.toLowerCase() !== myAddress) throw new Error("The saved pack belongs to another account.");
     if (pack.regular_count > validation.pack.questions.length) {
-        throw new Error("The on-chain pack has more questions than this draft, so it cannot be resumed safely.");
+        throw new Error("The published pack has more questions than this draft, so it cannot be resumed safely.");
     }
     let completedFinals = resume.completedFinals;
     if (pack.finals_set_count === 3) {
