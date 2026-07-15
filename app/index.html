@@ -690,6 +690,14 @@
             color: var(--fg-primary-inverted);
             font-variant-numeric: tabular-nums;
         }
+        /* `ul.list li > *` deliberately lets most list content shrink, but a
+           score badge needs a fixed circular footprint rather than its text's
+           intrinsic width. */
+        .answer-row .wager-badge {
+            flex: 0 0 34px;
+            width: 34px;
+            min-width: 34px;
+        }
         .wager-badge.correct { background: var(--fg-success); }
         .wager-badge.wrong { background: var(--fg-error); }
         .vote-btn { font-size: 0.75rem; padding: 6px 10px; }

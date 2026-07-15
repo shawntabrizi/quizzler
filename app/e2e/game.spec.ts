@@ -89,6 +89,10 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         await expect(frame.getByTestId("review-rows").locator(".wager-badge.correct")).toHaveCount(2, {
             timeout: 60_000,
         });
+        const scoreBadge = frame.getByTestId("review-rows").locator(".wager-badge").first();
+        await expect(scoreBadge).toBeVisible();
+        await expect(scoreBadge).toHaveCSS("width", "34px");
+        await expect(scoreBadge).toHaveCSS("height", "34px");
         await frame.getByTestId("btn-continue").click();
 
         // ── difficulty vote (both pick easy) ─────────────────────
