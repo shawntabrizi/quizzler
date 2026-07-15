@@ -252,11 +252,15 @@ const builderFinals = [false, false, false];
 
 const SCREENS = ["boot", "home", "pack-select", "configure", "builder", "lobby", "question", "review", "vote", "results", "abandoned"] as const;
 type Screen = (typeof SCREENS)[number];
+const $appShell = document.querySelector<HTMLElement>("main");
 
 function showScreen(name: Screen): void {
     for (const s of SCREENS) {
         getEl(`screen-${s}`).classList.toggle("active", s === name);
     }
+    const isPackPicker = name === "pack-select";
+    document.body.classList.toggle("pack-picker-open", isPackPicker);
+    $appShell?.classList.toggle("pack-picker-open", isPackPicker);
 }
 
 function gameSessionKey(): string | null {
@@ -1004,6 +1008,7 @@ function showPackSelection(): void {
     $homeError.textContent = "";
     $packSelectionError.textContent = "";
     showScreen("pack-select");
+    window.scrollTo(0, 0);
     void refreshPacks();
 }
 

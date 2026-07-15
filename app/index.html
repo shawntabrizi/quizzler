@@ -66,6 +66,25 @@
                 max(20px, env(safe-area-inset-left));
         }
 
+        /* The pack picker behaves like a small, focused app: only the
+           catalog moves, while its decision controls remain in reach. */
+        body.pack-picker-open { overflow: hidden; }
+        main.pack-picker-open {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 0;
+            padding-bottom: max(16px, env(safe-area-inset-bottom));
+        }
+        main.pack-picker-open > header { flex: 0 0 auto; }
+        main.pack-picker-open > #screen-pack-select.active {
+            display: grid;
+            flex: 1 1 auto;
+            grid-template-rows: auto minmax(0, 1fr);
+            min-height: 0;
+        }
+
         /* Setup benefits from a wider catalog, while the moment-to-moment game
            stays comfortably readable on large displays. */
         #screen-home,
@@ -383,6 +402,39 @@
             color: var(--fg-secondary);
             font-size: 0.84rem;
         }
+        #screen-pack-select .pack-select-card {
+            display: grid;
+            grid-template-rows: minmax(0, 1fr) auto;
+            min-height: 0;
+            margin-bottom: 0;
+            overflow: hidden;
+        }
+        #screen-pack-select .pack-picker {
+            display: grid;
+            grid-template-rows: auto auto minmax(0, 1fr);
+            min-height: 0;
+            margin: 0;
+        }
+        #screen-pack-select .pack-catalog {
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 0 2px 8px 0;
+            scrollbar-gutter: stable;
+            touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
+        }
+        .pack-selection-footer {
+            position: relative;
+            z-index: 1;
+            padding-top: 12px;
+            background: var(--bg-surface-container);
+            border-top: 1px solid var(--border-divider);
+            box-shadow: 0 -12px 20px -18px rgba(0, 0, 0, 0.9);
+        }
+        .pack-selection-footer .pack-selection-summary { margin: 0; }
+        .pack-selection-footer .error-text { margin-top: 4px; }
+        .pack-selection-footer .setup-actions { margin-top: 10px; }
         .setup-heading { margin: 0 0 16px; }
         .setup-heading h2 { font-size: 1.35rem; line-height: 1.2; }
         .setup-heading .hint { margin-top: 5px; }
@@ -600,6 +652,15 @@
             .setup-actions { align-items: stretch; }
             .setup-actions button { flex: 1 1 140px; }
             .setup-actions .primary { margin-left: 0; }
+            .pack-picker-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .pack-picker-actions button { width: 100%; }
+            .pack-picker-actions .primary {
+                grid-column: 1 / -1;
+                min-height: 48px;
+            }
             ul.list li { align-items: flex-start; }
             .wager-row { align-items: stretch; flex-direction: column; }
             #wager-final { width: 100% !important; }
@@ -679,14 +740,18 @@
                     <label class="sr-only" for="pack-search">Find a quiz pack</label>
                     <input type="search" id="pack-search" data-testid="pack-search" placeholder="Find a pack" autocomplete="off" />
                     <p class="pack-catalog-status" id="pack-catalog-status" role="status" aria-live="polite"></p>
-                    <div id="pack-list" data-testid="pack-list"></div>
+                    <div class="pack-catalog" role="region" aria-label="Quiz packs" tabindex="0">
+                        <div id="pack-list" data-testid="pack-list"></div>
+                    </div>
                 </div>
-                <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to continue.</p>
-                <div class="error-text" id="pack-selection-error" data-testid="pack-selection-error" role="alert"></div>
-                <div class="setup-actions">
-                    <button id="btn-pack-back" class="quiet" data-testid="btn-pack-back">Back home</button>
-                    <button id="btn-new-pack-from-picker" data-testid="btn-new-pack-from-picker">New pack</button>
-                    <button id="btn-pack-continue" class="primary" data-testid="btn-pack-continue" disabled>Continue</button>
+                <div class="pack-selection-footer">
+                    <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to continue.</p>
+                    <div class="error-text" id="pack-selection-error" data-testid="pack-selection-error" role="alert"></div>
+                    <div class="setup-actions pack-picker-actions">
+                        <button id="btn-pack-back" class="quiet" data-testid="btn-pack-back">Back home</button>
+                        <button id="btn-new-pack-from-picker" data-testid="btn-new-pack-from-picker">New pack</button>
+                        <button id="btn-pack-continue" class="primary" data-testid="btn-pack-continue" disabled>Continue</button>
+                    </div>
                 </div>
             </div>
         </section>
