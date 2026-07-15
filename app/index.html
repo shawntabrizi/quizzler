@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover makes env(safe-area-inset-*) resolve on notched
+         phones; without it every safe-area padding below is silently 0. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Quizzler</title>
     <style>
         /* Polkadot design system — Dark Elevated tokens (from Figma Theme
@@ -148,10 +150,6 @@
         #conn-pill.ok { color: var(--fg-success); }
         #conn-pill.err { color: var(--fg-error); }
         #chain-account { color: var(--fg-primary); }
-        #chain-block {
-            color: var(--fg-secondary);
-            font-variant-numeric: tabular-nums;
-        }
         .transaction-status {
             color: var(--fg-secondary);
             font-size: 0.76rem;
@@ -293,7 +291,7 @@
             margin-top: 16px;
         }
         .lobby-share {
-            min-height: 38px;
+            min-height: 44px;
             padding: 7px 13px;
             color: #fff;
             background: rgba(255, 255, 255, 0.13);
@@ -397,13 +395,15 @@
         button:disabled:hover { background: var(--bg-action-secondary); }
         button.primary:disabled:hover { background: var(--bg-action-primary); }
 
-        /* In-flight transaction: spinner replaces the label */
-        button.loading { position: relative; color: transparent; pointer-events: none; opacity: 0.85; }
+        /* In-flight action: keep the label readable — erasing it makes the
+           wait feel like unexplained latency — and add a trailing spinner. */
+        button.loading { position: relative; pointer-events: none; opacity: 0.85; padding-right: 36px; }
         button.loading::after {
             content: "";
             position: absolute;
-            inset: 0;
-            margin: auto;
+            right: 12px;
+            top: 50%;
+            margin-top: -8px;
             width: 16px;
             height: 16px;
             border-radius: 50%;
@@ -713,10 +713,10 @@
         }
         .builder-drafts-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
         .builder-drafts-header h2 { font-size: 0.95rem; }
-        .builder-drafts-header button { min-height: 34px; padding: 6px 9px; font-size: 0.76rem; }
+        .builder-drafts-header button { min-height: 44px; padding: 6px 9px; font-size: 0.76rem; }
         .builder-draft-list { max-height: min(58vh, 530px); overflow-y: auto; }
         .builder-draft-list li { align-items: center; }
-        .builder-draft-list button { width: 100%; min-height: 0; padding: 4px 0; color: inherit; background: transparent; border: 0; border-radius: 0; font-weight: 500; text-align: left; }
+        .builder-draft-list button { width: 100%; min-height: 44px; padding: 4px 0; color: inherit; background: transparent; border: 0; border-radius: 0; font-weight: 500; text-align: left; }
         .builder-draft-list button:hover { background: transparent; color: var(--fg-primary); }
         .builder-draft-list .draft-current { color: var(--fg-primary); font-weight: 700; }
         .draft-emoji { flex: 0 0 auto; font-size: 1.2rem; }
@@ -1362,19 +1362,40 @@
                 -webkit-overflow-scrolling: touch;
             }
             .wager-grid {
-                grid-template-columns: repeat(5, minmax(40px, 1fr));
-                width: min(100%, 270px);
+                grid-template-columns: repeat(5, minmax(44px, 1fr));
+                width: min(100%, 290px);
                 gap: 6px;
                 margin: 6px 0;
             }
-            .wager-btn { min-height: 40px; }
+            .wager-btn { min-height: 44px; }
             .vote-distribution-row { grid-template-columns: 54px minmax(0, 1fr) minmax(2ch, auto); }
         }
 
+        .boot-headline { color: var(--fg-secondary); }
+        .boot-headline.is-error { color: var(--fg-error); }
+        .boot-details { margin-top: 12px; }
+        .boot-details summary { color: var(--fg-tertiary); font-size: 0.78rem; cursor: pointer; }
         #boot-log { font-size: 0.85rem; color: var(--fg-secondary); }
         #boot-log div { padding: 2px 0; }
         #boot-log .err { color: var(--fg-error); }
         #boot-log .ok { color: var(--fg-success); }
+
+        /* Shared status line that must never wear error styling. */
+        .error-text.is-progress { color: var(--fg-secondary); }
+
+        /* Shape-matching placeholder while a question streams in. */
+        .question-text.skeleton {
+            min-height: 2.7em;
+            border-radius: var(--radius-small);
+            color: transparent;
+            background: linear-gradient(90deg, var(--bg-surface-nested) 25%, var(--bg-surface-container) 50%, var(--bg-surface-nested) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.2s ease-in-out infinite;
+        }
+        @keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+        @media (prefers-reduced-motion: reduce) {
+            .question-text.skeleton { animation: none; }
+        }
     </style>
 </head>
 <body>
@@ -1387,7 +1408,6 @@
                 <span id="conn-pill" data-testid="conn-pill" role="status">connecting…</span>
                 <span class="chain-status-divider" aria-hidden="true"></span>
                 <span id="chain-account" data-testid="chain-account" title="Active account">—</span>
-                <span id="chain-block" data-testid="chain-block" title="Latest chain block">#—</span>
             </div>
             <div id="game-actions" class="row" data-testid="game-actions">
                 <button id="btn-leave-screen" class="quiet" data-testid="btn-leave-screen">Back home — resume later</button>
@@ -1400,7 +1420,13 @@
         <section id="screen-boot" class="screen active" data-testid="screen-boot">
             <div class="card">
                 <h2>Starting up</h2>
-                <div id="boot-log" data-testid="boot-log"></div>
+                <p id="boot-headline" class="boot-headline" role="status" aria-live="polite">Setting up your game night…</p>
+                <!-- The step-by-step log stays for diagnosis (and the e2e boot
+                     ordering assertions); players only need the headline. -->
+                <details class="boot-details">
+                    <summary>Details</summary>
+                    <div id="boot-log" data-testid="boot-log"></div>
+                </details>
             </div>
         </section>
 
@@ -1419,7 +1445,9 @@
                 <div class="row">
                     <div class="grow">
                         <label for="join-game-id">Game code</label>
-                        <input type="number" id="join-game-id" data-testid="join-game-id" placeholder="6-digit code" min="0" />
+                        <!-- Not type="number": codes are digit strings, and the
+                             numeric type strips leading zeros and accepts e/-. -->
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" id="join-game-id" data-testid="join-game-id" placeholder="6-digit code" />
                     </div>
                     <button id="btn-join-game" class="primary" data-testid="btn-join-game" style="align-self: end;">Join game</button>
                 </div>
@@ -1556,7 +1584,7 @@
                             <button id="btn-open-emoji-picker" data-testid="btn-open-emoji-picker" type="button">Choose emoji</button>
                         </div>
                     </div>
-                    <p class="hint" id="pack-emoji-hint">Use the full picker, or type and paste any raw emoji. It is stored on-chain with the pack.</p>
+                    <p class="hint" id="pack-emoji-hint">Use the full picker, or type and paste any raw emoji. It’s published with the pack and can’t be changed later.</p>
                     <div class="builder-import-actions">
                         <label class="button-label" for="pack-file-input">Import JSON<input id="pack-file-input" data-testid="pack-file-input" type="file" accept="application/json,.json" hidden /></label>
                         <button id="btn-insert-pack-template" data-testid="btn-insert-pack-template" type="button">Insert template</button>

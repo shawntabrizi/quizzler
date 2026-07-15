@@ -232,7 +232,9 @@ async function main(): Promise<void> {
                 sub.unsubscribe();
                 reject(new Error(`tx nonce=${useNonce} timed out after ${TX_TIMEOUT_MS / 1000}s`));
             }, TX_TIMEOUT_MS);
-            const sub = tx.signSubmitAndWatch(signer, { nonce: useNonce }).subscribe({
+            // Mortal txs cannot linger in the pool after an interrupted batch
+            // and collide with a resumed run's manually assigned nonces.
+            const sub = tx.signSubmitAndWatch(signer, { nonce: useNonce, mortality: { mortal: true, period: 256 } }).subscribe({
                 next(ev) {
                     if (ev.type === "txBestBlocksState" && ev.found) {
                         clearTimeout(timer);

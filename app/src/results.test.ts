@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { rankFinalStandings } from "./results";
+import {
+    finalOutcomeText,
+    finalWagerValue,
+    ordinal,
+    placementText,
+    rankFinalStandings,
+    type FinalStanding,
+} from "./results";
 
 describe("final result scorecards", () => {
     it("explains won, lost, and unsubmitted final wagers correctly", () => {
@@ -45,5 +52,49 @@ describe("final result scorecards", () => {
             { player: "charlie", placement: 2, active: true },
             { player: "dana", placement: null, active: false },
         ]);
+    });
+});
+
+function standing(overrides: Partial<FinalStanding>): FinalStanding {
+    return {
+        player: "alice",
+        score: 5,
+        active: true,
+        placement: 1,
+        finalWager: 0,
+        finalSubmitted: true,
+        finalCorrect: false,
+        finalDelta: 0,
+        finalOutcome: "neutral",
+        ...overrides,
+    };
+}
+
+describe("final result copy", () => {
+    it("uses English ordinal suffixes including the 11th–13th exceptions", () => {
+        expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 111].map(ordinal)).toEqual(
+            ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "111th"],
+        );
+    });
+
+    it("never awards a placement to a forfeited player", () => {
+        expect(placementText(standing({ placement: null }))).toBe("Left quiz");
+        expect(placementText(standing({ placement: 1 }))).toBe("🥇 1st place");
+        expect(placementText(standing({ placement: 4 }))).toBe("4th place");
+    });
+
+    it("says a locked-but-unanswered wager was not applied", () => {
+        // The contract only settles a wager against an actual final answer;
+        // the copy must not imply points were lost.
+        const skipped = standing({ finalSubmitted: false, finalWager: 4 });
+        expect(finalOutcomeText(skipped)).toBe("No final answer · 4 locked, not applied");
+        expect(finalWagerValue(skipped)).toBe("4 locked");
+    });
+
+    it("signs settled wagers by their applied score change", () => {
+        expect(finalWagerValue(standing({ finalWager: 3, finalDelta: 3, finalOutcome: "won" }))).toBe("+3");
+        expect(finalWagerValue(standing({ finalWager: 3, finalDelta: -3, finalOutcome: "lost" }))).toBe("−3");
+        expect(finalOutcomeText(standing({ finalWager: 3, finalOutcome: "won" }))).toBe("Wager won");
+        expect(finalOutcomeText(standing({ finalWager: 0, finalCorrect: true }))).toBe("Correct · no points wagered");
     });
 });

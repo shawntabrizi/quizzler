@@ -83,3 +83,51 @@ export function rankFinalStandings(input: FinalStandingsInput): FinalStanding[] 
     const inactive = rows.filter((row) => !row.active);
     return [...active, ...inactive].map(({ index: _index, ...row }) => row);
 }
+
+export const PLACEMENT_TROPHIES: Record<number, { emoji: string; label: string }> = {
+    1: { emoji: "🥇", label: "First place" },
+    2: { emoji: "🥈", label: "Second place" },
+    3: { emoji: "🥉", label: "Third place" },
+};
+
+export function ordinal(value: number): string {
+    const mod100 = value % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+    switch (value % 10) {
+        case 1: return `${value}st`;
+        case 2: return `${value}nd`;
+        case 3: return `${value}rd`;
+        default: return `${value}th`;
+    }
+}
+
+export function placementText(standing: FinalStanding): string {
+    if (standing.placement === null) return "Left quiz";
+    const trophy = PLACEMENT_TROPHIES[standing.placement];
+    return `${trophy ? `${trophy.emoji} ` : ""}${ordinal(standing.placement)} place`;
+}
+
+/**
+ * Explain the final round in one phrase. A locked wager with no submission is
+ * deliberately "not applied": the contract only settles a wager against an
+ * actual final answer, and the copy must not imply points were lost.
+ */
+export function finalOutcomeText(standing: FinalStanding): string {
+    if (!standing.finalSubmitted) {
+        return standing.finalWager > 0
+            ? `No final answer · ${standing.finalWager} locked, not applied`
+            : "No final answer";
+    }
+    if (standing.finalWager === 0) {
+        return standing.finalCorrect ? "Correct · no points wagered" : "Incorrect · no points wagered";
+    }
+    return standing.finalOutcome === "won" ? "Wager won" : "Wager lost";
+}
+
+export function finalWagerValue(standing: FinalStanding): string {
+    if (!standing.finalSubmitted) {
+        return standing.finalWager > 0 ? `${standing.finalWager} locked` : "0";
+    }
+    if (standing.finalWager === 0) return "0";
+    return standing.finalDelta > 0 ? `+${standing.finalDelta}` : `−${Math.abs(standing.finalDelta)}`;
+}

@@ -15,7 +15,6 @@ test("boots inside the host and reaches the home screen", async ({ testHost }) =
     expect(handlesAt).toBeGreaterThan(mappingAt);
     expect(bootLog).not.toContain("contract mismatch");
     await expect(frame.getByTestId("chain-account")).toHaveText(/^[^.]+\.\.\.[^.]+$/);
-    await expect(frame.getByTestId("chain-block")).toHaveText(/^#\d/);
     await expect(frame.getByTestId("screen-home")).toBeVisible();
     await expect(frame.getByTestId("btn-join-game")).toBeVisible();
     await expect(frame.getByTestId("btn-new-pack")).toBeVisible();

@@ -44,6 +44,22 @@ export function presetLabel(preset: BlockPreset): string {
     return `${preset.name} · ${durationLabel(seconds)}`;
 }
 
+/**
+ * Live countdown label between polls. `currentBlock` is a snapshot, not a
+ * clock, so intervening blocks are extrapolated from wall time since the
+ * snapshot was observed. Deadlines at or above 2^63 encode "no deadline"
+ * (lobby/finished stages) and render nothing.
+ */
+export function countdownLabel(deadline: bigint, currentBlock: bigint, msSinceSnapshot: number): string {
+    if (deadline >= 2n ** 63n) return "";
+    const elapsedBlocks = msSinceSnapshot > 0
+        ? Math.floor(msSinceSnapshot / (BLOCK_SECONDS_ESTIMATE * 1_000))
+        : 0;
+    const blocksLeft = Number(deadline - currentBlock) - elapsedBlocks;
+    if (blocksLeft <= 0) return "Time’s up";
+    return `~${blocksLeft * BLOCK_SECONDS_ESTIMATE}s`;
+}
+
 export function questionCountOptions(maxQuestions: number): number[] {
     return Array.from({ length: Math.max(0, maxQuestions) }, (_, index) => index + 1);
 }
