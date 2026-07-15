@@ -88,7 +88,6 @@
         /* Setup benefits from a wider catalog, while the moment-to-moment game
            stays comfortably readable on large displays. */
         #screen-home,
-        #screen-builder,
         #screen-lobby,
         #screen-question,
         #screen-review,
@@ -99,7 +98,8 @@
             margin-inline: auto;
         }
         #screen-pack-select,
-        #screen-configure {
+        #screen-configure,
+        #screen-builder {
             max-width: 1040px;
             margin-inline: auto;
         }
@@ -151,6 +151,11 @@
             color: var(--fg-secondary);
             font-variant-numeric: tabular-nums;
         }
+        .transaction-status {
+            color: var(--fg-secondary);
+            font-size: 0.76rem;
+            line-height: 1.25;
+        }
         #game-actions { display: none; gap: 6px; margin-left: 0; }
         button.quiet {
             padding: 7px 10px;
@@ -169,6 +174,54 @@
 
         section.screen { display: none; }
         section.screen.active { display: block; }
+
+        /* The answer, ready, and vote actions stay at the edge of the
+           viewport. The question/review content is the only scrolling region,
+           which keeps the next useful action reachable on a phone and a wide
+           desktop alike. */
+        main.game-stage-open {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 0;
+            padding-bottom: 0;
+        }
+        main.game-stage-open > header { flex: 0 0 auto; }
+        main.game-stage-open > section.game-stage.active {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .game-stage-content {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 0 2px 18px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .game-stage-content .card:last-child { margin-bottom: 0; }
+        .game-action-dock {
+            display: grid;
+            flex: 0 0 auto;
+            gap: 10px;
+            margin-top: 12px;
+            padding: 14px 0 max(14px, env(safe-area-inset-bottom));
+            background: var(--bg-surface-main);
+            border-top: 1px solid var(--border-divider);
+            box-shadow: 0 -16px 24px -24px rgba(0, 0, 0, 0.95);
+        }
+        #answer-form.game-action-dock { grid-template-columns: minmax(0, 1fr) auto; }
+        #answer-form.game-action-dock > input,
+        #answer-form.game-action-dock > #wager-grid-block,
+        #answer-form.game-action-dock > #wager-final-row,
+        #answer-form.game-action-dock > .error-text { grid-column: 1 / -1; }
+        #answer-form.game-action-dock > #btn-submit-answer { min-width: 148px; }
+        .review-action-dock { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+        .review-action-dock .error-text { grid-column: 1 / -1; }
+        .vote-action-dock .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
         .card {
             background: var(--bg-surface-container);
@@ -292,7 +345,7 @@
         label { display: block; color: var(--fg-secondary); font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
         .answer-inputs { display: grid; gap: 8px; }
 
-        input[type="text"], input[type="number"], input[type="search"], select {
+        input[type="text"], input[type="number"], input[type="search"], select, textarea {
             width: 100%;
             min-height: 44px;
             background: var(--bg-surface-nested);
@@ -304,6 +357,7 @@
             font-family: inherit;
             cursor: text;
         }
+        textarea { min-height: 360px; resize: vertical; line-height: 1.45; }
         select { cursor: pointer; }
         input::placeholder { color: var(--fg-tertiary); }
 
@@ -624,6 +678,98 @@
         .pack-emoji-field { width: 106px; }
         #pack-emoji { text-align: center; }
 
+        /* Pack studio: author content offline in a single portable JSON
+           document, then inspect and publish it in bounded chain batches. */
+        .builder-layout {
+            display: grid;
+            grid-template-columns: minmax(190px, 0.38fr) minmax(0, 1fr);
+            align-items: start;
+            gap: 16px;
+        }
+        .builder-drafts {
+            position: sticky;
+            top: 20px;
+            padding: 16px;
+            background: var(--bg-surface-container);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-container);
+            box-shadow: var(--shadow-2);
+        }
+        .builder-drafts-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+        .builder-drafts-header h2 { font-size: 0.95rem; }
+        .builder-drafts-header button { min-height: 34px; padding: 6px 9px; font-size: 0.76rem; }
+        .builder-draft-list { max-height: min(58vh, 530px); overflow-y: auto; }
+        .builder-draft-list li { align-items: center; }
+        .builder-draft-list button { width: 100%; min-height: 0; padding: 4px 0; color: inherit; background: transparent; border: 0; border-radius: 0; font-weight: 500; text-align: left; }
+        .builder-draft-list button:hover { background: transparent; color: var(--fg-primary); }
+        .builder-draft-list .draft-current { color: var(--fg-primary); font-weight: 700; }
+        .draft-emoji { flex: 0 0 auto; font-size: 1.2rem; }
+        .draft-copy { display: grid; min-width: 0; gap: 1px; }
+        .draft-copy strong, .draft-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .draft-copy span { color: var(--fg-secondary); font-size: 0.72rem; }
+        .builder-editor { min-width: 0; }
+        .builder-editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+        .builder-editor-header h2 { margin-bottom: 4px; }
+        .builder-editor-header .hint { margin: 0; }
+        .builder-meta-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+        .builder-cover-controls { display: grid; grid-template-columns: 76px auto; gap: 8px; align-items: end; }
+        .builder-cover-controls .pack-emoji-field { width: auto; }
+        .builder-cover-controls button { min-height: 44px; padding-inline: 12px; }
+        .builder-import-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+        .button-label {
+            display: inline-flex;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-small);
+            padding: 10px 18px;
+            color: var(--fg-primary);
+            background: var(--bg-action-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .button-label:hover { background: var(--bg-action-secondary-hover); }
+        .builder-json-label { margin-top: 8px; }
+        #pack-json { min-height: min(50vh, 540px); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; tab-size: 2; }
+        .draft-save-status { min-height: 1.25em; margin-top: 7px; color: var(--fg-secondary); font-size: 0.78rem; }
+        .builder-preview {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            margin-top: 18px;
+            padding: 14px;
+            background: var(--bg-surface-nested);
+            border-radius: var(--radius-nested);
+        }
+        .builder-preview-emoji { display: grid; width: 54px; height: 54px; place-items: center; background: linear-gradient(145deg, #7c3aed, #312e81); border-radius: var(--radius-small); font-size: 2rem; }
+        .builder-preview-copy { min-width: 0; }
+        .builder-preview-copy h3 { overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+        .builder-preview-copy p { margin-top: 3px; color: var(--fg-secondary); font-size: 0.8rem; }
+        .builder-preview-invalid { margin-top: 16px; }
+        .builder-preview-invalid ul { padding-left: 18px; color: var(--fg-error); font-size: 0.84rem; }
+        .builder-publish-status { min-height: 1.25em; color: var(--fg-secondary); font-size: 0.82rem; }
+        #emoji-picker-dialog { width: min(430px, calc(100vw - 24px)); max-height: min(690px, calc(100dvh - 24px)); padding: 16px; }
+        #emoji-picker-dialog h2 { font-size: 1.1rem; }
+        #emoji-picker-dialog .hint { margin: 6px 0 12px; color: var(--fg-secondary); font-size: 0.82rem; }
+        #emoji-picker-host { min-height: 360px; }
+        #emoji-picker-host emoji-picker {
+            display: block;
+            width: 100%;
+            height: min(480px, 58dvh);
+            --background: var(--bg-surface-nested);
+            --border-color: var(--border-divider-tint);
+            --border-radius: var(--radius-nested);
+            --button-active-background: var(--bg-selection-container-active);
+            --button-hover-background: var(--bg-selection-container-hover);
+            --input-border-color: var(--border-divider-tint);
+            --input-font-color: var(--fg-primary);
+            --input-placeholder-color: var(--fg-tertiary);
+            --outline-color: var(--focus-ring);
+        }
+        .emoji-picker-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+
         .question-text { font-size: 1.3rem; font-weight: 600; line-height: 1.35; margin: 12px 0 20px; }
 
         .countdown { color: var(--fg-secondary); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
@@ -764,6 +910,17 @@
             #chain-status .chain-status-divider { display: none; }
             #game-actions { grid-column: 1 / -1; width: 100%; gap: 8px; }
             #game-actions button { flex: 1 1 0; min-width: 0; }
+            .transaction-status { grid-column: 1 / -1; }
+            main.game-stage-open { padding-bottom: 0; }
+            main.game-stage-open > header { margin-bottom: 12px; }
+            .game-stage-content { padding-bottom: 12px; }
+            .game-action-dock { margin-top: 8px; padding-top: 10px; }
+            #answer-form.game-action-dock { grid-template-columns: 1fr; }
+            #answer-form.game-action-dock > #btn-submit-answer { width: 100%; }
+            .review-action-dock { grid-template-columns: 1fr; align-items: stretch; }
+            .review-action-dock #btn-continue { width: 100%; }
+            .review-action-dock #continue-status { text-align: center; }
+            .vote-action-dock .row { grid-template-columns: 1fr; }
             .card { padding: 18px; }
             .lobby-card { padding: 20px 18px; }
             .lobby-code-panel { margin: 16px 0 20px; padding: 22px 12px 18px; }
@@ -775,14 +932,16 @@
             .lobby-actions #btn-start-game,
             .lobby-actions #btn-leave-lobby { width: 100%; margin-left: 0; }
             .lobby-actions #lobby-waiting { text-align: center; }
-            input[type="text"], input[type="number"], input[type="search"], select { font-size: 16px; }
+            input[type="text"], input[type="number"], input[type="search"], select, textarea { font-size: 16px; }
             ul.pack-grid { grid-template-columns: 1fr; }
             .pack-card { min-height: 104px; }
             .pack-art { flex-basis: 66px; }
             .pack-emoji-field { width: 88px; }
             .setup-heading { margin-bottom: 12px; }
             .config-layout,
-            .config-fields { grid-template-columns: 1fr; }
+            .config-fields,
+            .builder-layout,
+            .builder-meta-grid { grid-template-columns: 1fr; }
             .selected-pack-card {
                 position: static;
                 display: flex;
@@ -795,6 +954,12 @@
             }
             .config-pack-copy { min-width: 0; padding: 14px; }
             .config-pack-copy .quiet { margin-top: 10px; }
+            .builder-drafts { position: static; }
+            .builder-draft-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; gap: 6px; }
+            .builder-draft-list li { margin-bottom: 0; }
+            .builder-editor-header { flex-direction: column; gap: 4px; }
+            .builder-cover-controls { grid-template-columns: 84px 1fr; }
+            #pack-json { min-height: 42vh; }
             .setup-actions { align-items: stretch; }
             .setup-actions button { flex: 1 1 140px; }
             .setup-actions .primary { margin-left: 0; }
@@ -835,9 +1000,10 @@
                 <span id="chain-block" data-testid="chain-block" title="Latest chain block">#—</span>
             </div>
             <div id="game-actions" class="row" data-testid="game-actions">
-                <button id="btn-leave-screen" class="quiet" data-testid="btn-leave-screen">Leave screen</button>
+                <button id="btn-leave-screen" class="quiet" data-testid="btn-leave-screen">Back home — resume later</button>
                 <button id="btn-forfeit-game" class="danger" data-testid="btn-forfeit-game" style="display: none;">Forfeit quiz</button>
             </div>
+            <span id="transaction-status" class="transaction-status" data-testid="transaction-status" role="status" aria-live="polite" hidden></span>
         </header>
 
         <!-- Boot -->
@@ -877,6 +1043,18 @@
                     <button id="btn-host-game" class="primary" data-testid="btn-host-game">Choose a pack</button>
                     <button id="btn-new-pack" data-testid="btn-new-pack">Make a pack</button>
                 </div>
+            </div>
+            <div id="display-name-card" class="card" data-testid="display-name-card" style="display: none;">
+                <h2>Player name</h2>
+                <p class="hint">Optional. It appears for everyone in your lobby and scorecard instead of your shortened address.</p>
+                <div class="row">
+                    <div class="grow">
+                        <label for="display-name">Name</label>
+                        <input id="display-name" data-testid="display-name" type="text" maxlength="24" autocomplete="nickname" placeholder="Alex" />
+                    </div>
+                    <button id="btn-save-display-name" class="primary" data-testid="btn-save-display-name" style="align-self: end;">Save name</button>
+                </div>
+                <div id="display-name-status" class="draft-save-status" data-testid="display-name-status" role="status" aria-live="polite"></div>
             </div>
         </section>
 
@@ -956,59 +1134,59 @@
 
         <!-- Pack builder -->
         <section id="screen-builder" class="screen" data-testid="screen-builder">
-            <div class="card">
-                <h2 id="builder-title">New pack</h2>
-                <div class="row" id="builder-create-row">
-                    <div class="grow">
-                        <label for="pack-title">Pack title</label>
-                        <input type="text" id="pack-title" data-testid="pack-title" placeholder="Friday night trivia" maxlength="64" />
+            <div class="builder-layout">
+                <aside class="builder-drafts" aria-label="Saved pack drafts">
+                    <div class="builder-drafts-header">
+                        <h2>Local drafts</h2>
+                        <button id="btn-new-draft" class="quiet" data-testid="btn-new-draft">New</button>
                     </div>
-                    <div class="pack-emoji-field">
-                        <label for="pack-emoji">Pack emoji</label>
-                        <input type="text" id="pack-emoji" data-testid="pack-emoji" value="✨" maxlength="32" autocomplete="off" aria-describedby="pack-emoji-hint" />
-                    </div>
-                    <button id="btn-create-pack" class="primary" data-testid="btn-create-pack" style="align-self: end;">Create</button>
-                </div>
-                <p class="hint" id="pack-emoji-hint">Choose an emoji for this pack’s cover. It becomes part of the pack when published.</p>
-                <div id="builder-question-form" style="display: none;">
-                    <div class="row">
-                        <div class="grow">
-                            <label for="q-text">Question</label>
-                            <input type="text" id="q-text" data-testid="q-text" placeholder="What is the capital of France?" maxlength="256" />
+                    <ul class="list builder-draft-list" id="builder-draft-list" data-testid="builder-draft-list"></ul>
+                </aside>
+                <div class="card builder-editor">
+                    <div class="builder-editor-header">
+                        <div>
+                            <h2>Pack studio</h2>
+                            <p class="hint">Paste or import one quiz document, preview it locally, then publish it as an immutable pack.</p>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="grow">
-                            <label for="q-answers">Accepted answers (up to 5)</label>
-                            <div class="answer-inputs">
-                                <input type="text" id="q-answers" class="q-answer" data-testid="q-answers" placeholder="First accepted answer" maxlength="64" />
-                                <input type="text" class="q-answer" aria-label="Accepted answer 2" placeholder="Optional alternative" maxlength="64" />
-                                <input type="text" class="q-answer" aria-label="Accepted answer 3" placeholder="Optional alternative" maxlength="64" />
-                                <input type="text" class="q-answer" aria-label="Accepted answer 4" placeholder="Optional alternative" maxlength="64" />
-                                <input type="text" class="q-answer" aria-label="Accepted answer 5" placeholder="Optional alternative" maxlength="64" />
+                    <div class="builder-meta-grid">
+                        <div>
+                            <label for="draft-name">Draft name</label>
+                            <input id="draft-name" data-testid="draft-name" type="text" placeholder="Friday night trivia" maxlength="80" autocomplete="off" />
+                        </div>
+                        <div class="builder-cover-controls">
+                            <div class="pack-emoji-field">
+                                <label for="pack-emoji">Cover</label>
+                                <input type="text" id="pack-emoji" data-testid="pack-emoji" value="✨" maxlength="32" autocomplete="off" aria-describedby="pack-emoji-hint" />
                             </div>
+                            <button id="btn-open-emoji-picker" data-testid="btn-open-emoji-picker" type="button">Choose emoji</button>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="grow">
-                            <label for="q-kind">Type</label>
-                            <select id="q-kind" data-testid="q-kind">
-                                <option value="regular">Regular question</option>
-                                <option value="0">Final — easy</option>
-                                <option value="1">Final — medium</option>
-                                <option value="2">Final — hard</option>
-                            </select>
+                    <p class="hint" id="pack-emoji-hint">Use the full picker, or type and paste any raw emoji. It is stored on-chain with the pack.</p>
+                    <div class="builder-import-actions">
+                        <label class="button-label" for="pack-file-input">Import JSON<input id="pack-file-input" data-testid="pack-file-input" type="file" accept="application/json,.json" hidden /></label>
+                        <button id="btn-insert-pack-template" data-testid="btn-insert-pack-template" type="button">Insert template</button>
+                        <button id="btn-export-pack-file" data-testid="btn-export-pack-file" type="button">Export pack JSON</button>
+                        <button id="btn-export-draft" data-testid="btn-export-draft" type="button">Back up draft</button>
+                    </div>
+                    <label class="builder-json-label" for="pack-json">Quiz JSON</label>
+                    <textarea id="pack-json" data-testid="pack-json" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="draft-save-status builder-validation"></textarea>
+                    <p class="draft-save-status" id="draft-save-status" data-testid="draft-save-status" role="status" aria-live="polite"></p>
+                    <div id="builder-preview" class="builder-preview" data-testid="builder-preview" hidden>
+                        <div id="builder-preview-emoji" class="builder-preview-emoji" aria-hidden="true">✨</div>
+                        <div class="builder-preview-copy">
+                            <h3 id="builder-preview-title">Untitled pack</h3>
+                            <p id="builder-preview-meta"></p>
                         </div>
-                        <button id="btn-add-question" data-testid="btn-add-question" style="align-self: end;">Add question</button>
                     </div>
-                    <ul class="list" id="builder-questions" data-testid="builder-questions" style="margin-top: 12px;"></ul>
-                    <p class="hint" id="builder-progress" data-testid="builder-progress"></p>
-                    <div class="row">
-                        <button id="btn-seal-pack" class="primary" data-testid="btn-seal-pack" disabled>Seal pack</button>
-                        <button id="btn-builder-done" data-testid="btn-builder-done">Back home</button>
+                    <div id="builder-validation" class="builder-preview-invalid" data-testid="builder-validation" role="alert"></div>
+                    <div class="setup-actions">
+                        <button id="btn-builder-done" class="quiet" data-testid="btn-builder-done">Back home</button>
+                        <span id="builder-publish-status" class="builder-publish-status" data-testid="builder-publish-status" role="status" aria-live="polite"></span>
+                        <button id="btn-publish-pack" class="primary" data-testid="btn-publish-pack" disabled>Publish pack</button>
                     </div>
+                    <div class="error-text" id="builder-error" data-testid="builder-error" role="alert"></div>
                 </div>
-                <div class="error-text" id="builder-error" data-testid="builder-error" role="alert"></div>
             </div>
         </section>
 
@@ -1029,7 +1207,7 @@
                 </section>
                 <div class="lobby-players-heading">
                     <h3>Players</h3>
-                    <p>Invite friends, then start when you’re ready.</p>
+                    <p><span id="lobby-occupancy" data-testid="lobby-occupancy"></span> · Invite friends, then start when you’re ready. Starting closes the lobby.</p>
                 </div>
                 <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
                 <div class="row lobby-actions">
@@ -1042,86 +1220,94 @@
         </section>
 
         <!-- Question -->
-        <section id="screen-question" class="screen" data-testid="screen-question">
-            <div class="card">
-                <div class="row">
-                    <span class="muted" id="question-number" data-testid="question-number"></span>
-                    <span class="countdown right" id="question-countdown" data-testid="question-countdown" style="margin-left: auto;"></span>
+        <section id="screen-question" class="screen game-stage" data-testid="screen-question">
+            <div class="game-stage-content">
+                <div class="card">
+                    <div class="row">
+                        <span class="muted" id="question-number" data-testid="question-number"></span>
+                        <span class="countdown right" id="question-countdown" data-testid="question-countdown" style="margin-left: auto;"></span>
+                    </div>
+                    <p class="question-text" id="question-text" data-testid="question-text"></p>
                 </div>
-                <p class="question-text" id="question-text" data-testid="question-text"></p>
-                <div id="answer-form" data-testid="answer-form">
-                    <label class="sr-only" for="answer-input">Your answer</label>
-                    <input type="text" id="answer-input" data-testid="answer-input" placeholder="Type your answer…" maxlength="64" autocomplete="off" />
-                    <div id="wager-grid-block" role="group" aria-labelledby="wager-label">
-                        <p id="wager-label" class="hint" style="margin-top: 12px;">Wager points — each number can be used once per game</p>
-                        <div class="wager-grid" id="wager-grid" data-testid="wager-grid">
-                            <button class="wager-btn" data-wager="1" data-testid="wager-1">1</button>
-                            <button class="wager-btn" data-wager="2" data-testid="wager-2">2</button>
-                            <button class="wager-btn" data-wager="3" data-testid="wager-3">3</button>
-                            <button class="wager-btn" data-wager="4" data-testid="wager-4">4</button>
-                            <button class="wager-btn" data-wager="5" data-testid="wager-5">5</button>
-                            <button class="wager-btn" data-wager="6" data-testid="wager-6">6</button>
-                            <button class="wager-btn" data-wager="7" data-testid="wager-7">7</button>
-                            <button class="wager-btn" data-wager="8" data-testid="wager-8">8</button>
-                            <button class="wager-btn" data-wager="9" data-testid="wager-9">9</button>
-                            <button class="wager-btn" data-wager="10" data-testid="wager-10">10</button>
-                        </div>
+                <div class="card" id="submitted-card" style="display: none;" data-testid="submitted-card">
+                    <h2>Answers so far</h2>
+                    <p class="hint">Submitted answers and wagers appear as players lock in. Correctness is revealed in review.</p>
+                    <ul class="list" id="live-answers" data-testid="live-answers"></ul>
+                </div>
+            </div>
+            <div id="answer-form" class="game-action-dock" data-testid="answer-form">
+                <label class="sr-only" for="answer-input">Your answer</label>
+                <input type="text" id="answer-input" data-testid="answer-input" placeholder="Type your answer…" maxlength="64" autocomplete="off" />
+                <button id="btn-submit-answer" class="primary" data-testid="btn-submit-answer">Submit answer</button>
+                <div id="wager-grid-block" role="group" aria-labelledby="wager-label">
+                    <p id="wager-label" class="hint" style="margin-top: 2px;">Wager points — each number can be used once per game</p>
+                    <div class="wager-grid" id="wager-grid" data-testid="wager-grid">
+                        <button class="wager-btn" data-wager="1" data-testid="wager-1">1</button>
+                        <button class="wager-btn" data-wager="2" data-testid="wager-2">2</button>
+                        <button class="wager-btn" data-wager="3" data-testid="wager-3">3</button>
+                        <button class="wager-btn" data-wager="4" data-testid="wager-4">4</button>
+                        <button class="wager-btn" data-wager="5" data-testid="wager-5">5</button>
+                        <button class="wager-btn" data-wager="6" data-testid="wager-6">6</button>
+                        <button class="wager-btn" data-wager="7" data-testid="wager-7">7</button>
+                        <button class="wager-btn" data-wager="8" data-testid="wager-8">8</button>
+                        <button class="wager-btn" data-wager="9" data-testid="wager-9">9</button>
+                        <button class="wager-btn" data-wager="10" data-testid="wager-10">10</button>
                     </div>
-                    <div class="wager-row" id="wager-final-row" style="display: none;">
-                        <label for="wager-final" style="margin: 0;">Final wager (0–<span id="wager-final-max"></span>)</label>
-                        <input type="number" id="wager-final" data-testid="wager-final" min="0" value="0" style="width: 100px;" />
-                    </div>
-                    <button id="btn-submit-answer" class="primary" data-testid="btn-submit-answer">Submit answer</button>
+                </div>
+                <div class="wager-row" id="wager-final-row" style="display: none;">
+                    <label for="wager-final" style="margin: 0;">Final wager (0–<span id="wager-final-max"></span>)</label>
+                    <input type="number" id="wager-final" data-testid="wager-final" min="0" value="0" style="width: 100px;" />
                 </div>
                 <div class="error-text" id="question-error" data-testid="question-error" role="alert"></div>
-            </div>
-            <div class="card" id="submitted-card" style="display: none;" data-testid="submitted-card">
-                <h2>Answers so far</h2>
-                <p class="hint">Submitted answers and wagers appear as players lock in. Correctness is revealed in review.</p>
-                <ul class="list" id="live-answers" data-testid="live-answers"></ul>
             </div>
         </section>
 
         <!-- Review -->
-        <section id="screen-review" class="screen" data-testid="screen-review">
-            <div class="card">
-                <div class="row">
-                    <span class="muted" id="review-number" data-testid="review-number"></span>
-                    <span class="countdown" id="review-countdown" data-testid="review-countdown" style="margin-left: auto;"></span>
+        <section id="screen-review" class="screen game-stage" data-testid="screen-review">
+            <div class="game-stage-content">
+                <div class="card">
+                    <div class="row">
+                        <span class="muted" id="review-number" data-testid="review-number"></span>
+                        <span class="countdown" id="review-countdown" data-testid="review-countdown" style="margin-left: auto;"></span>
+                    </div>
+                    <p class="question-text" id="review-question" data-testid="review-question"></p>
+                    <div class="answer-panel">
+                        <div class="answer-text" id="review-answer" data-testid="review-answer"></div>
+                        <div class="answer-sub" id="review-difficulty" data-testid="review-difficulty"></div>
+                    </div>
+                    <ul class="list" id="review-rows" data-testid="review-rows" style="margin-top: 12px;"></ul>
                 </div>
-                <p class="question-text" id="review-question" data-testid="review-question"></p>
-                <div class="answer-panel">
-                    <div class="answer-text" id="review-answer" data-testid="review-answer"></div>
-                    <div class="answer-sub" id="review-difficulty" data-testid="review-difficulty"></div>
+                <div class="card">
+                    <h2>Leaderboard</h2>
+                    <ul class="list" id="review-leaderboard" data-testid="review-leaderboard"></ul>
                 </div>
-                <ul class="list" id="review-rows" data-testid="review-rows" style="margin-top: 12px;"></ul>
-                <div class="row" style="margin-top: 12px;">
-                    <button id="btn-continue" class="primary" data-testid="btn-continue">Continue</button>
-                    <span class="muted" id="continue-status" data-testid="continue-status"></span>
-                </div>
-                <div class="error-text" id="review-error" role="alert"></div>
             </div>
-            <div class="card">
-                <h2>Leaderboard</h2>
-                <ul class="list" id="review-leaderboard" data-testid="review-leaderboard"></ul>
+            <div class="game-action-dock review-action-dock">
+                <button id="btn-continue" class="primary" data-testid="btn-continue">Ready for next question</button>
+                <span class="muted" id="continue-status" data-testid="continue-status"></span>
+                <div class="error-text" id="review-error" role="alert"></div>
             </div>
         </section>
 
         <!-- Final difficulty vote -->
-        <section id="screen-vote" class="screen" data-testid="screen-vote">
-            <div class="card">
-                <div class="row">
-                    <h2>Final question — pick the stakes</h2>
-                    <span class="countdown" id="vote-countdown" data-testid="vote-countdown" style="margin-left: auto;"></span>
+        <section id="screen-vote" class="screen game-stage" data-testid="screen-vote">
+            <div class="game-stage-content">
+                <div class="card">
+                    <div class="row">
+                        <h2>Final question — pick the stakes</h2>
+                        <span class="countdown" id="vote-countdown" data-testid="vote-countdown" style="margin-left: auto;"></span>
+                    </div>
+                    <p class="hint">Majority picks the difficulty of the final question. Ties break harder.</p>
+                    <p class="hint" id="vote-status" data-testid="vote-status" style="margin-top: 12px;"></p>
+                    <div class="error-text" id="vote-error" role="alert"></div>
                 </div>
-                <p class="hint">Majority picks the difficulty of the final question. Ties break harder.</p>
-                <div class="row">
+            </div>
+            <div class="game-action-dock vote-action-dock">
+                <div class="row" role="group" aria-label="Final question difficulty">
                     <button data-difficulty="0" class="btn-difficulty" data-testid="btn-difficulty-easy">Easy</button>
                     <button data-difficulty="1" class="btn-difficulty" data-testid="btn-difficulty-medium">Medium</button>
                     <button data-difficulty="2" class="btn-difficulty" data-testid="btn-difficulty-hard">Hard</button>
                 </div>
-                <p class="hint" id="vote-status" data-testid="vote-status" style="margin-top: 12px;"></p>
-                <div class="error-text" id="vote-error" role="alert"></div>
             </div>
         </section>
 
@@ -1159,6 +1345,14 @@
             <button id="btn-cancel-forfeit" class="quiet" data-testid="btn-cancel-forfeit">Keep playing</button>
         </div>
         <div class="error-text" id="forfeit-error" role="alert"></div>
+    </dialog>
+    <dialog id="emoji-picker-dialog" data-testid="emoji-picker-dialog" aria-labelledby="emoji-picker-title">
+        <h2 id="emoji-picker-title">Choose a pack emoji</h2>
+        <p class="hint">Search or browse the full emoji set. You can still type or paste an emoji directly into the cover field.</p>
+        <div id="emoji-picker-host" data-testid="emoji-picker-host"></div>
+        <div class="emoji-picker-actions">
+            <button id="btn-close-emoji-picker" class="quiet" type="button">Done</button>
+        </div>
     </dialog>
     <script type="module" src="/src/main.ts"></script>
 </body>

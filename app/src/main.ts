@@ -37,6 +37,24 @@ import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
+import { deploymentCatalog, resolveDeployment, type ContractDeployment } from "./deployments";
+import {
+    DebouncedPackDraftSaver,
+    EMPTY_PACK_JSON,
+    canResumePackPublish,
+    createBrowserPackDraftStore,
+    createPackDraft,
+    createPackPublishResume,
+    exportPackDraft,
+    exportPackFile,
+    importPackDraft,
+    updatePackDraft,
+    validatePackDraft,
+    type PackDraft,
+    type PackDraftValidation,
+    type PackPublishResume,
+} from "./pack-drafts";
+import { normalizeAcceptedAnswers, type PackQuestion } from "./pack-validation";
 import {
     packPresentation,
     sectionPacks,
@@ -51,12 +69,6 @@ function isContractAddress(value: unknown): value is `0x${string}` {
 
 const configuredRegistry = import.meta.env.VITE_QUIZZLER_REGISTRY;
 const configuredGame = import.meta.env.VITE_QUIZZLER_GAME;
-// A test host may inject an isolated registry/game pair at build time. Normal
-// players always use the tracked deployment, and a partial/malformed override
-// is rejected during boot rather than mixing contracts from different pairs.
-const activeContracts = configuredRegistry || configuredGame
-    ? { registry: configuredRegistry, game: configuredGame }
-    : contractInfo;
 // Consume an invite once per page load so a refresh while a signer prompt is
 // open cannot prompt the player to join the same room twice.
 const sharedLobbyInvite = consumeSharedLobbyInvite(window.location.href);
@@ -67,6 +79,25 @@ if (sharedLobbyInvite.present) {
         // A host can disallow history writes; the join flow itself still works.
     }
 }
+
+// A test host can inject one isolated pair at build time. Player-facing URLs
+// may choose only a deployment explicitly allowlisted in contract-address.json
+// — never arbitrary addresses supplied by a query string.
+const hasContractOverride = configuredRegistry !== undefined || configuredGame !== undefined;
+const configuredDeployments: ContractDeployment[] = hasContractOverride
+    && isContractAddress(configuredRegistry)
+    && isContractAddress(configuredGame)
+    ? [{ id: "build-override", registry: configuredRegistry, game: configuredGame }]
+    : hasContractOverride
+      ? []
+      : deploymentCatalog(contractInfo);
+let activeDeployment = resolveDeployment(
+    configuredDeployments,
+    hasContractOverride ? undefined : sharedLobbyInvite.deploymentId,
+);
+let activeContracts: { registry: string | undefined; game: string | undefined } = activeDeployment
+    ? { registry: activeDeployment.registry, game: activeDeployment.game }
+    : { registry: configuredRegistry, game: configuredGame };
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -83,10 +114,6 @@ const FINAL_SLOT_BASE = 0xf0;
 const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
 const MAX_GAME_QUESTIONS = 10;
-const MAX_TITLE_BYTES = 64;
-const MAX_EMOJI_BYTES = 32;
-const MAX_QUESTION_BYTES = 256;
-const MAX_ANSWER_BYTES = 64;
 const POLL_FALLBACK_MS = 8_000;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
@@ -116,11 +143,20 @@ function performanceMeasure(name: string, startMark: string, endMark: string): v
 
 const appStartMark = performanceMark("app:start");
 
-const registrySupportsPackEmoji = (registryAbi as Array<{
-    type?: string;
-    name?: string;
-    inputs?: unknown[];
-}>).some((entry) => entry.type === "function" && entry.name === "createPack" && entry.inputs?.length === 2);
+interface RuntimeContractCapabilities {
+    /** Atomic imported-question batches and race-free pack IDs. */
+    registryImport: boolean;
+    /** Consolidated game snapshots, names, and race-free game IDs. */
+    gameLiveState: boolean;
+}
+
+// The app's ABI can be newer than an allowlisted deployed contract during a
+// staged rollout. Probe safe view methods once and keep legacy rooms playable
+// instead of assuming every address has just been migrated.
+let contractCapabilities: RuntimeContractCapabilities = {
+    registryImport: false,
+    gameLiveState: false,
+};
 
 // ── Chain-facing types (viem decodes named tuples to objects) ───────
 
@@ -161,6 +197,14 @@ interface GameView {
     active_player_count: number;
 }
 
+/** The newer game contract returns this in one consistent RPC read. */
+interface LiveGameView extends GameView, PhaseView {
+    players: string[];
+    scores: (number | bigint)[];
+    player_names: string[];
+    submissions: SubmissionView[];
+}
+
 interface PackView {
     creator: string;
     title: string;
@@ -175,6 +219,8 @@ interface Snapshot {
     phase: PhaseView;
     game: GameView;
     players: string[];
+    /** Optional on-chain names, parallel to `players`. */
+    playerNames: string[];
     scores: number[];
     submissions: SubmissionView[];
     questionText: string;
@@ -239,6 +285,35 @@ let busy = false;
 // don't re-send txs the chain would reject anyway.
 let actionKey = "";
 const actionsSent = new Set<string>();
+const actionSentAt = new Map<string, number>();
+
+function markActionSent(action: string): void {
+    actionsSent.add(action);
+    actionSentAt.set(action, Date.now());
+}
+
+function clearActionSent(action: string): void {
+    actionsSent.delete(action);
+    actionSentAt.delete(action);
+}
+
+/**
+ * A best-block inclusion can be reorged out. Never let that optimistic local
+ * guard trap the player forever: confirmed state wins immediately; an
+ * unconfirmed intent becomes safely retryable after a short reconciliation
+ * window (the contract remains the idempotent authority).
+ */
+function reconcileActionGuards(snap: Snapshot): void {
+    const mine = snap.submissions.find((submission) => submission.player.toLowerCase() === myAddress);
+    if (mine?.submitted) clearActionSent("submit");
+    if (mine?.continue_ready) clearActionSent("continue");
+    const now = Date.now();
+    for (const [action, sentAt] of actionSentAt) {
+        if (now - sentAt < 18_000) continue;
+        clearActionSent(action);
+        setTransactionStatus("Still checking chain state — you can retry safely if needed.");
+    }
+}
 
 // Poll ordering guards: polls are skipped while one is in flight, and a
 // snapshot that is BEHIND the one on screen is dropped unless it persists
@@ -246,6 +321,7 @@ const actionsSent = new Set<string>();
 // reorg keeps reporting the earlier phase and wins after a few polls).
 let pollInFlight = false;
 let pollQueued = false;
+let consecutivePollFailures = 0;
 let lastRank = -1;
 let behindStreak = 0;
 let latestObservedAt = 0;
@@ -279,37 +355,88 @@ const packTitleRequests = new Map<number, Promise<string>>();
 // wallet open immediately when the player taps the button.
 const txPreflights = new Map<string, TxPreflight>();
 let createGamePreflightTimer: ReturnType<typeof setTimeout> | null = null;
+let preparedGameCreationNonce: bigint | null = null;
 
 // Game configuration and player membership are immutable once the game has
 // started. Keeping those values avoids two contract reads on every block.
 let cachedGame: GameView | null = null;
 let cachedPlayers: string[] | null = null;
+let cachedPlayerNames: string[] | null = null;
 let preferredQuestionKey: number | null = null;
+let myDisplayName = "";
 
-// Pack-builder state
-let builderPackId: number | null = null;
-let builderRegular = 0;
-const builderFinals = [false, false, false];
+// Pack studio state. Draft contents are deliberately local until the final
+// publish action; only the selected cover and validated quiz are ever sent to
+// the public registry.
+const packDraftStore = createBrowserPackDraftStore();
+const packDraftSaver = new DebouncedPackDraftSaver(packDraftStore, {
+    onError: () => setDraftSaveStatus("Couldn’t save this draft locally."),
+});
+let packDrafts: PackDraft[] = [];
+let activePackDraft: PackDraft | null = null;
+let packDraftValidation: PackDraftValidation | null = null;
+let packStudioLoaded = false;
 
 // ── Screen switching ─────────────────────────────────────────────────
 
 const SCREENS = ["boot", "home", "pack-select", "configure", "builder", "lobby", "question", "review", "vote", "results", "abandoned"] as const;
 type Screen = (typeof SCREENS)[number];
 const $appShell = document.querySelector<HTMLElement>("main");
+let visibleScreen: Screen | null = null;
 
 function showScreen(name: Screen): void {
     for (const s of SCREENS) {
         getEl(`screen-${s}`).classList.toggle("active", s === name);
     }
     const isPackPicker = name === "pack-select";
+    const isGameStage = name === "question" || name === "review" || name === "vote";
     document.body.classList.toggle("pack-picker-open", isPackPicker);
     $appShell?.classList.toggle("pack-picker-open", isPackPicker);
+    $appShell?.classList.toggle("game-stage-open", isGameStage);
+    const changed = visibleScreen !== name;
+    visibleScreen = name;
+    // Announce a genuine stage transition without stealing the cursor from an
+    // answer field on every block-driven re-render.
+    if (changed && name !== "boot") {
+        queueMicrotask(() => {
+            const target = getEl(`screen-${name}`).querySelector<HTMLElement>("h2, .question-text");
+            if (!target) return;
+            target.tabIndex = -1;
+            target.focus({ preventScroll: true });
+        });
+    }
 }
 
 function gameSessionKey(): string | null {
     return myAddress && isContractAddress(activeContracts.game)
         ? activeGameSessionKey(activeContracts.game, myAddress)
         : null;
+}
+
+function readSavedGameForDeployment(deployment: ContractDeployment): bigint | null {
+    if (!myAddress) return null;
+    try {
+        return parseStoredGameId(window.sessionStorage.getItem(activeGameSessionKey(deployment.game, myAddress)));
+    } catch {
+        return null;
+    }
+}
+
+/** Select a known historical pair before creating its contract handles. */
+function selectDeployment(deployment: ContractDeployment): void {
+    activeDeployment = deployment;
+    activeContracts = { registry: deployment.registry, game: deployment.game };
+}
+
+/** Prefer the current deployment, then a saved room on an allowlisted older one. */
+function restoreSavedDeployment(): bigint | null {
+    for (const deployment of configuredDeployments) {
+        const id = readSavedGameForDeployment(deployment);
+        if (id === null) continue;
+        if (activeDeployment?.id !== deployment.id) selectDeployment(deployment);
+        return id;
+    }
+    return readSavedGame();
 }
 
 function readSavedGame(): bigint | null {
@@ -358,6 +485,7 @@ const $chainBlock = getEl("chain-block");
 const $gameActions = getEl("game-actions");
 const $btnForfeitGame = getEl<HTMLButtonElement>("btn-forfeit-game");
 const $forfeitDialog = getEl<HTMLDialogElement>("forfeit-dialog");
+const $transactionStatus = getEl("transaction-status");
 
 function setGameActions(mode: "hidden" | "lobby" | "active"): void {
     $gameActions.style.display = mode === "hidden" ? "none" : "flex";
@@ -373,6 +501,11 @@ function setConnectionStatus(label: string, state: "pending" | "ok" | "err"): vo
     $connPill.className = state === "ok" ? "ok" : state === "err" ? "err" : "";
     $chainStatus.classList.toggle("is-live", state === "ok");
     $chainStatus.classList.toggle("has-error", state === "err");
+}
+
+function setTransactionStatus(message: string | null): void {
+    $transactionStatus.hidden = !message;
+    $transactionStatus.textContent = message ?? "";
 }
 
 function showActiveAccount(address: string): void {
@@ -401,6 +534,12 @@ function subscribeChainStatus(): void {
 
 function fmtAddr(addr: string): string {
     return addr.toLowerCase() === myAddress ? "You" : truncateAddress(addr);
+}
+
+function fmtPlayer(snap: Pick<Snapshot, "players" | "playerNames">, addr: string): string {
+    const index = snap.players.findIndex((player) => player.toLowerCase() === addr.toLowerCase());
+    const name = index >= 0 ? snap.playerNames[index]?.trim() : "";
+    return name || fmtAddr(addr);
 }
 
 /** In-flight tx feedback: spinner + disabled, cleared in the finally. */
@@ -508,6 +647,7 @@ function syncNextTxNonce(): Promise<number | null> {
 async function submitPreparedTx(transaction: any, nonce: number): Promise<void> {
     if (!productAccount) throw new Error("Account not ready");
     const signer = productAccount.getSigner();
+    setTransactionStatus("Waiting for wallet signature…");
     await new Promise<void>((resolve, reject) => {
         let settled = false;
         let subscription: { unsubscribe(): void } | null = null;
@@ -530,12 +670,14 @@ async function submitPreparedTx(transaction: any, nonce: number): Promise<void> 
                     if (!event.ok) {
                         finish(new Error(JSON.stringify(event.dispatchError)));
                     } else {
+                        setTransactionStatus("Included — checking chain state…");
                         finish();
                     }
                 },
                 error: (error: unknown) => finish(error instanceof Error ? error : new Error(String(error))),
             });
             subscription = nextSubscription;
+            setTransactionStatus("Submitting to chain…");
             if (settled) nextSubscription.unsubscribe();
         } catch (error) {
             finish(error instanceof Error ? error : new Error(String(error)));
@@ -552,6 +694,7 @@ async function submitTx(
     if (!productAccount) throw new Error("Account not ready");
     for (let attempt = 0; ; attempt++) {
         try {
+            setTransactionStatus(attempt === 0 ? "Checking transaction…" : "Refreshing transaction details…");
             // A warmed estimate avoids an RPC on the tap path. On retries we
             // intentionally estimate again against current chain state.
             const overrides = attempt === 0 && initialOverrides !== null
@@ -561,11 +704,13 @@ async function submitTx(
             if (nonce === null) {
                 // Degrade safely to the SDK's submission path if the account
                 // nonce API is unavailable in a host implementation.
+                setTransactionStatus("Waiting for wallet signature…");
                 const result = await handle[method].tx(...args, {
                     signer: productAccount.getSigner(),
                     ...(overrides ?? {}),
                 });
                 if (!result.ok) throw new Error(JSON.stringify(result.dispatchError));
+                setTransactionStatus("Included — checking chain state…");
             } else {
                 const transaction = await handle[method].prepare(...args, {
                     origin: productAccount.address,
@@ -581,9 +726,11 @@ async function submitTx(
             nonceSync = null;
             const msg = e instanceof Error ? e.message : String(e);
             if (attempt === 0 && msg.includes("Stale")) {
+                setTransactionStatus("Refreshing chain state…");
                 await new Promise((r) => setTimeout(r, 5_000));
                 continue;
             }
+            setTransactionStatus("Transaction was not confirmed. Check your wallet and try again.");
             throw e;
         }
     }
@@ -674,13 +821,60 @@ async function sealedPack(packId: number): Promise<PackView | null> {
 
 // ── Boot ─────────────────────────────────────────────────────────────
 
+function createContractHandles(client: any, descriptor: any): void {
+    if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
+        throw new Error("Contract addresses are not configured.");
+    }
+    registry = createContractFromClient(
+        client.raw.assetHub,
+        descriptor,
+        activeContracts.registry,
+        registryAbi as never,
+        { signerManager: manager },
+    );
+    game = createContractFromClient(
+        client.raw.assetHub,
+        descriptor,
+        activeContracts.game,
+        gameAbi as never,
+        { signerManager: manager },
+    );
+}
+
+async function verifyActiveContractPair(): Promise<boolean> {
+    try {
+        const linkedRegistry = await game.registry.query();
+        if (!linkedRegistry.success) return false;
+        return String(linkedRegistry.value).toLowerCase() === activeContracts.registry?.toLowerCase();
+    } catch {
+        return false;
+    }
+}
+
+async function detectContractCapabilities(): Promise<void> {
+    const [registryResult, gameResult] = await Promise.all([
+        registry.getPacks.query([]).catch(() => null),
+        game.getGameForCreation.query(myAddress, 0n).catch(() => null),
+    ]);
+    contractCapabilities = {
+        registryImport: Boolean(registryResult?.success),
+        gameLiveState: Boolean(gameResult?.success),
+    };
+    const $displayNameCard = getEl("display-name-card");
+    $displayNameCard.style.display = contractCapabilities.gameLiveState ? "" : "none";
+}
+
 async function init(): Promise<void> {
     const bootStartMark = performanceMark("boot:start");
     showScreen("boot");
     if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
         setConnectionStatus("no contract", "err");
-        bootLog("Contract addresses not configured.", "err");
-        bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
+        if (sharedLobbyInvite.deploymentId) {
+            bootLog("This invite points to a deployment this app no longer supports.", "err");
+        } else {
+            bootLog("Contract addresses not configured.", "err");
+            bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
+        }
         return;
     }
 
@@ -712,7 +906,7 @@ async function init(): Promise<void> {
     }
     productAccount = productRes.value;
     myAddress = ss58ToH160(productAccount.address).toLowerCase();
-    savedGameId = readSavedGame();
+    savedGameId = restoreSavedDeployment();
     showActiveAccount(productAccount.address);
     bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
 
@@ -728,21 +922,16 @@ async function init(): Promise<void> {
     const chainReadyMark = performanceMark("chain:ready");
     performanceMeasure("chain:open", descriptorReadyMark, chainReadyMark);
 
-    registry = createContractFromClient(
-        client.raw.assetHub,
-        paseo_asset_hub,
-        activeContracts.registry,
-        registryAbi as never,
-        { signerManager: manager },
-    );
-    game = createContractFromClient(
-        client.raw.assetHub,
-        paseo_asset_hub,
-        activeContracts.game,
-        gameAbi as never,
-        { signerManager: manager },
-    );
+    createContractHandles(client, paseo_asset_hub);
     bootLog("Contract handles ready (registry + game)", "ok");
+
+    if (!await verifyActiveContractPair()) {
+        setConnectionStatus("contract mismatch", "err");
+        bootLog("The game contract is not linked to this registry deployment.", "err");
+        return;
+    }
+
+    await detectContractCapabilities();
 
     // Sealed packs are immutable. Restore their last known metadata for an
     // instant picker on a return visit, then reconcile the current registry
@@ -818,6 +1007,30 @@ const $configPackTitle = getEl("config-pack-title");
 const $configPackMeta = getEl("config-pack-meta");
 const $resumeGameCard = getEl("resume-game-card");
 const $resumeGameCode = getEl("resume-game-code");
+const $displayName = getEl<HTMLInputElement>("display-name");
+const $displayNameStatus = getEl("display-name-status");
+
+getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", async () => {
+    if (busy || !productAccount || !contractCapabilities.gameLiveState) return;
+    const name = $displayName.value;
+    if (name !== "" && (name !== name.trim() || /[\u0000-\u001f\u007f-\u009f]/u.test(name) || utf8ByteLength(name) > 24)) {
+        $displayNameStatus.textContent = "Use a trimmed one-line name of up to 24 bytes.";
+        return;
+    }
+    busy = true;
+    $displayNameStatus.textContent = "";
+    setLoading("btn-save-display-name", true);
+    try {
+        await sendTx(game, "setDisplayName", name);
+        myDisplayName = name;
+        $displayNameStatus.textContent = name ? "Name saved for your next lobby refresh." : "Name cleared.";
+    } catch (error) {
+        $displayNameStatus.textContent = txError(error);
+    } finally {
+        busy = false;
+        setLoading("btn-save-display-name", false);
+    }
+});
 
 function renderResumeCard(): void {
     const shouldShow = savedGameId !== null && gameId === null;
@@ -895,6 +1108,7 @@ let knownPackCount = 0;
 let starterPacksLoading = false;
 let communityPacksLoading = false;
 let communityPacksRequested = false;
+let lastCommunityRequestAt = 0;
 // E2E runs can opt in to their disposable packs without exposing them to
 // players on the normal home screen.
 const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
@@ -1068,6 +1282,7 @@ function requestCommunityPacks(count: number): void {
     if (count <= STARTER_PACK_COUNT || communityRefresh) return;
     const ids = communityPackIds(count);
     if (ids.length === 0) return;
+    lastCommunityRequestAt = Date.now();
     communityPacksLoading = true;
     renderPackList();
     const request = (async () => {
@@ -1134,6 +1349,7 @@ function selectPack(id: number, pack: CatalogPack): void {
     }
     updateSelectedPackSummary();
     $packSelectionError.textContent = "";
+    preparedGameCreationNonce = null;
     scheduleCreateGamePreflight();
 }
 
@@ -1274,7 +1490,7 @@ function showPackSelection(): void {
     $packSelectionError.textContent = "";
     showScreen("pack-select");
     window.scrollTo(0, 0);
-    void refreshPacks();
+    void refreshPacks({ includeCommunity: true });
 }
 
 getEl("btn-host-game").addEventListener("click", showPackSelection);
@@ -1306,7 +1522,9 @@ for (const id of ["btn-config-back", "btn-config-back-bottom"]) {
 // published by others should show up without a reload.
 setInterval(() => {
     if (registry && getEl("screen-pack-select").classList.contains("active") && !busy) {
-        void refreshPacks();
+        // Featured packs remain fresh frequently; the much larger community
+        // window only needs a gentle refresh while someone is comparing.
+        void refreshPacks({ includeCommunity: Date.now() - lastCommunityRequestAt > 60_000 });
     }
 }, 5_000);
 
@@ -1356,6 +1574,13 @@ function gameConfigArgs(config: CreatedGameConfig): readonly unknown[] {
     ];
 }
 
+function gameCreateCall(config: CreatedGameConfig): { method: string; args: readonly unknown[]; nonce: bigint | null } {
+    const args = gameConfigArgs(config);
+    if (!contractCapabilities.gameLiveState) return { method: "createGame", args, nonce: null };
+    const nonce = preparedGameCreationNonce ??= creationNonce();
+    return { method: "createGameWithNonce", args: [...args, nonce], nonce };
+}
+
 /** Debounce form edits, then use the player's think time to size createGame. */
 function scheduleCreateGamePreflight(): void {
     if (createGamePreflightTimer) clearTimeout(createGamePreflightTimer);
@@ -1363,15 +1588,11 @@ function scheduleCreateGamePreflight(): void {
         createGamePreflightTimer = null;
         if (!game || !productAccount) return;
         const config = readCreatedGameConfig();
-        if (config) void warmTx(game, "createGame", gameConfigArgs(config));
+        if (config) {
+            const call = gameCreateCall(config);
+            void warmTx(game, call.method, call.args);
+        }
     }, 250);
-}
-
-async function myLatestPackId(): Promise<number | null> {
-    const res = await registry.myLatestPack.query(myAddress);
-    if (!res.success) return null;
-    const id = Number(res.value);
-    return id === NO_PACK ? null : id;
 }
 
 async function myLatestGameId(): Promise<bigint | null> {
@@ -1379,6 +1600,19 @@ async function myLatestGameId(): Promise<bigint | null> {
     if (!res.success) return null;
     const id = BigInt(res.value);
     return id === 0n ? null : id;
+}
+
+/** Resolve a creation nonce instead of racing another tab's latest-game pointer. */
+async function resolveCreatedGame(nonce: bigint): Promise<bigint | null> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        const res = await game.getGameForCreation.query(myAddress, nonce);
+        if (res.success) {
+            const id = BigInt(res.value);
+            if (id !== 0n) return id;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+    return null;
 }
 
 /** `null` means the chain could not be queried; `false` is authoritative. */
@@ -1490,14 +1724,18 @@ getEl("btn-create-game").addEventListener("click", async () => {
     busy = true;
     setLoading("btn-create-game", true);
     try {
-        await sendWarmedTx(game, "createGame", gameConfigArgs(config));
+        const call = gameCreateCall(config);
+        await sendWarmedTx(game, call.method, call.args);
         $configError.textContent = "Game created — opening your lobby…";
-        const id = await myLatestGameId();
+        const id = call.nonce === null
+            ? await myLatestGameId()
+            : await resolveCreatedGame(call.nonce);
         if (id === null) throw new Error("could not locate the created game");
         enterGame(id, createdLobbySnapshot(config));
     } catch (e) {
         $configError.textContent = txError(e);
     } finally {
+        preparedGameCreationNonce = null;
         busy = false;
         setLoading("btn-create-game", false);
     }
@@ -1506,6 +1744,7 @@ getEl("btn-create-game").addEventListener("click", async () => {
 for (const select of [$questionCount, $answerBlocks, $reviewBlocks, $maxPlayers]) {
     select.addEventListener("change", () => {
         $configError.textContent = "";
+        preparedGameCreationNonce = null;
         scheduleCreateGamePreflight();
     });
 }
@@ -1552,186 +1791,450 @@ getEl<HTMLButtonElement>("btn-forget-saved-game").addEventListener("click", () =
     renderResumeCard();
 });
 
-// ── Pack builder ─────────────────────────────────────────────────────
+// ── Pack studio ──────────────────────────────────────────────────────
 
 const $builderError = getEl("builder-error");
-const $builderProgress = getEl("builder-progress");
-const $btnSeal = getEl<HTMLButtonElement>("btn-seal-pack");
-const $builderAnswerInputs = [...document.querySelectorAll<HTMLInputElement>(".q-answer")];
+const $draftName = getEl<HTMLInputElement>("draft-name");
+const $packEmoji = getEl<HTMLInputElement>("pack-emoji");
+const $packJson = getEl<HTMLTextAreaElement>("pack-json");
+const $draftSaveStatus = getEl("draft-save-status");
+const $draftList = getEl("builder-draft-list");
+const $builderPreview = getEl("builder-preview");
+const $builderValidation = getEl("builder-validation");
+const $builderPublishStatus = getEl("builder-publish-status");
+const $btnPublishPack = getEl<HTMLButtonElement>("btn-publish-pack");
+const $emojiPickerDialog = getEl<HTMLDialogElement>("emoji-picker-dialog");
+const $emojiPickerHost = getEl("emoji-picker-host");
+const MAX_IMPORT_BATCH_SIZE = 8;
+const FINAL_DIFFICULTIES = ["easy", "medium", "hard"] as const;
 
-function openPackBuilder(): void {
-    builderPackId = null;
-    builderRegular = 0;
-    builderFinals.fill(false);
-    getEl<HTMLInputElement>("pack-title").value = "";
-    getEl<HTMLInputElement>("pack-emoji").value = "✨";
-    getEl<HTMLInputElement>("q-text").value = "";
-    for (const input of $builderAnswerInputs) input.value = "";
-    getEl<HTMLSelectElement>("q-kind").value = "regular";
-    getEl("builder-title").textContent = "New pack";
-    getEl("builder-create-row").style.display = "";
-    getEl("builder-question-form").style.display = "none";
-    renderList(getEl("builder-questions"), []);
+type FinalDifficulty = (typeof FINAL_DIFFICULTIES)[number];
+type PublishQuestion = { text: string; answers: string[]; is_final: boolean; difficulty: number };
+
+function setDraftSaveStatus(message: string): void {
+    $draftSaveStatus.textContent = message;
+}
+
+function activeDraftOrThrow(): PackDraft {
+    if (!activePackDraft) throw new Error("Open a pack draft first.");
+    return activePackDraft;
+}
+
+function replaceActiveDraft(next: PackDraft, { save = true, paintInputs = false }: { save?: boolean; paintInputs?: boolean } = {}): void {
+    activePackDraft = next;
+    const index = packDrafts.findIndex((draft) => draft.metadata.id === next.metadata.id);
+    if (index >= 0) packDrafts.splice(index, 1, next);
+    else packDrafts.unshift(next);
+    packDrafts.sort((a, b) => b.metadata.updatedAt - a.metadata.updatedAt);
+    if (paintInputs) {
+        $draftName.value = next.metadata.name;
+        $packEmoji.value = next.metadata.emoji;
+        $packJson.value = next.rawJson;
+    }
+    if (save) {
+        setDraftSaveStatus("Saving locally…");
+        packDraftSaver.schedule(next);
+    }
+    renderPackDraftList();
+    renderPackDraftPreview();
+}
+
+function renderPackDraftList(): void {
+    renderList(
+        $draftList,
+        packDrafts.map((draft) => {
+            const item = li(span("draft-emoji", draft.metadata.emoji));
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = draft.metadata.id === activePackDraft?.metadata.id ? "draft-current" : "";
+            button.setAttribute("aria-current", draft.metadata.id === activePackDraft?.metadata.id ? "true" : "false");
+            const copy = document.createElement("span");
+            copy.className = "draft-copy";
+            const name = document.createElement("strong");
+            name.textContent = draft.metadata.name;
+            const meta = document.createElement("span");
+            const validation = validatePackDraft(draft);
+            meta.textContent = validation.valid
+                ? `${validation.pack.questions.length} questions · ready`
+                : "needs attention";
+            copy.append(name, meta);
+            button.append(copy);
+            button.addEventListener("click", () => void openExistingPackDraft(draft.metadata.id));
+            item.append(button);
+            return item;
+        }),
+    );
+}
+
+function renderPackDraftPreview(): void {
+    const draft = activePackDraft;
+    if (!draft) {
+        $builderPreview.hidden = true;
+        $builderValidation.textContent = "";
+        $btnPublishPack.disabled = true;
+        return;
+    }
+    const validation = validatePackDraft(draft);
+    packDraftValidation = validation;
+    if (!validation.valid) {
+        $builderPreview.hidden = true;
+        const list = document.createElement("ul");
+        for (const issue of validation.issues) {
+            const item = document.createElement("li");
+            item.textContent = issue.message;
+            list.append(item);
+        }
+        $builderValidation.replaceChildren(list);
+        $btnPublishPack.disabled = true;
+        $builderPublishStatus.textContent = "Fix the draft before publishing.";
+        return;
+    }
+    $builderPreview.hidden = false;
+    getEl("builder-preview-emoji").textContent = validation.emoji;
+    getEl("builder-preview-title").textContent = validation.pack.title;
+    getEl("builder-preview-meta").textContent =
+        `${validation.pack.questions.length} regular ${validation.pack.questions.length === 1 ? "question" : "questions"} · 3 finals · ${validation.emoji}`;
+    $builderValidation.textContent = "";
+    $btnPublishPack.disabled = busy || !contractCapabilities.registryImport;
+    if (!contractCapabilities.registryImport) {
+        $builderPublishStatus.textContent = "This deployment needs the batch-publishing contract update before it can publish imported packs.";
+    } else if (canResumePackPublish(draft, validation)) {
+        $builderPublishStatus.textContent = "A previous publish is ready to resume.";
+    } else {
+        $builderPublishStatus.textContent = "Ready to publish in bounded batches.";
+    }
+}
+
+async function ensurePackStudio(): Promise<void> {
+    if (!packStudioLoaded) {
+        setDraftSaveStatus("Loading local drafts…");
+        try {
+            packDrafts = await packDraftStore.list();
+        } catch {
+            packDrafts = [];
+        }
+        packStudioLoaded = true;
+    }
+    if (!activePackDraft) {
+        const initial = packDrafts[0] ?? createPackDraft();
+        if (packDrafts.length === 0) {
+            packDrafts = [initial];
+            try {
+                await packDraftStore.save(initial);
+            } catch {
+                // The memory fallback still makes the studio usable.
+            }
+        }
+        replaceActiveDraft(initial, { save: false, paintInputs: true });
+    } else {
+        replaceActiveDraft(activePackDraft, { save: false, paintInputs: true });
+    }
+    setDraftSaveStatus("Saved locally on this device.");
+}
+
+async function openExistingPackDraft(id: string): Promise<void> {
+    await packDraftSaver.flush();
+    const draft = packDrafts.find((candidate) => candidate.metadata.id === id)
+        ?? await packDraftStore.get(id);
+    if (!draft) return;
+    replaceActiveDraft(draft, { save: false, paintInputs: true });
+    setDraftSaveStatus("Saved locally on this device.");
+}
+
+async function openPackBuilder(): Promise<void> {
     $builderError.textContent = "";
     showScreen("builder");
+    await ensurePackStudio();
 }
 
 for (const id of ["btn-new-pack", "btn-new-pack-from-picker"]) {
-    getEl(id).addEventListener("click", openPackBuilder);
+    getEl(id).addEventListener("click", () => void openPackBuilder());
 }
 
-getEl("btn-create-pack").addEventListener("click", async () => {
-    if (busy || !productAccount) return;
-    $builderError.textContent = "";
-    const title = getEl<HTMLInputElement>("pack-title").value.trim();
-    const emoji = getEl<HTMLInputElement>("pack-emoji").value.trim();
-    if (!title) {
-        $builderError.textContent = "Give the pack a title.";
-        return;
-    }
-    if (utf8ByteLength(title) > MAX_TITLE_BYTES) {
-        $builderError.textContent = `Pack titles can be at most ${MAX_TITLE_BYTES} bytes.`;
-        return;
-    }
-    if (!emoji) {
-        $builderError.textContent = "Choose an emoji for the pack cover.";
-        return;
-    }
-    if (utf8ByteLength(emoji) > MAX_EMOJI_BYTES) {
-        $builderError.textContent = `Pack emojis can be at most ${MAX_EMOJI_BYTES} bytes.`;
-        return;
-    }
-    busy = true;
-    setLoading("btn-create-pack", true);
-    try {
-        // Keep the staged migration non-breaking: the old registry ABI has no
-        // emoji argument, while the promoted fresh registry stores it forever.
-        await sendTx(registry, "createPack", ...(registrySupportsPackEmoji ? [title, emoji] : [title]));
-        const id = await myLatestPackId();
-        if (id === null) throw new Error("could not locate the created pack");
-        builderPackId = id;
-        getEl("builder-title").textContent = `${registrySupportsPackEmoji ? `${emoji} ` : ""}${title} (pack #${builderPackId})`;
-        getEl("builder-create-row").style.display = "none";
-        getEl("builder-question-form").style.display = "";
-        updateBuilderProgress();
-    } catch (e) {
-        $builderError.textContent = txError(e);
-    } finally {
-        busy = false;
-        setLoading("btn-create-pack", false);
-    }
+getEl("btn-new-draft").addEventListener("click", async () => {
+    await packDraftSaver.flush();
+    const draft = createPackDraft();
+    replaceActiveDraft(draft, { paintInputs: true });
+    setDraftSaveStatus("New draft — saving locally…");
 });
 
-function updateBuilderProgress(): void {
-    const finals = ["easy", "medium", "hard"]
-        .map((n, i) => `${n} ${builderFinals[i] ? "✓" : "✗"}`)
-        .join(" · ");
-    $builderProgress.textContent = `${builderRegular} regular question(s) · finals: ${finals}`;
-    $btnSeal.disabled = !(builderRegular >= 1 && builderFinals.every(Boolean));
+function updateActiveDraftFromEditor(change: Parameters<typeof updatePackDraft>[1]): void {
+    const draft = activeDraftOrThrow();
+    replaceActiveDraft(updatePackDraft(draft, change));
 }
 
-getEl("btn-add-question").addEventListener("click", async () => {
-    if (busy || builderPackId === null || !productAccount) return;
-    $builderError.textContent = "";
-    const text = getEl<HTMLInputElement>("q-text").value.trim();
-    const enteredAnswers = $builderAnswerInputs.map((input) => input.value.trim()).filter(Boolean);
-    const kind = getEl<HTMLSelectElement>("q-kind").value;
-    if (!text || enteredAnswers.length === 0) {
-        $builderError.textContent = "A question needs text and at least one answer.";
+$draftName.addEventListener("input", () => {
+    if (activePackDraft) updateActiveDraftFromEditor({ name: $draftName.value });
+});
+$packEmoji.addEventListener("input", () => {
+    if (activePackDraft) updateActiveDraftFromEditor({ emoji: $packEmoji.value });
+});
+$packJson.addEventListener("input", () => {
+    if (activePackDraft) updateActiveDraftFromEditor({ rawJson: $packJson.value });
+});
+
+function downloadText(filename: string, text: string): void {
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(href), 0);
+}
+
+getEl("btn-insert-pack-template").addEventListener("click", () => {
+    if (!activePackDraft) return;
+    updateActiveDraftFromEditor({ rawJson: EMPTY_PACK_JSON });
+    $packJson.value = EMPTY_PACK_JSON;
+    setDraftSaveStatus("Template inserted — saving locally…");
+});
+
+getEl("btn-export-pack-file").addEventListener("click", () => {
+    if (!packDraftValidation?.valid) {
+        $builderError.textContent = "Fix the draft before exporting a playable pack file.";
         return;
     }
-    if (utf8ByteLength(text) > MAX_QUESTION_BYTES) {
-        $builderError.textContent = `Questions can be at most ${MAX_QUESTION_BYTES} bytes.`;
-        return;
-    }
-    const answers: string[] = [];
-    const normalizedAnswers = new Set<string>();
-    for (const answer of enteredAnswers) {
-        const normalized = normalizeAnswer(answer);
-        if (!normalized) {
-            $builderError.textContent = "Each accepted answer needs at least one letter or number.";
-            return;
-        }
-        if (normalized.length > MAX_ANSWER_BYTES) {
-            $builderError.textContent = `Accepted answers can be at most ${MAX_ANSWER_BYTES} bytes.`;
-            return;
-        }
-        if (!normalizedAnswers.has(normalized)) {
-            normalizedAnswers.add(normalized);
-            // The contract's no_std normalizer intentionally only handles
-            // ASCII. Send the same folded value a player will submit so
-            // answers such as “café” remain matchable end-to-end.
-            answers.push(normalized);
-        }
-    }
-    if (answers.length > 5) {
-        $builderError.textContent = "At most 5 accepted answers.";
-        return;
-    }
-    const isFinal = kind !== "regular";
-    const difficulty = isFinal ? Number(kind) : 0;
-    busy = true;
-    setLoading("btn-add-question", true);
+    const fileName = `${packDraftValidation.pack.title.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "quizzler-pack"}.json`;
+    downloadText(fileName, exportPackFile(packDraftValidation.pack, { emoji: packDraftValidation.emoji }));
+});
+
+getEl("btn-export-draft").addEventListener("click", () => {
+    if (!activePackDraft) return;
+    downloadText("quizzler-pack-draft.json", exportPackDraft(activePackDraft));
+});
+
+getEl<HTMLInputElement>("pack-file-input").addEventListener("change", async (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
     try {
-        try {
-            await sendTx(registry, "addQuestion", builderPackId, text, answers, isFinal, difficulty);
-        } catch (e) {
-            // Pack ids are assigned at execution time, so a best-block reorg
-            // can shift them between resolution and dispatch — the tx then
-            // hits someone else's pack and reverts. Re-resolve and retry once.
-            if (!/revert/i.test(txError(e))) throw e;
-            const id = await myLatestPackId();
-            if (id === null) throw e;
-            builderPackId = id;
-            await sendTx(registry, "addQuestion", builderPackId, text, answers, isFinal, difficulty);
-        }
-        if (isFinal) builderFinals[difficulty] = true;
-        else builderRegular += 1;
-        const tag = isFinal ? `final · ${DIFFICULTY_NAMES[difficulty]}` : `Q${builderRegular}`;
-        getEl("builder-questions").appendChild(
-            li(span("sub", tag), span("", ` ${text}`)),
-        );
-        getEl<HTMLInputElement>("q-text").value = "";
-        for (const input of $builderAnswerInputs) input.value = "";
-        updateBuilderProgress();
-    } catch (e) {
-        $builderError.textContent = txError(e);
-    } finally {
-        busy = false;
-        setLoading("btn-add-question", false);
+        const imported = importPackDraft(await file.text(), { name: file.name.replace(/\.json$/i, "") || "Imported pack" });
+        await packDraftSaver.flush();
+        replaceActiveDraft(imported.draft, { paintInputs: true });
+        setDraftSaveStatus(imported.validation.valid ? "Imported and saved locally." : "Imported locally — fix the highlighted issues.");
+    } catch (error) {
+        $builderError.textContent = `Couldn’t read that file: ${txError(error)}`;
     }
 });
 
-getEl("btn-seal-pack").addEventListener("click", async () => {
-    if (busy || builderPackId === null || !productAccount) return;
-    busy = true;
-    setLoading("btn-seal-pack", true);
+async function openEmojiPicker(): Promise<void> {
+    $builderError.textContent = "";
+    if (!$emojiPickerDialog.open) $emojiPickerDialog.showModal();
+    if ($emojiPickerHost.childElementCount > 0) return;
+    $emojiPickerHost.textContent = "Loading the full emoji picker…";
     try {
-        try {
-            await sendTx(registry, "sealPack", builderPackId);
-        } catch (e) {
-            // same reorg id-shift heal as addQuestion
-            if (!/revert/i.test(txError(e))) throw e;
-            const id = await myLatestPackId();
-            if (id === null) throw e;
-            builderPackId = id;
-            await sendTx(registry, "sealPack", builderPackId);
+        await import("emoji-picker-element");
+        const picker = document.createElement("emoji-picker");
+        picker.classList.add("dark");
+        picker.addEventListener("emoji-click", (event) => {
+            const unicode = (event as unknown as CustomEvent<{ unicode?: unknown }>).detail?.unicode;
+            if (typeof unicode !== "string") return;
+            $packEmoji.value = unicode;
+            if (activePackDraft) updateActiveDraftFromEditor({ emoji: unicode });
+            $emojiPickerDialog.close();
+        });
+        $emojiPickerHost.replaceChildren(picker);
+    } catch {
+        $emojiPickerHost.textContent = "The emoji picker could not load here. You can still type or paste any emoji into the cover field.";
+    }
+}
+
+getEl("btn-open-emoji-picker").addEventListener("click", () => void openEmojiPicker());
+getEl("btn-close-emoji-picker").addEventListener("click", () => $emojiPickerDialog.close());
+
+function publishQuestion(question: PackQuestion, isFinal: boolean, difficulty: number): PublishQuestion {
+    return {
+        text: question.text,
+        // The registry rejects duplicate normalized answers. Preserve friendly
+        // source variants in a draft, but emit one canonical value per match.
+        answers: normalizeAcceptedAnswers(question.answers),
+        is_final: isFinal,
+        difficulty,
+    };
+}
+
+function nextPublishResume(resume: PackPublishResume, patch: Partial<PackPublishResume>): PackPublishResume {
+    return { ...resume, ...patch, updatedAt: Date.now() };
+}
+
+async function persistPublishResume(resume: PackPublishResume): Promise<void> {
+    const draft = activeDraftOrThrow();
+    replaceActiveDraft(updatePackDraft(draft, { publishResume: resume }), { paintInputs: false });
+    await packDraftSaver.flush();
+}
+
+function creationNonce(): bigint {
+    const bytes = new Uint32Array(2);
+    try {
+        globalThis.crypto.getRandomValues(bytes);
+        return (BigInt(bytes[0]) << 32n) | BigInt(bytes[1]);
+    } catch {
+        return (BigInt(Date.now()) << 16n) | BigInt(Math.floor(Math.random() * 0xffff));
+    }
+}
+
+async function resolveCreatedPack(nonce: bigint): Promise<number | null> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        const result = await registry.getPackForCreation.query(myAddress, nonce);
+        if (result.success) {
+            const id = Number(result.value);
+            if (id !== NO_PACK) return id;
         }
-        await refreshPacks();
-        showScreen("home");
-        renderResumeCard();
-    } catch (e) {
-        $builderError.textContent = txError(e);
+        await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+    return null;
+}
+
+/** Reconcile a saved cursor against immutable registry state before resuming. */
+async function reconcilePublishResume(
+    resume: PackPublishResume,
+    validation: Extract<PackDraftValidation, { valid: true }>,
+): Promise<PackPublishResume> {
+    if (resume.packId === null) {
+        if (!resume.creationNonce) return resume;
+        const packId = await resolveCreatedPack(BigInt(resume.creationNonce));
+        return packId === null
+            ? resume
+            : nextPublishResume(resume, { packId, phase: "questions" });
+    }
+    const packResult = await registry.getPack.query(resume.packId);
+    if (!packResult.success) throw new Error("The saved pack could not be read from this registry.");
+    const pack = packResult.value as PackView;
+    if (pack.creator.toLowerCase() !== myAddress) throw new Error("The saved pack belongs to another account.");
+    if (pack.regular_count > validation.pack.questions.length) {
+        throw new Error("The on-chain pack has more questions than this draft, so it cannot be resumed safely.");
+    }
+    let completedFinals = resume.completedFinals;
+    if (pack.finals_set_count === 3) {
+        completedFinals = [...FINAL_DIFFICULTIES];
+    } else if (pack.finals_set_count > 0) {
+        const existing = await Promise.all(FINAL_DIFFICULTIES.map(async (difficulty) => {
+            const result = await registry.getQuestion.query(resume.packId!, FINAL_SLOT_BASE + FINAL_DIFFICULTIES.indexOf(difficulty));
+            return result.success ? difficulty : null;
+        }));
+        completedFinals = existing.filter((difficulty): difficulty is FinalDifficulty => difficulty !== null);
+    }
+    return nextPublishResume(resume, {
+        phase: pack.sealed ? "seal" : pack.regular_count < validation.pack.questions.length ? "questions" : "finals",
+        nextRegularQuestion: pack.regular_count,
+        completedFinals,
+    });
+}
+
+async function publishPackDraft(): Promise<void> {
+    if (busy || !productAccount || !activePackDraft) return;
+    const validation = validatePackDraft(activePackDraft);
+    if (!validation.valid) {
+        renderPackDraftPreview();
+        return;
+    }
+    if (!contractCapabilities.registryImport) {
+        $builderError.textContent = "This registry has not been upgraded for safe batch publishing yet.";
+        return;
+    }
+    busy = true;
+    $builderError.textContent = "";
+    setLoading("btn-publish-pack", true);
+    try {
+        let resume = canResumePackPublish(activePackDraft, validation)
+            ? activePackDraft.publishResume!
+            : createPackPublishResume({ contentHash: validation.contentHash });
+        resume = await reconcilePublishResume(resume, validation);
+        await persistPublishResume(resume);
+
+        if (resume.packId === null) {
+            $builderPublishStatus.textContent = "Creating the pack…";
+            const nonce = resume.creationNonce ? BigInt(resume.creationNonce) : creationNonce();
+            if (!resume.creationNonce) {
+                resume = nextPublishResume(resume, { creationNonce: nonce.toString() });
+                await persistPublishResume(resume);
+            }
+            let packId = await resolveCreatedPack(nonce);
+            if (packId === null) {
+                await sendTx(registry, "createPackWithNonce", validation.pack.title, validation.emoji, nonce);
+                packId = await resolveCreatedPack(nonce);
+            }
+            if (packId === null) throw new Error("Couldn’t locate the created pack. Your draft is saved; try Publish again to resume.");
+            resume = nextPublishResume(resume, { packId, phase: "questions" });
+            await persistPublishResume(resume);
+        }
+
+        const packId = resume.packId;
+        if (packId === null) throw new Error("Couldn’t resolve the pack id.");
+        while (resume.nextRegularQuestion < validation.pack.questions.length) {
+            const start = resume.nextRegularQuestion;
+            const batch = validation.pack.questions
+                .slice(start, start + MAX_IMPORT_BATCH_SIZE)
+                .map((question) => publishQuestion(question, false, 0));
+            $builderPublishStatus.textContent = `Publishing questions ${start + 1}–${start + batch.length} of ${validation.pack.questions.length}…`;
+            await sendTx(registry, "addQuestions", packId, batch);
+            resume = await reconcilePublishResume(resume, validation);
+            if (resume.nextRegularQuestion <= start) throw new Error("The question batch is not visible on-chain yet. Try Publish again to resume safely.");
+            await persistPublishResume(resume);
+        }
+
+        const remainingFinals = FINAL_DIFFICULTIES.filter((difficulty) => !resume.completedFinals.includes(difficulty));
+        if (remainingFinals.length > 0) {
+            $builderPublishStatus.textContent = "Publishing final questions…";
+            const finals = remainingFinals.map((difficulty, index) =>
+                publishQuestion(validation.pack.finals[difficulty], true, FINAL_DIFFICULTIES.indexOf(difficulty)),
+            );
+            await sendTx(registry, "addQuestions", packId, finals);
+            resume = await reconcilePublishResume(resume, validation);
+            if (resume.completedFinals.length < 3) throw new Error("The final-question batch is not visible on-chain yet. Try Publish again to resume safely.");
+            await persistPublishResume(resume);
+        }
+
+        const finalState = await registry.getPack.query(packId);
+        if (!finalState.success) throw new Error("Couldn’t verify the completed pack.");
+        if (!(finalState.value as PackView).sealed) {
+            $builderPublishStatus.textContent = "Sealing the pack…";
+            await sendTx(registry, "sealPack", packId);
+        }
+        replaceActiveDraft(updatePackDraft(activeDraftOrThrow(), { publishResume: null }), { paintInputs: false });
+        await packDraftSaver.flush();
+        const published: CatalogPack = {
+            id: packId,
+            creator: myAddress,
+            title: validation.pack.title,
+            emoji: validation.emoji,
+            regular_count: validation.pack.questions.length,
+            finals_set_count: 3,
+            sealed: true,
+        };
+        mergeCatalogPacks([published]);
+        selectedPackId = packId;
+        selectedPack = published;
+        updateSelectedPackSummary();
+        $builderPublishStatus.textContent = "Published — now set up your game.";
+        showScreen("configure");
+        scheduleCreateGamePreflight();
+    } catch (error) {
+        $builderError.textContent = txError(error);
+        $builderPublishStatus.textContent = "Publish paused. Your saved draft can resume from its last confirmed step.";
     } finally {
         busy = false;
-        setLoading("btn-seal-pack", false);
+        setLoading("btn-publish-pack", false);
+        renderPackDraftPreview();
     }
-});
+}
+
+getEl("btn-publish-pack").addEventListener("click", () => void publishPackDraft());
 
 getEl("btn-builder-done").addEventListener("click", async () => {
-    await refreshPacks();
+    await packDraftSaver.flush();
     showScreen("home");
     renderResumeCard();
+});
+
+window.addEventListener("pagehide", () => {
+    // A final best-effort save turns a refresh during authoring into a normal
+    // draft restore rather than relying solely on the debounce timer.
+    void packDraftSaver.flush();
 });
 
 // ── Game loop ────────────────────────────────────────────────────────
@@ -1761,6 +2264,7 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             active_player_count: 1,
         },
         players: [myAddress],
+        playerNames: [myDisplayName],
         scores: [0],
         submissions: [],
         questionText: "",
@@ -1810,6 +2314,7 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     latest = initialSnapshot;
     actionKey = "";
     actionsSent.clear();
+    actionSentAt.clear();
     wagerOutcomes = new Map();
     wagerHistoryLoadedUpTo = -1;
     selectedWager = null;
@@ -1820,6 +2325,7 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     latestObservedAt = initialSnapshot ? Date.now() : 0;
     cachedGame = initialSnapshot?.game ?? null;
     cachedPlayers = initialSnapshot?.players ?? null;
+    cachedPlayerNames = initialSnapshot?.playerNames ?? null;
     preferredQuestionKey = null;
     getEl<HTMLInputElement>("answer-input").value = "";
     getEl<HTMLInputElement>("wager-final").value = "0";
@@ -1842,12 +2348,14 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     optimisticAnswer = null;
     cachedGame = null;
     cachedPlayers = null;
+    cachedPlayerNames = null;
     preferredQuestionKey = null;
     latestObservedAt = 0;
     gameEntryMark = null;
     awaitingFirstGameSnapshot = false;
     if (!preserveSavedGame) forgetSavedGame();
     if ($forfeitDialog.open) $forfeitDialog.close();
+    setTransactionStatus(null);
     setGameActions("hidden");
     stopGamePolling();
     void refreshPacks();
@@ -1997,72 +2505,130 @@ async function poll(): Promise<void> {
     const polledSession = gameSession;
     pollInFlight = true;
     try {
-        const wasLobby = latest?.phase.stage === STAGE_LOBBY;
-        const needGame = cachedGame === null || wasLobby;
-        const needPlayers = cachedPlayers === null || wasLobby;
-        // On the normal path the active slot is unchanged, so all five reads
-        // can start together. A stage transition only needs one corrective
-        // submissions read, rather than forcing every poll into two waves.
-        const expectedQuestionKey = preferredQuestionKey ?? (latest ? questionKeyFor(latest.phase) : FINAL_QKEY);
-        const [phaseRes, maybeGameRes, maybePlayersRes, scoresRes, initialSubsRes] = await Promise.all([
-            game.getPhase.query(polledGameId),
-            needGame ? game.getGame.query(polledGameId) : Promise.resolve(null),
-            needPlayers ? game.getPlayers.query(polledGameId) : Promise.resolve(null),
-            game.getScores.query(polledGameId),
-            game.getSubmissions.query(polledGameId, expectedQuestionKey),
-        ]);
-        if (!isCurrentGame(polledGameId, polledSession)) return;
-        if (!phaseRes.success) return;
-        const phase = phaseRes.value as PhaseView;
-        const qkey = questionKeyFor(phase);
+        let phase: PhaseView | null = null;
+        let gameView: GameView | null = null;
+        let players: string[] | null = null;
+        let playerNames: string[] | null = null;
+        let scores: number[] | null = null;
+        let submissions: SubmissionView[] | null = null;
+        let usedLiveSnapshot = false;
 
-        let gameRes = maybeGameRes;
-        let playersRes = maybePlayersRes;
-        // A reorg can be the one case where our previous non-lobby cache is
-        // no longer valid. Fall back to fresh lobby membership in that case.
-        if (phase.stage === STAGE_LOBBY && !needGame) {
-            [gameRes, playersRes] = await Promise.all([
-                game.getGame.query(polledGameId),
-                game.getPlayers.query(polledGameId),
+        // New deployments return an internally consistent table in one read.
+        // If a transient read fails, keep the room usable via the legacy path
+        // below rather than treating an RPC hiccup as a contract migration.
+        if (contractCapabilities.gameLiveState) {
+            try {
+                const liveResult = await game.getLiveGame.query(polledGameId);
+                if (liveResult.success) {
+                    const live = liveResult.value as LiveGameView;
+                    phase = {
+                        stage: Number(live.stage),
+                        cursor: Number(live.cursor),
+                        deadline: BigInt(live.deadline),
+                        current_block: BigInt(live.current_block),
+                        final_difficulty: Number(live.final_difficulty),
+                        slot: Number(live.slot),
+                        submit_count: Number(live.submit_count),
+                        continue_count: Number(live.continue_count),
+                        player_count: Number(live.player_count),
+                        active_player_count: Number(live.active_player_count),
+                    };
+                    gameView = {
+                        pack_id: Number(live.pack_id),
+                        creator: String(live.creator).toLowerCase(),
+                        num_questions: Number(live.num_questions),
+                        answer_blocks: Number(live.answer_blocks),
+                        review_blocks: Number(live.review_blocks),
+                        max_players: Number(live.max_players),
+                        player_count: Number(live.player_count),
+                        active_player_count: Number(live.active_player_count),
+                    };
+                    players = live.players.map((player) => String(player).toLowerCase());
+                    scores = live.scores.map(Number);
+                    playerNames = live.player_names.map((name) => String(name));
+                    submissions = live.submissions.map((submission) => ({
+                        ...submission,
+                        player: String(submission.player).toLowerCase(),
+                        wager: Number(submission.wager),
+                        overturn_votes: Number(submission.overturn_votes),
+                    }));
+                    usedLiveSnapshot = true;
+                }
+            } catch {
+                // Fall through to the older read set for this one refresh.
+            }
+        }
+
+        if (!usedLiveSnapshot) {
+            const wasLobby = latest?.phase.stage === STAGE_LOBBY;
+            const needGame = cachedGame === null || wasLobby;
+            const needPlayers = cachedPlayers === null || wasLobby;
+            const needNames = contractCapabilities.gameLiveState && (cachedPlayerNames === null || needPlayers);
+            // On legacy deployments the immutable game/roster are cached once
+            // play begins. A stage transition needs only one corrective
+            // submissions read, not a second full wave of RPCs.
+            const expectedQuestionKey = preferredQuestionKey ?? (latest ? questionKeyFor(latest.phase) : FINAL_QKEY);
+            const [phaseRes, maybeGameRes, maybePlayersRes, scoresRes, initialSubsRes, maybeNamesRes] = await Promise.all([
+                game.getPhase.query(polledGameId),
+                needGame ? game.getGame.query(polledGameId) : Promise.resolve(null),
+                needPlayers ? game.getPlayers.query(polledGameId) : Promise.resolve(null),
+                game.getScores.query(polledGameId),
+                game.getSubmissions.query(polledGameId, expectedQuestionKey),
+                needNames ? game.getPlayerNames.query(polledGameId) : Promise.resolve(null),
             ]);
-        }
-        if (!isCurrentGame(polledGameId, polledSession)) return;
-        if (!scoresRes.success || !initialSubsRes.success) return;
-
-        let gameView: GameView;
-        if (gameRes) {
-            if (!gameRes.success) return;
-            gameView = gameRes.value as GameView;
-        } else if (cachedGame) {
-            gameView = cachedGame;
-        } else {
-            return;
-        }
-
-        let players: string[];
-        const needFreshPlayers = cachedPlayers === null || cachedPlayers.length !== phase.player_count;
-        if (needFreshPlayers && !playersRes) {
-            playersRes = await game.getPlayers.query(polledGameId);
             if (!isCurrentGame(polledGameId, polledSession)) return;
-        }
-        if (playersRes) {
-            if (!playersRes.success) return;
-            players = (playersRes.value as string[]).map((p) => p.toLowerCase());
-        } else if (cachedPlayers) {
-            players = cachedPlayers;
-        } else {
-            return;
+            if (!phaseRes.success || !scoresRes.success || !initialSubsRes.success) return;
+            phase = phaseRes.value as PhaseView;
+            const qkey = questionKeyFor(phase);
+
+            let gameRes = maybeGameRes;
+            let playersRes = maybePlayersRes;
+            // A reorg can be the one case where our previous non-lobby cache
+            // is no longer valid. Refresh the mutable lobby state then.
+            if (phase.stage === STAGE_LOBBY && !needGame) {
+                [gameRes, playersRes] = await Promise.all([
+                    game.getGame.query(polledGameId),
+                    game.getPlayers.query(polledGameId),
+                ]);
+            }
+            if (!isCurrentGame(polledGameId, polledSession)) return;
+            if (gameRes) {
+                if (!gameRes.success) return;
+                gameView = gameRes.value as GameView;
+            } else if (cachedGame) {
+                gameView = cachedGame;
+            } else {
+                return;
+            }
+
+            const needFreshPlayers = cachedPlayers === null || cachedPlayers.length !== phase.player_count;
+            if (needFreshPlayers && !playersRes) {
+                playersRes = await game.getPlayers.query(polledGameId);
+                if (!isCurrentGame(polledGameId, polledSession)) return;
+            }
+            if (playersRes) {
+                if (!playersRes.success) return;
+                players = (playersRes.value as string[]).map((player) => player.toLowerCase());
+            } else if (cachedPlayers) {
+                players = cachedPlayers;
+            } else {
+                return;
+            }
+
+            if (maybeNamesRes?.success) playerNames = (maybeNamesRes.value as string[]).map(String);
+            else if (cachedPlayerNames) playerNames = cachedPlayerNames;
+            else playerNames = Array.from({ length: players.length }, () => "");
+            let subsRes = initialSubsRes;
+            if (qkey !== expectedQuestionKey) {
+                subsRes = await game.getSubmissions.query(polledGameId, qkey);
+                if (!isCurrentGame(polledGameId, polledSession) || !subsRes.success) return;
+            }
+            if (qkey === expectedQuestionKey || phase.stage !== STAGE_LOBBY) preferredQuestionKey = null;
+            scores = (scoresRes.value as (number | bigint)[]).map(Number);
+            submissions = subsRes.value as SubmissionView[];
         }
 
-        let subsRes = initialSubsRes;
-        if (qkey !== expectedQuestionKey) {
-            subsRes = await game.getSubmissions.query(polledGameId, qkey);
-            if (!isCurrentGame(polledGameId, polledSession)) return;
-            if (!subsRes.success) return;
-        }
-        if (qkey === expectedQuestionKey || phase.stage !== STAGE_LOBBY) {
-            preferredQuestionKey = null;
-        }
+        if (!phase || !gameView || !players || !playerNames || !scores || !submissions) return;
 
         // Drop snapshots that move the game BACKWARDS unless they persist —
         // a slow read resolving late must not yank the table back a round.
@@ -2079,6 +2645,14 @@ async function poll(): Promise<void> {
         // play starts this saves two RPCs per block for every player.
         cachedGame = gameView;
         cachedPlayers = players;
+        cachedPlayerNames = playerNames.length === players.length
+            ? playerNames
+            : Array.from({ length: players.length }, () => "");
+        const myPlayerIndex = players.indexOf(myAddress);
+        if (myPlayerIndex >= 0 && cachedPlayerNames[myPlayerIndex] !== undefined) {
+            myDisplayName = cachedPlayerNames[myPlayerIndex];
+            $displayName.value = myDisplayName;
+        }
 
         let qText = "";
         let aText = "";
@@ -2098,8 +2672,9 @@ async function poll(): Promise<void> {
             phase,
             game: gameView,
             players,
-            scores: (scoresRes.value as (number | bigint)[]).map(Number),
-            submissions: subsRes.value as SubmissionView[],
+            playerNames: cachedPlayerNames,
+            scores,
+            submissions,
             questionText: qText,
             answerText: aText,
         };
@@ -2123,12 +2698,14 @@ async function poll(): Promise<void> {
         }
         latest = snap;
         latestObservedAt = Date.now();
+        consecutivePollFailures = 0;
         recordFirstGameSnapshot();
         // reset per-stage action guards when the stage changes
         const key = `${polledGameId}:${latest.phase.stage}:${latest.phase.cursor}`;
         if (key !== actionKey) {
             actionKey = key;
             actionsSent.clear();
+            actionSentAt.clear();
             optimisticAnswer = null;
         }
         const isAnswerStage =
@@ -2144,6 +2721,8 @@ async function poll(): Promise<void> {
         if (optimisticAnswer && mySubmission(latest)?.submitted) {
             optimisticAnswer = null;
         }
+        reconcileActionGuards(latest);
+        if (actionsSent.size === 0) setTransactionStatus(null);
         render(latest);
         // Historic wagers matter for controls, not for the first paint. On a
         // rejoin this used to delay the whole table by one serial RPC per
@@ -2152,6 +2731,10 @@ async function poll(): Promise<void> {
             if (isCurrentGame(polledGameId, polledSession) && latest === snap) render(snap);
         });
     } catch (e) {
+        consecutivePollFailures += 1;
+        if (consecutivePollFailures >= 2) {
+            setTransactionStatus("Reconnecting to chain state…");
+        }
         console.warn("poll failed", e);
     } finally {
         pollInFlight = false;
@@ -2218,8 +2801,8 @@ function renderLobby(snap: Snapshot): void {
         getEl("lobby-players"),
         snap.players.map((p) =>
             li(
-                span("", fmtAddr(p)),
-                span("sub", p.toLowerCase() === starter.toLowerCase() ? "starts when ready" : ""),
+                span("", fmtPlayer(snap, p)),
+                span("sub", p.toLowerCase() === starter.toLowerCase() ? "can start when ready" : ""),
             ),
         ),
     );
@@ -2227,8 +2810,9 @@ function renderLobby(snap: Snapshot): void {
     getEl("btn-start-game").style.display = isStarter ? "" : "none";
     getEl("lobby-waiting").style.display = isStarter ? "none" : "";
     getEl("lobby-waiting").textContent = starter
-        ? `Waiting for ${fmtAddr(starter)} to start…`
+        ? `Waiting for ${fmtPlayer(snap, starter)} to start…`
         : "Waiting for a player to start…";
+    getEl("lobby-occupancy").textContent = `${snap.phase.active_player_count} / ${snap.game.max_players} players`;
     setGameActions("lobby");
     showScreen("lobby");
 
@@ -2254,7 +2838,7 @@ async function shareLobbyInvite(): Promise<void> {
     const $feedback = getEl("lobby-share-feedback");
     const $shareLink = getEl<HTMLInputElement>("lobby-share-link");
     const packTitle = getEl("lobby-title").textContent?.trim() || "Quizzler";
-    const url = sharedLobbyInviteUrl(window.location.href, gameId);
+    const url = sharedLobbyInviteUrl(window.location.href, gameId, activeDeployment?.id);
     const shareData = {
         title: "Join my Quizzler game",
         text: `Join my ${packTitle} quiz on Quizzler. Game code: ${gameId}.`,
@@ -2454,7 +3038,7 @@ function renderQuestion(snap: Snapshot): void {
                     : pendingMine
                       ? `“${optimisticAnswer?.answer}” · wagered ${optimisticAnswer?.wager} · confirming…`
                       : "…";
-                return li(span("", fmtAddr(s.player)), span("right sub", text));
+                return li(span("", fmtPlayer(snap, s.player)), span("right sub", text));
             }),
         );
     }
@@ -2499,7 +3083,7 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
     }
     if (actionsSent.has("submit")) return;
     // Optimistic: flip to the submitted view immediately; roll back on error.
-    actionsSent.add("submit");
+    markActionSent("submit");
     optimisticAnswer = { qkey: questionKeyFor(latest.phase), answer, wager };
     render(latest);
     busy = true;
@@ -2509,7 +3093,7 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
         getEl<HTMLInputElement>("answer-input").value = "";
         void poll();
     } catch (e) {
-        actionsSent.delete("submit");
+        clearActionSent("submit");
         optimisticAnswer = null;
         $err.textContent = txError(e);
         if (latest) render(latest);
@@ -2551,7 +3135,7 @@ function renderReview(snap: Snapshot): void {
             const eligibleVoters = snap.phase.active_player_count - (s.active ? 1 : 0);
             const threshold = Math.floor(eligibleVoters / 2) + 1;
             const row = li(
-                span("", fmtAddr(s.player)),
+                span("", fmtPlayer(snap, s.player)),
                 span("sub", s.active ? "" : "left quiz"),
             );
             row.className = "answer-row";
@@ -2586,7 +3170,7 @@ function renderReview(snap: Snapshot): void {
     const continued = (mine?.continue_ready ?? false) || actionsSent.has("continue");
     const $btn = getEl<HTMLButtonElement>("btn-continue");
     $btn.disabled = continued || !amActive;
-    $btn.textContent = !amActive ? "You left this quiz" : continued ? "Waiting for others…" : "Continue";
+    $btn.textContent = !amActive ? "You left this quiz" : continued ? "Waiting for others…" : "Ready for next question";
     getEl("continue-status").textContent =
         `${snap.phase.continue_count}/${snap.phase.active_player_count} active players ready`;
 
@@ -2601,7 +3185,7 @@ async function voteCorrect(target: string): Promise<void> {
     const key = `vote:${target.toLowerCase()}`;
     if (actionsSent.has(key)) return;
     // optimistic: mark the vote instantly, roll back on error
-    actionsSent.add(key);
+    markActionSent(key);
     if (latest) render(latest);
     busy = true;
     try {
@@ -2614,7 +3198,7 @@ async function voteCorrect(target: string): Promise<void> {
             // authoritative confirmation that their earlier vote is on-chain.
             getEl("review-error").textContent = "Your vote is already recorded.";
         } else {
-            actionsSent.delete(key);
+            clearActionSent(key);
             getEl("review-error").textContent = message;
         }
         if (latest) render(latest);
@@ -2627,14 +3211,14 @@ getEl("btn-continue").addEventListener("click", async () => {
     if (busy || gameId === null || !productAccount || actionsSent.has("continue")) return;
     if (!latest || !mySubmission(latest)?.active) return;
     // optimistic: show "Waiting for others…" instantly, roll back on error
-    actionsSent.add("continue");
+    markActionSent("continue");
     if (latest) render(latest);
     busy = true;
     try {
         await sendTx(game, "readyContinue", gameId);
         void poll();
     } catch (e) {
-        actionsSent.delete("continue");
+        clearActionSent("continue");
         getEl("review-error").textContent = txError(e);
         if (latest) render(latest);
     } finally {
@@ -2668,7 +3252,7 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
         if (busy || gameId === null || !productAccount || actionsSent.has("difficulty")) return;
         if (!latest || !mySubmission(latest)?.active) return;
         // optimistic: lock the vote in visually, roll back on error
-        actionsSent.add("difficulty");
+        markActionSent("difficulty");
         if (latest) render(latest);
         busy = true;
         try {
@@ -2679,7 +3263,7 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
             if (message.includes("AlreadyVoted")) {
                 getEl("vote-error").textContent = "Your vote is already recorded.";
             } else {
-                actionsSent.delete("difficulty");
+                clearActionSent("difficulty");
                 getEl("vote-error").textContent = message;
             }
             if (latest) render(latest);
@@ -2706,7 +3290,7 @@ function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
         ranked.map((r, i) =>
             li(
                 span("sub", `#${i + 1}`),
-                span("", fmtAddr(r.player)),
+                span("", fmtPlayer(snap, r.player)),
                 span("sub", r.active ? "" : "left quiz"),
                 span("right pts", `${r.score}`),
             ),
@@ -2720,7 +3304,7 @@ function renderResults(snap: Snapshot): void {
     );
     const top = Math.max(...activePlayers.map((player) => snap.scores[snap.players.indexOf(player)]));
     const winners = activePlayers.filter((player) => snap.scores[snap.players.indexOf(player)] === top);
-    getEl("results-winner").textContent = winners.map(fmtAddr).join(" & ");
+    getEl("results-winner").textContent = winners.map((player) => fmtPlayer(snap, player)).join(" & ");
     renderLeaderboard(getEl("results-leaderboard"), snap);
     stopGamePolling();
     setGameActions("hidden");

@@ -83,6 +83,7 @@ describe("pack drafts", () => {
         expect(imported.validation.issues.map((entry) => entry.code)).toEqual(expect.arrayContaining(["json", "emoji"]));
         expect(validatePackEmoji("👨‍👩‍👧‍👦")).toMatchObject({ valid: true, emoji: "👨‍👩‍👧‍👦" });
         expect(validatePackEmoji("x".repeat(33))).toMatchObject({ valid: false, bytes: 33 });
+        expect(validatePackEmoji("🎲\n")).toMatchObject({ valid: false });
     });
 
     it("round-trips both portable PackFile JSON and named draft backups with raw emoji metadata", () => {
@@ -112,11 +113,12 @@ describe("pack drafts", () => {
         const validation = validatePackDraft(initial);
         if (!validation.valid) throw new Error("expected a valid draft");
         const withResume = updatePackDraft(initial, {
-            publishResume: createPackPublishResume({ contentHash: validation.contentHash, packId: 42, now: 11 }),
+            publishResume: createPackPublishResume({ contentHash: validation.contentHash, packId: 42, creationNonce: 42n, now: 11 }),
             now: 11,
         });
 
         expect(canResumePackPublish(withResume)).toBe(true);
+        expect(withResume.publishResume?.creationNonce).toBe("42");
         expect(updatePackDraft(withResume, { name: "Renamed only", now: 12 }).publishResume).toBeDefined();
         expect(updatePackDraft(withResume, { emoji: "🍜", now: 12 }).publishResume).toBeUndefined();
         expect(updatePackDraft(withResume, { rawJson: JSON.stringify({ ...pack, title: "Changed" }), now: 12 }).publishResume).toBeUndefined();

@@ -40,19 +40,23 @@ function validateQuestion(value: unknown, where: string): PackQuestion {
         throw new Error(`${where}: every accepted answer must be a string`);
     }
     const answers = value.answers as string[];
-    if (!value.text.trim() || utf8ByteLength(value.text) > MAX_QUESTION_BYTES) {
+    if (!value.text.trim() || utf8ByteLength(value.text) > MAX_QUESTION_BYTES || /[\u0000-\u001f\u007f-\u009f]/u.test(value.text)) {
         throw new Error(`${where}: question text must be 1–${MAX_QUESTION_BYTES} UTF-8 bytes`);
     }
     if (answers.length === 0) {
         throw new Error(`${where}: at least one accepted answer is required`);
     }
     for (const answer of answers) {
+        if (utf8ByteLength(answer) > MAX_ANSWER_BYTES) {
+            throw new Error(`${where}: invalid accepted answer ${JSON.stringify(answer)}`);
+        }
         const normalized = normalizeAnswer(answer);
         if (!normalized || normalized.length > MAX_ANSWER_BYTES) {
             throw new Error(`${where}: invalid accepted answer ${JSON.stringify(answer)}`);
         }
     }
-    if (normalizeAcceptedAnswers(answers).length > MAX_ACCEPTED_ANSWERS) {
+    const normalizedAnswers = normalizeAcceptedAnswers(answers);
+    if (normalizedAnswers.length > MAX_ACCEPTED_ANSWERS) {
         throw new Error(`${where}: at most ${MAX_ACCEPTED_ANSWERS} distinct accepted answers are allowed`);
     }
     return { text: value.text, answers };
@@ -63,7 +67,7 @@ export function validatePack(value: unknown, where = "pack"): PackFile {
     if (!isRecord(value) || typeof value.title !== "string" || !Array.isArray(value.questions) || !isRecord(value.finals)) {
         throw new Error(`${where}: expected title, questions, and easy/medium/hard finals`);
     }
-    if (!value.title.trim() || utf8ByteLength(value.title) > MAX_PACK_TITLE_BYTES) {
+    if (!value.title.trim() || utf8ByteLength(value.title) > MAX_PACK_TITLE_BYTES || /[\u0000-\u001f\u007f-\u009f]/u.test(value.title)) {
         throw new Error(`${where}: title must be 1–${MAX_PACK_TITLE_BYTES} UTF-8 bytes`);
     }
     if (value.questions.length === 0 || value.questions.length > MAX_REGULAR_QUESTIONS) {

@@ -29,6 +29,8 @@ export interface PackPublishResume {
     contentHash: string;
     /** Null until the create-pack transaction is confirmed. */
     packId: number | null;
+    /** Persisted before create so a refresh can resolve the nonce safely. */
+    creationNonce?: string;
     phase: PackPublishPhase;
     /** Number of regular questions confirmed on-chain, starting at zero. */
     nextRegularQuestion: number;
@@ -141,6 +143,9 @@ export function validatePackEmoji(value: unknown): PackEmojiValidation {
     const bytes = new TextEncoder().encode(value).length;
     if (!value.trim()) {
         return { valid: false, emoji: value, bytes, error: "Choose an emoji for the pack cover." };
+    }
+    if (/[\u0000-\u001f\u007f-\u009f]/u.test(value)) {
+        return { valid: false, emoji: value, bytes, error: "Pack emojis cannot contain control characters." };
     }
     if (bytes > MAX_PACK_EMOJI_BYTES) {
         return {
@@ -395,6 +400,7 @@ export function validatePackDraft(draft: PackDraft): PackDraftValidation {
 export interface CreatePackPublishResumeInput {
     contentHash: string;
     packId?: number | null;
+    creationNonce?: string | bigint;
     phase?: PackPublishPhase;
     nextRegularQuestion?: number;
     completedFinals?: readonly PackFinalDifficulty[];
@@ -410,6 +416,22 @@ function uniqueFinals(value: readonly PackFinalDifficulty[] | undefined): PackFi
     return allowed.filter((difficulty) => value?.includes(difficulty));
 }
 
+function validCreationNonce(value: unknown): value is string {
+    if (typeof value !== "string" || !/^\d+$/.test(value)) return false;
+    try {
+        return BigInt(value) <= 0xffff_ffff_ffff_ffffn;
+    } catch {
+        return false;
+    }
+}
+
+function normalizedCreationNonce(value: string | bigint | undefined): string | undefined {
+    if (value === undefined) return undefined;
+    const raw = typeof value === "bigint" ? value.toString() : value;
+    if (!validCreationNonce(raw)) throw new Error("A creation nonce must be an unsigned uint64 integer.");
+    return raw;
+}
+
 /** Start a resumable publisher cursor after obtaining a validated content hash. */
 export function createPackPublishResume(input: CreatePackPublishResumeInput): PackPublishResume {
     if (!input.contentHash) throw new Error("A publish resume requires a content hash.");
@@ -422,10 +444,12 @@ export function createPackPublishResume(input: CreatePackPublishResumeInput): Pa
     if (!(["create", "questions", "finals", "seal"] as const).includes(phase)) {
         throw new Error("A publish resume phase is invalid.");
     }
+    const creationNonce = normalizedCreationNonce(input.creationNonce);
     return {
         version: PACK_DRAFT_VERSION,
         contentHash: input.contentHash,
         packId,
+        ...(creationNonce ? { creationNonce } : {}),
         phase,
         nextRegularQuestion: nonNegativeInteger(input.nextRegularQuestion, 0),
         completedFinals: uniqueFinals(input.completedFinals),
@@ -539,6 +563,7 @@ export function importPackDraft(rawJson: string, options: PackDraftImportOptions
 function validPublishResume(value: unknown): value is PackPublishResume {
     if (!isRecord(value)) return false;
     const packId = value.packId;
+    const creationNonce = value.creationNonce;
     const phase = value.phase;
     const nextRegularQuestion = value.nextRegularQuestion;
     const completedFinals = value.completedFinals;
@@ -547,6 +572,7 @@ function validPublishResume(value: unknown): value is PackPublishResume {
         || typeof value.contentHash !== "string"
         || !value.contentHash
         || (packId !== null && (typeof packId !== "number" || !Number.isSafeInteger(packId) || packId < 0))
+        || (creationNonce !== undefined && !validCreationNonce(creationNonce))
         || typeof phase !== "string"
         || !["create", "questions", "finals", "seal"].includes(phase)
         || typeof nextRegularQuestion !== "number"
