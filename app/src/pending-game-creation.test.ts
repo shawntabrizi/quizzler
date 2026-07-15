@@ -26,7 +26,6 @@ const CONFIG = {
     numQuestions: 5,
     answerBlocks: 30,
     reviewBlocks: 18,
-    maxPlayers: 8,
 };
 
 describe("pending game-creation browser session", () => {
@@ -55,7 +54,7 @@ describe("pending game-creation browser session", () => {
         storage.values.set(key, JSON.stringify({
             version: 1,
             nonce: "18446744073709551616",
-            config: { ...CONFIG, maxPlayers: 17 },
+            config: { ...CONFIG, reviewBlocks: 601 },
         }));
 
         expect(readPendingGameCreation(storage, GAME, ACCOUNT)).toBeNull();

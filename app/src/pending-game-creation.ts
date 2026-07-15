@@ -15,7 +15,6 @@ const MAX_PACK_ID = 0xffff_ffff;
 const MAX_GAME_QUESTIONS = 10;
 const MIN_STAGE_BLOCKS = 2;
 const MAX_STAGE_BLOCKS = 600;
-const MAX_PLAYERS = 16;
 
 /** The exact game options needed to render a newly created lobby immediately. */
 export interface PendingGameCreationConfig {
@@ -23,7 +22,6 @@ export interface PendingGameCreationConfig {
     numQuestions: number;
     answerBlocks: number;
     reviewBlocks: number;
-    maxPlayers: number;
 }
 
 export interface PendingGameCreation {
@@ -70,8 +68,7 @@ export function isPendingGameCreationConfig(value: unknown): value is PendingGam
     return validInteger(value.packId, 0, MAX_PACK_ID)
         && validInteger(value.numQuestions, 1, MAX_GAME_QUESTIONS)
         && validInteger(value.answerBlocks, MIN_STAGE_BLOCKS, MAX_STAGE_BLOCKS)
-        && validInteger(value.reviewBlocks, MIN_STAGE_BLOCKS, MAX_STAGE_BLOCKS)
-        && validInteger(value.maxPlayers, 1, MAX_PLAYERS);
+        && validInteger(value.reviewBlocks, MIN_STAGE_BLOCKS, MAX_STAGE_BLOCKS);
 }
 
 function validPersistedPendingGameCreation(value: unknown): value is PersistedPendingGameCreation {

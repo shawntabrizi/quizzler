@@ -28,7 +28,7 @@ import {
     ANSWER_BLOCK_PRESETS,
     BLOCK_SECONDS_ESTIMATE,
     isAllowedBlockPreset,
-    PLAYER_CAP_PRESETS,
+    MAX_LOBBY_PLAYERS,
     presetLabel,
     questionCountOptions,
     REVIEW_BLOCK_PRESETS,
@@ -257,7 +257,6 @@ interface CreatedGameConfig {
     numQuestions: number;
     answerBlocks: number;
     reviewBlocks: number;
-    maxPlayers: number;
 }
 
 interface BestBlock {
@@ -1126,7 +1125,6 @@ const $btnPackContinue = getEl<HTMLButtonElement>("btn-pack-continue");
 const $questionCount = getEl<HTMLSelectElement>("cfg-questions");
 const $answerBlocks = getEl<HTMLSelectElement>("cfg-answer-blocks");
 const $reviewBlocks = getEl<HTMLSelectElement>("cfg-review-blocks");
-const $maxPlayers = getEl<HTMLSelectElement>("cfg-max-players");
 const $configPackArt = getEl("config-pack-art");
 const $configPackTitle = getEl("config-pack-title");
 const $configPackMeta = getEl("config-pack-meta");
@@ -1208,14 +1206,6 @@ function configureGameControls(): void {
         $reviewBlocks,
         REVIEW_BLOCK_PRESETS.map((preset) => ({ value: preset.blocks, label: presetLabel(preset) })),
         18,
-    );
-    replaceSelectOptions(
-        $maxPlayers,
-        PLAYER_CAP_PRESETS.map((value) => ({
-            value,
-            label: `${value} ${value === 1 ? "player" : "players"}`,
-        })),
-        8,
     );
     renderQuestionCountOptions(MAX_GAME_QUESTIONS);
 }
@@ -1712,16 +1702,11 @@ function readCreatedGameConfig(showErrors = false): CreatedGameConfig | null {
     if (!Number.isInteger(reviewBlocks) || !isAllowedBlockPreset(reviewBlocks, REVIEW_BLOCK_PRESETS)) {
         return fail("Choose one of the listed review-time options.");
     }
-    const maxPlayers = Number($maxPlayers.value);
-    if (!Number.isInteger(maxPlayers) || !PLAYER_CAP_PRESETS.some((cap) => cap === maxPlayers)) {
-        return fail("Choose one of the listed player limits.");
-    }
     return {
         packId: selectedPackId,
         numQuestions,
         answerBlocks,
         reviewBlocks,
-        maxPlayers,
     };
 }
 
@@ -1731,7 +1716,9 @@ function gameConfigArgs(config: CreatedGameConfig): readonly unknown[] {
         config.numQuestions,
         config.answerBlocks,
         config.reviewBlocks,
-        config.maxPlayers,
+        // The deployed contract keeps this ABI argument as a bounded safety
+        // ceiling. It is deliberately no longer a host-facing game option.
+        MAX_LOBBY_PLAYERS,
     ];
 }
 
@@ -1961,7 +1948,7 @@ getEl("btn-create-game").addEventListener("click", async () => {
     }
 });
 
-for (const select of [$questionCount, $answerBlocks, $reviewBlocks, $maxPlayers]) {
+for (const select of [$questionCount, $answerBlocks, $reviewBlocks]) {
     select.addEventListener("change", () => {
         $configError.textContent = "";
         preparedGameCreationNonce = null;
@@ -2525,7 +2512,7 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             num_questions: config.numQuestions,
             answer_blocks: config.answerBlocks,
             review_blocks: config.reviewBlocks,
-            max_players: config.maxPlayers,
+            max_players: MAX_LOBBY_PLAYERS,
             player_count: 1,
             active_player_count: 1,
         },
@@ -3078,7 +3065,8 @@ function renderLobby(snap: Snapshot): void {
     getEl("lobby-waiting").textContent = starter
         ? `Waiting for ${fmtPlayer(snap, starter)} to start…`
         : "Waiting for a player to start…";
-    getEl("lobby-occupancy").textContent = `${snap.phase.active_player_count} / ${snap.game.max_players} players`;
+    const activePlayers = snap.phase.active_player_count;
+    getEl("lobby-occupancy").textContent = `${activePlayers} ${activePlayers === 1 ? "player" : "players"}`;
     setGameActions("lobby");
     showScreen("lobby");
 

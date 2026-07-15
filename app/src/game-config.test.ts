@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
     ANSWER_BLOCK_PRESETS,
+    MAX_LOBBY_PLAYERS,
     MAX_STAGE_BLOCKS,
     MIN_STAGE_BLOCKS,
-    PLAYER_CAP_PRESETS,
     REVIEW_BLOCK_PRESETS,
     isAllowedBlockPreset,
     presetLabel,
@@ -22,8 +22,8 @@ describe("game configuration presets", () => {
         expect(presetLabel({ name: "Relaxed", blocks: 45 })).toBe("Relaxed · ~1 min 30 sec");
     });
 
-    it("uses a compact set of useful player caps", () => {
-        expect(PLAYER_CAP_PRESETS).toEqual([1, 2, 4, 6, 8, 12, 16]);
+    it("keeps one non-configurable contract safety ceiling for lobbies", () => {
+        expect(MAX_LOBBY_PLAYERS).toBe(16);
     });
 
     it("caps question choices to the selected pack", () => {

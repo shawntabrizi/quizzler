@@ -27,8 +27,11 @@ export const REVIEW_BLOCK_PRESETS: readonly BlockPreset[] = [
     { blocks: 30, name: "Take your time" },
 ];
 
-/** Kept intentionally short: these are useful party sizes, not a spreadsheet. */
-export const PLAYER_CAP_PRESETS = [1, 2, 4, 6, 8, 12, 16] as const;
+/**
+ * A fixed contract safety ceiling. It is intentionally not a host setting:
+ * invite whoever you want, then start the lobby whenever the party is ready.
+ */
+export const MAX_LOBBY_PLAYERS = 16;
 
 function durationLabel(seconds: number): string {
     const minutes = Math.floor(seconds / 60);
