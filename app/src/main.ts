@@ -143,11 +143,12 @@ const PRODUCT_DERIVATION_INDEX = 0;
 const PGAS_ASSET_ID = 2_000_000_000;
 const PGAS_ERC20_PRECOMPILE = "0x7735940000000000000000000000000001200000" as const;
 const SESSION_PGAS_BUDGET = 10_000_000_000n;
-const SESSION_SETUP_STORAGE_LIMIT = 20_000_000_000n;
-const SESSION_SETUP_WEIGHT = {
-    ref_time: 2_000_000_000n,
-    proof_size: 500_000n,
-};
+// Revive calls vary materially with the storage they touch. In particular,
+// registering a session writes four mappings and is larger than a normal game
+// move, so always dry-run it rather than relying on a static gas guess.
+const REVIVE_GAS_MARGIN = 2n;
+const REVIVE_STORAGE_MARGIN = 2n;
+const MIN_REVIVE_STORAGE_HEADROOM = 1_000_000_000n;
 
 // These are the only calls a session key may make on a Quizzler game. Pack
 // authoring, profile changes, lobby management, forfeiting, and creation stay
@@ -287,6 +288,14 @@ interface TransactionActor {
     kind: "product" | "session";
 }
 
+interface ReviveCallLimits {
+    weight_limit: {
+        ref_time: bigint;
+        proof_size: bigint;
+    };
+    storage_deposit_limit: bigint;
+}
+
 type SessionAccount = SessionKeyInfo["account"];
 
 // ── App state ────────────────────────────────────────────────────────
@@ -298,6 +307,7 @@ let registry: any = null;
 let game: any = null;
 let sessionRegistry: any = null;
 let assetHub: any = null;
+let unsafeAssetHub: any = null;
 let myAddress = ""; // lowercase H160
 let savedGameId: bigint | null = null;
 const nextTxNonceByAddress = new Map<string, number>();
@@ -866,15 +876,75 @@ async function ensureQuickPlayAllowance(): Promise<void> {
     }
 }
 
-function reviveCall(destination: `0x${string}`, data: `0x${string}`, storageDepositLimit: bigint): any {
+function stringifyChainError(value: unknown): string {
+    try {
+        return JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item);
+    } catch {
+        return String(value);
+    }
+}
+
+/**
+ * Estimate a raw Revive call before signing it. The contract helper does this
+ * for ABI methods, but quick play also calls the PGAS ERC-20 precompile and
+ * batches decoded calls, so it needs the same protection explicitly.
+ */
+async function estimateReviveCall(
+    destination: `0x${string}`,
+    data: `0x${string}`,
+    actor: TransactionActor,
+): Promise<ReviveCallLimits> {
+    if (!unsafeAssetHub) throw new Error("Chain client is not ready.");
+    const result: any = await unsafeAssetHub.apis.ReviveApi.call(
+        actor.address,
+        destination,
+        0n,
+        undefined,
+        undefined,
+        hexToBytes(data),
+        { at: "best" },
+    );
+    if (!result?.result?.success || result.result.value?.flags !== 0) {
+        throw new Error(`Quick play call could not be estimated: ${stringifyChainError(result?.result?.value ?? result)}`);
+    }
+    const gas = result.weight_required;
+    if (typeof gas?.ref_time !== "bigint" || typeof gas?.proof_size !== "bigint") {
+        throw new Error("Quick play call did not return a gas estimate.");
+    }
+    const deposit = result.storage_deposit?.type === "Charge" && typeof result.storage_deposit.value === "bigint"
+        ? result.storage_deposit.value
+        : 0n;
+    return {
+        // The reference session flow uses a 2× dry-run buffer. It protects
+        // the signed call from small best-block state changes without turning
+        // a large static limit into an intermittent OutOfGas failure.
+        weight_limit: {
+            ref_time: gas.ref_time * REVIVE_GAS_MARGIN,
+            proof_size: gas.proof_size * REVIVE_GAS_MARGIN,
+        },
+        storage_deposit_limit: deposit === 0n
+            ? 0n
+            : deposit * REVIVE_STORAGE_MARGIN + MIN_REVIVE_STORAGE_HEADROOM,
+    };
+}
+
+function reviveCall(destination: `0x${string}`, data: `0x${string}`, limits: ReviveCallLimits): any {
     if (!assetHub) throw new Error("Chain client is not ready.");
     return assetHub.tx.Revive.call({
         dest: destination,
         value: 0n,
-        weight_limit: SESSION_SETUP_WEIGHT,
-        storage_deposit_limit: storageDepositLimit,
+        weight_limit: limits.weight_limit,
+        storage_deposit_limit: limits.storage_deposit_limit,
         data: hexToBytes(data),
     });
+}
+
+async function estimatedReviveCall(
+    destination: `0x${string}`,
+    data: `0x${string}`,
+    actor: TransactionActor,
+): Promise<any> {
+    return reviveCall(destination, data, await estimateReviveCall(destination, data, actor));
 }
 
 async function submitStandaloneTx(transaction: any, actor: TransactionActor): Promise<void> {
@@ -932,9 +1002,10 @@ async function activatePendingQuickPlay(session: SessionAccount): Promise<void> 
     });
     quickPlayMessage = "Finishing quick play setup…";
     renderQuickPlayStatus();
+    const actor = sessionTransactionActor(session);
     await submitStandaloneTx(
-        reviveCall(sessionRegistryAddress, activationData, SESSION_SETUP_STORAGE_LIMIT),
-        sessionTransactionActor(session),
+        await estimatedReviveCall(sessionRegistryAddress, activationData, actor),
+        actor,
     );
     if (!await sessionIsRegistered(session)) {
         throw new Error("Quick play setup was not confirmed on-chain. Please try again.");
@@ -995,8 +1066,12 @@ async function setupQuickPlay(): Promise<void> {
         functionName: "requestSession",
         args: [session.account.h160Address],
     });
-    const fund = reviveCall(PGAS_ERC20_PRECOMPILE, fundData, 0n);
-    const request = reviveCall(sessionRegistryAddress, requestData, SESSION_SETUP_STORAGE_LIMIT);
+    quickPlayMessage = "Preparing quick play setup…";
+    renderQuickPlayStatus();
+    const [fund, request] = await Promise.all([
+        estimatedReviveCall(PGAS_ERC20_PRECOMPILE, fundData, product),
+        estimatedReviveCall(sessionRegistryAddress, requestData, product),
+    ]);
     const setup = assetHub.tx.Utility.batch_all({
         // Keep the batch pure Revive calls. A native Assets transfer or any
         // other outer call would lose the PGAS fee path.
@@ -1049,7 +1124,7 @@ async function endQuickPlay(): Promise<void> {
             functionName: "transfer",
             args: [productTransactionActor().h160 as `0x${string}`, balance],
         });
-        await submitStandaloneTx(reviveCall(PGAS_ERC20_PRECOMPILE, drainData, 0n), session);
+        await submitStandaloneTx(await estimatedReviveCall(PGAS_ERC20_PRECOMPILE, drainData, session), session);
     }
 
     quickPlayMessage = "Confirm to end quick play…";
@@ -1301,6 +1376,7 @@ async function init(): Promise<void> {
     performanceMeasure("descriptor:load", descriptorStartMark, descriptorReadyMark);
     const client = await createChainClient({ chains: { assetHub: paseo_asset_hub } });
     assetHub = client.assetHub;
+    unsafeAssetHub = client.raw.assetHub.getUnsafeApi();
     bestBlocks = client.raw.assetHub.bestBlocks$;
     subscribeChainStatus();
     bootLog("Chain client ready", "ok");
