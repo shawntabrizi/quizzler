@@ -30,9 +30,18 @@ export const REVIEW_BLOCK_PRESETS: readonly BlockPreset[] = [
 /** Kept intentionally short: these are useful party sizes, not a spreadsheet. */
 export const PLAYER_CAP_PRESETS = [1, 2, 4, 6, 8, 12, 16] as const;
 
+function durationLabel(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    if (minutes === 0) return `~${seconds} sec`;
+    if (remainder === 0) return `~${minutes} min`;
+    return `~${minutes} min ${remainder} sec`;
+}
+
+/** A friendly label for the UI; the encoded block count remains internal. */
 export function presetLabel(preset: BlockPreset): string {
     const seconds = preset.blocks * BLOCK_SECONDS_ESTIMATE;
-    return `${preset.name} · ${preset.blocks} blocks · ~${seconds}s`;
+    return `${preset.name} · ${durationLabel(seconds)}`;
 }
 
 export function questionCountOptions(maxQuestions: number): number[] {

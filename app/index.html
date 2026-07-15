@@ -498,19 +498,12 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 16px;
         }
-        .field-hint,
-        .timer-note {
+        .field-hint {
             color: var(--fg-secondary);
             font-size: 0.8rem;
             line-height: 1.4;
         }
         .field-hint { margin-top: 6px; }
-        .timer-note {
-            margin-top: 16px;
-            padding: 10px 12px;
-            background: var(--bg-surface-nested);
-            border-radius: var(--radius-small);
-        }
         .pack-emoji-field { width: 106px; }
         #pack-emoji { text-align: center; }
 
@@ -793,7 +786,6 @@
                             <select id="cfg-max-players" data-testid="cfg-max-players"></select>
                         </div>
                     </div>
-                    <p class="timer-note">Timers are exact block counts on-chain. Current Paseo estimate: about 2 seconds per block; actual timing can vary.</p>
                     <div class="error-text" id="config-error" data-testid="config-error" role="alert"></div>
                     <div class="setup-actions">
                         <button id="btn-config-back-bottom" class="quiet" data-testid="btn-config-back-bottom">Back to packs</button>

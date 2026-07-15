@@ -12,12 +12,14 @@ import {
 } from "./game-config";
 
 describe("game configuration presets", () => {
-    it("only offers contract-valid exact block durations", () => {
+    it("only encodes contract-valid durations while keeping labels friendly", () => {
         for (const preset of [...ANSWER_BLOCK_PRESETS, ...REVIEW_BLOCK_PRESETS]) {
             expect(preset.blocks).toBeGreaterThanOrEqual(MIN_STAGE_BLOCKS);
             expect(preset.blocks).toBeLessThanOrEqual(MAX_STAGE_BLOCKS);
-            expect(presetLabel(preset)).toContain(`${preset.blocks} blocks`);
+            expect(presetLabel(preset)).not.toContain("block");
         }
+        expect(presetLabel({ name: "Standard", blocks: 30 })).toBe("Standard · ~1 min");
+        expect(presetLabel({ name: "Relaxed", blocks: 45 })).toBe("Relaxed · ~1 min 30 sec");
     });
 
     it("uses a compact set of useful player caps", () => {
