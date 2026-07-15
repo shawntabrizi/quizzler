@@ -17,14 +17,41 @@ function method(abi: AbiItem[], name: string): AbiItem {
 }
 
 describe("transaction ABI", () => {
-    it("exposes immutable emoji metadata when creating and reading a pack", () => {
-        const createPack = method(registryAbi as AbiItem[], "createPack");
+    it("exposes nonce-bound pack creation, batched imports, and immutable emoji metadata", () => {
+        const createPack = method(registryAbi as AbiItem[], "createPackWithNonce");
         expect(createPack.stateMutability).toBe("nonpayable");
         expect(createPack.inputs).toEqual([
             { name: "title", type: "string" },
             { name: "emoji", type: "string" },
+            { name: "creation_nonce", type: "uint64" },
         ]);
         expect(createPack.outputs).toEqual([]);
+
+        const addQuestions = method(registryAbi as AbiItem[], "addQuestions");
+        expect(addQuestions.stateMutability).toBe("nonpayable");
+        expect(addQuestions.inputs).toEqual([
+            {
+                name: "pack_id",
+                type: "uint32",
+            },
+            {
+                name: "questions",
+                type: "tuple[]",
+                components: expect.arrayContaining([
+                    { name: "text", type: "string" },
+                    { name: "answers", type: "string[]" },
+                    { name: "is_final", type: "bool" },
+                    { name: "difficulty", type: "uint8" },
+                ]),
+            },
+        ]);
+
+        const getPackForCreation = method(registryAbi as AbiItem[], "getPackForCreation");
+        expect(getPackForCreation.stateMutability).toBe("view");
+        expect(getPackForCreation.inputs).toEqual([
+            { name: "who", type: "address" },
+            { name: "creation_nonce", type: "uint64" },
+        ]);
 
         const getPack = method(registryAbi as AbiItem[], "getPack");
         expect(getPack.outputs).toEqual([
@@ -36,10 +63,45 @@ describe("transaction ABI", () => {
         ]);
     });
 
-    it("marks game creation as a state-changing call", () => {
-        const createGame = method(gameAbi as AbiItem[], "createGame");
+    it("marks nonce-bound game creation as a state-changing call", () => {
+        const createGame = method(gameAbi as AbiItem[], "createGameWithNonce");
         expect(createGame.stateMutability).toBe("nonpayable");
+        expect(createGame.inputs).toEqual([
+            { name: "pack_id", type: "uint32" },
+            { name: "num_questions", type: "uint8" },
+            { name: "answer_blocks", type: "uint32" },
+            { name: "review_blocks", type: "uint32" },
+            { name: "max_players", type: "uint8" },
+            { name: "creation_nonce", type: "uint64" },
+        ]);
         expect(createGame.outputs).toEqual([]);
+
+        const getGameForCreation = method(gameAbi as AbiItem[], "getGameForCreation");
+        expect(getGameForCreation.stateMutability).toBe("view");
+        expect(getGameForCreation.inputs).toEqual([
+            { name: "who", type: "address" },
+            { name: "creation_nonce", type: "uint64" },
+        ]);
+    });
+
+    it("does not expose superseded creation APIs", () => {
+        const registryNames = new Set(
+            (registryAbi as AbiItem[])
+                .filter((item) => item.type === "function")
+                .map((item) => item.name),
+        );
+        const gameNames = new Set(
+            (gameAbi as AbiItem[])
+                .filter((item) => item.type === "function")
+                .map((item) => item.name),
+        );
+
+        for (const name of ["createPack", "addQuestion", "myLatestPack"]) {
+            expect(registryNames).not.toContain(name);
+        }
+        for (const name of ["createGame", "myLatestGame"]) {
+            expect(gameNames).not.toContain(name);
+        }
     });
 
     it("exposes the lobby and forfeit lifecycle boundary", () => {

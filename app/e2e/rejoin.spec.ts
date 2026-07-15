@@ -17,8 +17,7 @@ test("reopens an active joined quiz after refresh", async ({ testHost }) => {
             text: "What is the capital of Portugal?",
             answers: ["Lisbon"],
         });
-        await charlie.tx("createGame", [packId, 1, 600, 600, 2]);
-        const gameId = BigInt(await charlie.query<number | bigint>("myLatestGame", [charlie.h160]));
+        const gameId = await charlie.createTestGame(packId, 1, 600, 600, 2);
 
         await frame.getByTestId("join-game-id").fill(String(gameId));
         await frame.getByTestId("btn-join-game").click();

@@ -11,8 +11,7 @@ test("opens a shared invite directly into its lobby", async ({ testHost }) => {
             text: "Which planet is known as the Red Planet?",
             answers: ["Mars"],
         });
-        await charlie.tx("createGame", [packId, 1, 600, 600, 2]);
-        const gameId = BigInt(await charlie.query<number | bigint>("myLatestGame", [charlie.h160]));
+        const gameId = await charlie.createTestGame(packId, 1, 600, 600, 2);
 
         // The host forwards its own query string to the product iframe.
         // Reloading the host this way also gives the new app instance a fresh

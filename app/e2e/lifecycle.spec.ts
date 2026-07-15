@@ -15,8 +15,7 @@ test("transfers the lobby starter and excludes forfeits from later quorums", asy
 
         // Leaving the lobby removes the current starter, so the oldest
         // remaining player can start without becoming a permanent host.
-        await charlie.tx("createGame", [packId, 1, 600, 600, 4]);
-        const handoffGame = BigInt(await charlie.query<number | bigint>("myLatestGame", [charlie.h160]));
+        const handoffGame = await charlie.createTestGame(packId, 1, 600, 600, 4);
         await bob.tx("joinGame", [handoffGame]);
         await charlie.tx("leaveLobby", [handoffGame]);
         expect((await bob.query<string[]>("getPlayers", [handoffGame])).map((p) => p.toLowerCase())).toEqual([bob.h160]);
@@ -25,8 +24,7 @@ test("transfers the lobby starter and excludes forfeits from later quorums", asy
 
         // In a separate two-player room, Charlie's answer is historical after
         // he forfeits; it must not satisfy Bob's remaining one-player quorum.
-        await charlie.tx("createGame", [packId, 1, 600, 600, 4]);
-        const gameId = BigInt(await charlie.query<number | bigint>("myLatestGame", [charlie.h160]));
+        const gameId = await charlie.createTestGame(packId, 1, 600, 600, 4);
         await bob.tx("joinGame", [gameId]);
         await charlie.tx("startGame", [gameId]);
         await charlie.tx("submitAnswer", [gameId, "Tokyo", 1]);

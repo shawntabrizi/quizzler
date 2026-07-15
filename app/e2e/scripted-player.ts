@@ -10,6 +10,7 @@ import { getWsProvider } from "polkadot-api/ws";
 import { paseo_asset_hub } from "@parity/product-sdk-descriptors/paseo-asset-hub";
 import { createDevSigner, ensureAccountMapped, getDevPublicKey } from "@parity/product-sdk-tx";
 import { ss58ToH160 } from "@parity/product-sdk-address";
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { decodeFunctionResult, encodeFunctionData, hexToBytes, type Abi } from "viem";
 
@@ -25,13 +26,9 @@ const gameAbi = JSON.parse(
 ) as Abi;
 /** Methods served by the pack registry; everything else is the game. */
 const REGISTRY_METHODS = new Set([
-    "createPack", "addQuestion", "sealPack", "packCount", "getPack",
-    "getPackStatus", "getQuestion", "getAnswers", "myLatestPack",
+    "createPackWithNonce", "addQuestions", "sealPack", "packCount", "getPack", "getPacks",
+    "getPackStatus", "getQuestion", "getAnswers", "getPackForCreation",
 ]);
-
-const registrySupportsPackEmoji = registryAbi.some(
-    (entry) => entry.type === "function" && entry.name === "createPack" && entry.inputs.length === 2,
-);
 
 function route(functionName: string): { abi: Abi; dest: `0x${string}` } {
     const e2eContracts = getE2EContracts();
@@ -53,6 +50,22 @@ export interface PhaseView {
     active_player_count: number;
     submit_count: number;
     continue_count: number;
+}
+
+interface PackView {
+    regular_count: number | bigint;
+    finals_set_count: number | bigint;
+    sealed: boolean;
+}
+
+const NO_PACK = 0xffffffff;
+
+function creationNonce(): bigint {
+    return randomBytes(8).readBigUInt64BE();
+}
+
+function wait(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export class ScriptedPlayer {
@@ -176,35 +189,144 @@ export class ScriptedPlayer {
         });
     }
 
-    /** Newest pack this player created (ids shift under reorgs). */
-    private async resolveMyPack(): Promise<number> {
-        const id = Number(await this.query<number | bigint>("myLatestPack", [this.h160]));
-        if (id === 0xffffffff) throw new Error("could not locate created test pack");
-        return id;
+    private async resolveCreatedPack(nonce: bigint): Promise<number | null> {
+        const id = Number(await this.query<number | bigint>("getPackForCreation", [this.h160, nonce]));
+        return id === NO_PACK ? null : id;
+    }
+
+    private async resolveCreatedGame(nonce: bigint): Promise<bigint | null> {
+        const id = BigInt(await this.query<number | bigint>("getGameForCreation", [this.h160, nonce]));
+        return id === 0n ? null : id;
+    }
+
+    private async waitForCreation<T>(resolve: () => Promise<T | null>): Promise<T | null> {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            const created = await resolve();
+            if (created !== null) return created;
+            if (attempt < 2) await wait(750);
+        }
+        return null;
+    }
+
+    private async createWithNonce<T>(
+        functionName: string,
+        args: unknown[],
+        resolve: () => Promise<T | null>,
+        description: string,
+    ): Promise<T> {
+        const existing = await resolve();
+        if (existing !== null) return existing;
+
+        try {
+            await this.tx(functionName, args);
+        } catch (error) {
+            // A best-block reorg can make the retry see CreationNonceUsed
+            // even though the original transaction survived. Resolve its
+            // nonce before treating that as a failure.
+            const created = await this.waitForCreation(resolve);
+            if (created !== null) return created;
+            throw error;
+        }
+
+        const created = await this.waitForCreation(resolve);
+        if (created === null) throw new Error(`could not locate created ${description}`);
+        return created;
+    }
+
+    private async getPack(packId: number): Promise<PackView> {
+        return this.query<PackView>("getPack", [packId]);
+    }
+
+    private async waitForPack(
+        packId: number,
+        ready: (pack: PackView) => boolean,
+    ): Promise<PackView> {
+        let pack = await this.getPack(packId);
+        for (let attempt = 0; attempt < 3 && !ready(pack); attempt += 1) {
+            await wait(750);
+            pack = await this.getPack(packId);
+        }
+        return pack;
+    }
+
+    private static hasTestQuestions(pack: PackView): boolean {
+        return Number(pack.regular_count) === 1 && Number(pack.finals_set_count) === 3;
+    }
+
+    private async ensureTestQuestions(packId: number, questions: unknown[]): Promise<void> {
+        let pack = await this.getPack(packId);
+        if (ScriptedPlayer.hasTestQuestions(pack)) return;
+        if (Number(pack.regular_count) !== 0 || Number(pack.finals_set_count) !== 0) {
+            throw new Error("created test pack is unexpectedly partially populated");
+        }
+
+        try {
+            await this.tx("addQuestions", [packId, questions]);
+        } catch (error) {
+            pack = await this.waitForPack(packId, ScriptedPlayer.hasTestQuestions);
+            if (ScriptedPlayer.hasTestQuestions(pack)) return;
+            throw error;
+        }
+
+        pack = await this.waitForPack(packId, ScriptedPlayer.hasTestQuestions);
+        if (!ScriptedPlayer.hasTestQuestions(pack)) {
+            throw new Error("test pack questions were not persisted");
+        }
+    }
+
+    private async ensureSealed(packId: number): Promise<void> {
+        let pack = await this.getPack(packId);
+        if (pack.sealed) return;
+        if (!ScriptedPlayer.hasTestQuestions(pack)) {
+            throw new Error("cannot seal an incomplete test pack");
+        }
+
+        try {
+            await this.tx("sealPack", [packId]);
+        } catch (error) {
+            pack = await this.waitForPack(packId, (candidate) => candidate.sealed);
+            if (pack.sealed) return;
+            throw error;
+        }
+
+        pack = await this.waitForPack(packId, (candidate) => candidate.sealed);
+        if (!pack.sealed) throw new Error("test pack was not sealed");
     }
 
     /** Create + seal a tiny pack this player knows the answers to. */
     async createTestPack(title: string, question: { text: string; answers: string[] }): Promise<number> {
-        await this.tx("createPack", registrySupportsPackEmoji ? [title, "🧪"] : [title]);
-        // Resolve the id AFTER creation (pre-reading the counter races with
-        // concurrent creators), and re-resolve + retry when a best-block
-        // reorg shifts the id under us mid-flow (surfaces as a revert).
-        let packId = await this.resolveMyPack();
-        const onPack = async (fn: string, args: (id: number) => unknown[]): Promise<void> => {
-            try {
-                await this.tx(fn, args(packId));
-            } catch (e) {
-                if (!/revert/i.test(String(e))) throw e;
-                packId = await this.resolveMyPack();
-                await this.tx(fn, args(packId));
-            }
-        };
-        await onPack("addQuestion", (id) => [id, question.text, question.answers, false, 0]);
-        await onPack("addQuestion", (id) => [id, "Final (easy): what is 2 plus 2?", ["4"], true, 0]);
-        await onPack("addQuestion", (id) => [id, "Final (medium): what is 6 times 7?", ["42"], true, 1]);
-        await onPack("addQuestion", (id) => [id, "Final (hard): what is 17 squared?", ["289"], true, 2]);
-        await onPack("sealPack", (id) => [id]);
+        const nonce = creationNonce();
+        const packId = await this.createWithNonce(
+            "createPackWithNonce",
+            [title, "🧪", nonce],
+            () => this.resolveCreatedPack(nonce),
+            "test pack",
+        );
+        await this.ensureTestQuestions(packId, [
+            { text: question.text, answers: question.answers, is_final: false, difficulty: 0 },
+            { text: "Final (easy): what is 2 plus 2?", answers: ["4"], is_final: true, difficulty: 0 },
+            { text: "Final (medium): what is 6 times 7?", answers: ["42"], is_final: true, difficulty: 1 },
+            { text: "Final (hard): what is 17 squared?", answers: ["289"], is_final: true, difficulty: 2 },
+        ]);
+        await this.ensureSealed(packId);
         return packId;
+    }
+
+    /** Create a lobby and resolve its durable join code through its nonce. */
+    async createTestGame(
+        packId: number,
+        numQuestions: number,
+        answerBlocks: number,
+        reviewBlocks: number,
+        maxPlayers: number,
+    ): Promise<bigint> {
+        const nonce = creationNonce();
+        return this.createWithNonce(
+            "createGameWithNonce",
+            [packId, numQuestions, answerBlocks, reviewBlocks, maxPlayers, nonce],
+            () => this.resolveCreatedGame(nonce),
+            "test game",
+        );
     }
 
     async getPhase(gameId: bigint): Promise<PhaseView> {
