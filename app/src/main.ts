@@ -3871,12 +3871,12 @@ async function poll(): Promise<void> {
             : null;
         const questionSlot = phase.slot !== NO_SLOT ? phase.slot : resultSlot;
         if (questionSlot !== null) {
-            const [question, answer] = await retryChainRead<[string, string]>(() => Promise.all([
+            const [question, answer] = await Promise.all([
                 questionText(gameView.pack_id, questionSlot),
                 phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW || phase.stage === STAGE_FINISHED
                     ? canonicalAnswer(gameView.pack_id, questionSlot)
                     : Promise.resolve(""),
-            ]));
+            ]);
             qText = question;
             aText = answer;
             if (!isCurrentGame(polledGameId, polledSession)) return;
