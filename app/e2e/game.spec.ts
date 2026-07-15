@@ -11,7 +11,7 @@ import { ScriptedPlayer } from "./scripted-player";
  *   Q1: bob correct +1 → 1; charlie wrong 0, bob votes "mark correct" —
  *       with 2 players the single other player is a majority → charlie +1.
  *   Final (both vote easy → "what is 2 plus 2"): bob wagers 1 → 2,
- *       charlie locks 0 → stays 1. Winner: bob at 2.
+ *       charlie wagers 1 and misses → 0. Winner: bob at 2.
  */
 test("plays a full two-player game to the results screen", async ({ testHost }) => {
     test.setTimeout(600_000);
@@ -60,7 +60,7 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         const charlieDone = charlie.playUntilFinished(gameId, {
             answer: "wrong on purpose",
             wager: 1,
-            finalWager: 0,
+            finalWager: 1,
             difficultyVote: 0,
             beforeDifficultyVote: () => charlieDifficultyVoteGate,
         });
@@ -146,11 +146,19 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
 
         await expect(frame.getByTestId("screen-results")).toBeVisible({ timeout: 180_000 });
         await expect(frame.getByTestId("results-winner")).toHaveText("You");
+        await expect(frame.getByTestId("results-final-placement")).toContainText("1st place");
+        await expect(frame.getByTestId("results-final-wager")).toHaveText("+1");
+        await expect(frame.getByTestId("results-final-wager")).toHaveClass(/is-won/);
+        await expect(frame.getByTestId("results-final-wager-result")).toHaveText("Wager won");
+        await expect(frame.getByTestId("results-final-score")).toHaveText("2 points");
+        await expect(frame.getByTestId("results-podium").locator("li")).toHaveCount(2);
+        await expect(frame.getByTestId("results-final-wagers").locator('[data-outcome="won"]')).toHaveCount(1);
+        await expect(frame.getByTestId("results-final-wagers").locator('[data-outcome="lost"]')).toHaveCount(1);
         await expect(frame.getByTestId("results-leaderboard").getByText("2")).toBeVisible();
 
         await charlieDone;
         const scores = await charlie.query<(number | bigint)[]>("getScores", [gameId]);
-        expect(scores.map(Number).sort((a, b) => b - a)).toEqual([2, 1]);
+        expect(scores.map(Number).sort((a, b) => b - a)).toEqual([2, 0]);
     } finally {
         releaseCharlieDifficultyVote?.();
         charlie.destroy();

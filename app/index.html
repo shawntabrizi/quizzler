@@ -988,6 +988,205 @@
         .banner { text-align: center; padding: 24px 0 8px; }
         .banner .winner { font-size: 1.6rem; font-weight: 600; }
 
+        /* Results make the final round legible at a glance, then keep the
+           full table below it for the whole group. JavaScript owns the text
+           and outcome classes; these styles deliberately work for both the
+           summary and each player's final-wager row. */
+        .results-hero { overflow: hidden; }
+        .results-eyebrow {
+            color: var(--fg-tertiary);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .results-winner-banner {
+            padding: 14px 0 22px;
+            border-bottom: 1px solid var(--border-divider);
+        }
+        .results-final-summary {
+            display: grid;
+            gap: 14px;
+            padding-top: 22px;
+        }
+        .results-final-summary-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .results-final-summary-heading h2 { margin: 3px 0 0; }
+        .results-placement {
+            flex: 0 0 auto;
+            padding: 5px 9px;
+            border: 1px solid var(--border-divider-tint);
+            border-radius: var(--radius-full);
+            color: var(--fg-primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .results-final-question {
+            color: var(--fg-secondary);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .results-final-details {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .results-final-detail {
+            display: grid;
+            min-width: 0;
+            gap: 3px;
+            padding: 12px;
+            background: var(--bg-surface-nested);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-nested);
+        }
+        .results-final-detail dt {
+            color: var(--fg-secondary);
+            font-size: 0.72rem;
+        }
+        .results-final-detail dd {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            color: var(--fg-primary);
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .results-final-detail.score {
+            background: var(--bg-selection-container-active);
+            border-color: var(--border-divider-tint);
+        }
+        .results-final-detail.score dd {
+            font-size: 1.35rem;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+        .results-wager-value,
+        .results-wager-outcome {
+            font-variant-numeric: tabular-nums;
+        }
+        .results-wager-value.is-won,
+        .results-wager-value.won,
+        .results-wager-value.correct,
+        .results-wager-value[data-outcome="won"],
+        .results-wager-outcome.is-won,
+        .results-wager-outcome.won,
+        .results-wager-outcome.correct,
+        .results-wager-outcome[data-outcome="won"],
+        .results-final-wager-row[data-outcome="won"] .results-wager-value,
+        .results-final-wager-row[data-outcome="won"] .results-final-wager-value {
+            color: var(--fg-success);
+        }
+        .results-wager-value.is-lost,
+        .results-wager-value.lost,
+        .results-wager-value.wrong,
+        .results-wager-value[data-outcome="lost"],
+        .results-wager-outcome.is-lost,
+        .results-wager-outcome.lost,
+        .results-wager-outcome.wrong,
+        .results-wager-outcome[data-outcome="lost"],
+        .results-final-wager-row[data-outcome="lost"] .results-wager-value,
+        .results-final-wager-row[data-outcome="lost"] .results-final-wager-value {
+            color: var(--fg-error);
+        }
+        .results-section-heading {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .results-section-heading h2 { margin: 0; }
+        .results-section-heading .hint { margin: 0; text-align: right; }
+        .results-podium {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            align-items: end;
+            gap: 8px;
+            list-style: none;
+        }
+        .results-podium:empty { display: none; }
+        .results-podium-place {
+            display: grid;
+            min-width: 0;
+            min-height: 136px;
+            align-content: center;
+            justify-items: center;
+            gap: 5px;
+            padding: 14px 8px;
+            overflow: hidden;
+            text-align: center;
+            background: var(--bg-surface-nested);
+            border: 1px solid var(--border-divider);
+            border-radius: var(--radius-nested);
+        }
+        .results-podium-place[data-placement="1"] {
+            order: 2;
+            min-height: 164px;
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.16), var(--bg-surface-nested) 62%);
+            border-color: rgba(245, 158, 11, 0.48);
+        }
+        .results-podium-place[data-placement="2"] { order: 1; }
+        .results-podium-place[data-placement="3"] { order: 3; }
+        .results-podium-trophy {
+            font-size: clamp(1.65rem, 6vw, 2.35rem);
+            line-height: 1;
+        }
+        .results-podium-rank {
+            color: var(--fg-secondary);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .results-podium-player {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            font-size: 0.84rem;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+        .results-podium-score {
+            color: var(--fg-secondary);
+            font-size: 0.8rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .results-all-placements { margin-top: 20px; }
+        .results-all-placements h3 { font-size: 0.92rem; margin-bottom: 8px; }
+        #results-leaderboard li { font-variant-numeric: tabular-nums; }
+        .results-final-wagers { list-style: none; }
+        .results-final-wagers:empty { display: none; }
+        .results-final-wager-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 0;
+            border-top: 1px solid var(--border-divider);
+        }
+        .results-final-wager-row:first-child { border-top: 0; padding-top: 0; }
+        .results-final-wager-player {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            font-weight: 600;
+        }
+        .results-final-wager-meta {
+            color: var(--fg-secondary);
+            font-size: 0.8rem;
+        }
+        .results-final-wager-value {
+            min-width: max-content;
+            text-align: right;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
         .muted { color: var(--fg-tertiary); }
         .error-text { color: var(--fg-error); font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
         .sr-only {
@@ -1126,6 +1325,21 @@
             ul.list li { align-items: flex-start; }
             .final-wager-card { gap: 14px; }
             .final-wager-score strong { font-size: 1.55rem; }
+            .results-final-summary { gap: 12px; padding-top: 18px; }
+            .results-final-summary-heading { gap: 10px; }
+            .results-final-summary-heading h2 { font-size: 1.02rem; }
+            .results-placement { padding: 4px 7px; font-size: 0.74rem; }
+            .results-final-details { gap: 6px; }
+            .results-final-detail { padding: 10px; }
+            .results-final-detail.score { grid-column: 1 / -1; }
+            .results-section-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+            .results-section-heading .hint { text-align: left; }
+            .results-podium { gap: 6px; }
+            .results-podium-place { min-height: 122px; padding: 12px 5px; }
+            .results-podium-place[data-placement="1"] { min-height: 144px; }
+            .results-podium-trophy { font-size: 1.65rem; }
+            .results-podium-player { font-size: 0.74rem; }
+            .results-podium-score { font-size: 0.72rem; }
         }
 
         /* A keyboard shrinks the visual viewport on a phone. The question
@@ -1543,12 +1757,62 @@
 
         <!-- Results -->
         <section id="screen-results" class="screen" data-testid="screen-results">
-            <div class="card">
-                <div class="banner">
+            <div class="card results-hero">
+                <p class="results-eyebrow">Quiz complete</p>
+                <div class="banner results-winner-banner">
                     <div class="muted">Winner</div>
                     <div class="winner" id="results-winner" data-testid="results-winner"></div>
                 </div>
-                <ul class="list" id="results-leaderboard" data-testid="results-leaderboard"></ul>
+                <div id="results-final-summary" class="results-final-summary" data-testid="results-final-summary">
+                    <div class="results-final-summary-heading">
+                        <div>
+                            <p class="results-eyebrow">Final round</p>
+                            <h2>Your final result</h2>
+                        </div>
+                        <span id="results-final-placement" class="results-placement" data-testid="results-final-placement">—</span>
+                    </div>
+                    <p id="results-final-question" class="results-final-question" data-testid="results-final-question">—</p>
+                    <dl class="results-final-details">
+                        <div class="results-final-detail">
+                            <dt>Your answer</dt>
+                            <dd id="results-final-answer" data-testid="results-final-answer">—</dd>
+                        </div>
+                        <div class="results-final-detail">
+                            <dt>Correct answer</dt>
+                            <dd id="results-final-correct-answer" data-testid="results-final-correct-answer">—</dd>
+                        </div>
+                        <div class="results-final-detail">
+                            <dt>Your wager</dt>
+                            <dd id="results-final-wager" class="results-wager-value" data-testid="results-final-wager">—</dd>
+                        </div>
+                        <div class="results-final-detail">
+                            <dt>Wager result</dt>
+                            <dd id="results-final-wager-result" class="results-wager-outcome" data-testid="results-final-wager-result">—</dd>
+                        </div>
+                        <div class="results-final-detail score">
+                            <dt>Final score</dt>
+                            <dd id="results-final-score" data-testid="results-final-score">—</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            <div class="card">
+                <div class="results-section-heading">
+                    <h2>Final standings</h2>
+                    <p class="hint">Top three take the podium.</p>
+                </div>
+                <ol id="results-podium" class="results-podium" data-testid="results-podium" aria-label="Top three players"></ol>
+                <div class="results-all-placements">
+                    <h3>Everyone</h3>
+                    <ul class="list results-leaderboard" id="results-leaderboard" data-testid="results-leaderboard"></ul>
+                </div>
+            </div>
+            <div class="card">
+                <div class="results-section-heading">
+                    <h2>Final wagers</h2>
+                    <p class="hint">Green won, red lost.</p>
+                </div>
+                <ul id="results-final-wagers" class="results-final-wagers" data-testid="results-final-wagers" aria-label="Final wager results"></ul>
                 <div class="row" style="margin-top: 16px; justify-content: center;">
                     <button id="btn-back-home" class="primary" data-testid="btn-back-home">Back home</button>
                 </div>

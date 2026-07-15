@@ -42,6 +42,7 @@ import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
+import { rankFinalStandings, type FinalStanding } from "./results";
 import {
     automaticInstantPlayAllowed,
     normalizeInstantPlayPreference,
@@ -3684,11 +3685,20 @@ async function poll(): Promise<void> {
 
         let qText = "";
         let aText = "";
-        if (phase.slot !== NO_SLOT) {
+        // Finished snapshots do not have a live slot, but the final recap
+        // still needs its prompt and canonical answer. The selected final
+        // difficulty remains part of the settled game state.
+        const resultSlot = phase.stage === STAGE_FINISHED
+            && phase.final_difficulty >= 0
+            && phase.final_difficulty < DIFFICULTY_NAMES.length
+            ? FINAL_SLOT_BASE + phase.final_difficulty
+            : null;
+        const questionSlot = phase.slot !== NO_SLOT ? phase.slot : resultSlot;
+        if (questionSlot !== null) {
             const [question, answer] = await Promise.all([
-                questionText(gameView.pack_id, phase.slot),
-                phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW
-                    ? canonicalAnswer(gameView.pack_id, phase.slot)
+                questionText(gameView.pack_id, questionSlot),
+                phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW || phase.stage === STAGE_FINISHED
+                    ? canonicalAnswer(gameView.pack_id, questionSlot)
                     : Promise.resolve(""),
             ]);
             qText = question;
@@ -4473,14 +4483,143 @@ function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
     );
 }
 
-function renderResults(snap: Snapshot): void {
-    const activePlayers = snap.players.filter((player) =>
-        snap.submissions.find((submission) => submission.player.toLowerCase() === player.toLowerCase())?.active ?? true,
+const PLACEMENT_TROPHIES: Record<number, { emoji: string; label: string }> = {
+    1: { emoji: "🥇", label: "First place" },
+    2: { emoji: "🥈", label: "Second place" },
+    3: { emoji: "🥉", label: "Third place" },
+};
+
+function ordinal(value: number): string {
+    const mod100 = value % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+    switch (value % 10) {
+        case 1: return `${value}st`;
+        case 2: return `${value}nd`;
+        case 3: return `${value}rd`;
+        default: return `${value}th`;
+    }
+}
+
+function placementText(standing: FinalStanding): string {
+    if (standing.placement === null) return "Left quiz";
+    const trophy = PLACEMENT_TROPHIES[standing.placement];
+    return `${trophy ? `${trophy.emoji} ` : ""}${ordinal(standing.placement)} place`;
+}
+
+function finalOutcomeText(standing: FinalStanding): string {
+    if (!standing.finalSubmitted) {
+        return standing.finalWager > 0
+            ? `No final answer · ${standing.finalWager} locked, not applied`
+            : "No final answer";
+    }
+    if (standing.finalWager === 0) {
+        return standing.finalCorrect ? "Correct · no points wagered" : "Incorrect · no points wagered";
+    }
+    return standing.finalOutcome === "won" ? "Wager won" : "Wager lost";
+}
+
+function finalWagerValue(standing: FinalStanding): string {
+    if (!standing.finalSubmitted) {
+        return standing.finalWager > 0 ? `${standing.finalWager} locked` : "0";
+    }
+    if (standing.finalWager === 0) return "0";
+    return standing.finalDelta > 0 ? `+${standing.finalDelta}` : `−${Math.abs(standing.finalDelta)}`;
+}
+
+function applyFinalOutcomeStyle(element: HTMLElement, standing: FinalStanding): void {
+    element.classList.toggle("is-won", standing.finalOutcome === "won");
+    element.classList.toggle("is-lost", standing.finalOutcome === "lost");
+    element.dataset.outcome = standing.finalOutcome;
+}
+
+function renderFinalStandings(standings: readonly FinalStanding[], snap: Snapshot): void {
+    renderList(
+        getEl("results-leaderboard"),
+        standings.map((standing) => {
+            const placement = standing.placement === null
+                ? "—"
+                : `${PLACEMENT_TROPHIES[standing.placement]?.emoji ?? ""} #${standing.placement}`.trim();
+            const row = li(
+                span("result-placement", placement),
+                span("", fmtPlayer(snap, standing.player)),
+                span("sub", standing.active ? "" : "left quiz"),
+                span("right pts results-score", String(standing.score)),
+            );
+            row.setAttribute("aria-label", `${fmtPlayer(snap, standing.player)}, ${placementText(standing)}, ${standing.score} points`);
+            return row;
+        }),
     );
-    const top = Math.max(...activePlayers.map((player) => snap.scores[snap.players.indexOf(player)]));
-    const winners = activePlayers.filter((player) => snap.scores[snap.players.indexOf(player)] === top);
-    getEl("results-winner").textContent = winners.map((player) => fmtPlayer(snap, player)).join(" & ");
-    renderLeaderboard(getEl("results-leaderboard"), snap);
+
+    const podium = standings.filter(
+        (standing) => standing.active && standing.placement !== null && standing.placement <= 3,
+    );
+    renderList(
+        getEl("results-podium"),
+        podium.map((standing) => {
+            const placement = standing.placement ?? 0;
+            const trophy = PLACEMENT_TROPHIES[placement];
+            const row = li(
+                span("results-podium-trophy", trophy?.emoji ?? "🏅"),
+                span("results-podium-rank", trophy?.label ?? `${ordinal(placement)} place`),
+                span("results-podium-player", fmtPlayer(snap, standing.player)),
+                span("results-podium-score", `${standing.score} points`),
+            );
+            row.className = "results-podium-place";
+            row.dataset.placement = String(placement);
+            row.setAttribute("aria-label", `${trophy?.label ?? `${ordinal(placement)} place`}: ${fmtPlayer(snap, standing.player)}, ${standing.score} points`);
+            return row;
+        }),
+    );
+
+    renderList(
+        getEl("results-final-wagers"),
+        standings.map((standing) => {
+            const details = document.createElement("span");
+            details.className = "results-final-wager-player";
+            details.append(
+                document.createTextNode(fmtPlayer(snap, standing.player)),
+                span("results-final-wager-meta", ` · ${finalOutcomeText(standing)}${standing.active ? "" : " · left quiz"}`),
+            );
+            const value = span("results-wager-value results-final-wager-value", finalWagerValue(standing));
+            const row = li(details, value);
+            row.className = "results-final-wager-row";
+            row.dataset.outcome = standing.finalOutcome;
+            row.setAttribute("aria-label", `${fmtPlayer(snap, standing.player)}: ${finalOutcomeText(standing)}, ${finalWagerValue(standing)}`);
+            return row;
+        }),
+    );
+}
+
+function renderResults(snap: Snapshot): void {
+    const standings = rankFinalStandings({
+        players: snap.players,
+        scores: snap.scores,
+        finalWagers: snap.finalWagers,
+        submissions: snap.submissions,
+    });
+    const winners = standings.filter((standing) => standing.active && standing.placement === 1);
+    getEl("results-winner").textContent = winners.length > 0
+        ? winners.map((standing) => fmtPlayer(snap, standing.player)).join(" & ")
+        : "No active players";
+
+    const mine = standings.find((standing) => standing.player.toLowerCase() === myAddress);
+    const myFinalSubmission = snap.submissions.find((submission) => submission.player.toLowerCase() === myAddress);
+    if (mine) {
+        getEl("results-final-placement").textContent = placementText(mine);
+        getEl("results-final-answer").textContent = mine.finalSubmitted
+            ? myFinalSubmission?.answer || "—"
+            : "No final answer";
+        const $wager = getEl("results-final-wager");
+        $wager.textContent = finalWagerValue(mine);
+        applyFinalOutcomeStyle($wager, mine);
+        const $wagerResult = getEl("results-final-wager-result");
+        $wagerResult.textContent = finalOutcomeText(mine);
+        applyFinalOutcomeStyle($wagerResult, mine);
+        getEl("results-final-score").textContent = `${mine.score} points`;
+    }
+    getEl("results-final-question").textContent = snap.questionText || "Final question";
+    getEl("results-final-correct-answer").textContent = snap.answerText || "—";
+    renderFinalStandings(standings, snap);
     stopGamePolling();
     setGameActions("hidden");
     showScreen("results");
