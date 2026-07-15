@@ -112,17 +112,50 @@
             line-height: 1.25;
         }
         header .tagline { color: var(--fg-secondary); font-size: 0.85rem; }
-        #conn-pill {
+        #chain-status {
             margin-left: auto;
+            display: inline-flex;
+            min-width: 0;
+            align-items: center;
+            gap: 7px;
             font-size: 0.75rem;
             color: var(--fg-secondary);
             background: var(--bg-surface-container);
             border-radius: var(--radius-full);
-            padding: 4px 12px;
+            padding: 5px 10px;
             white-space: nowrap;
         }
+        .chain-status-dot {
+            width: 7px;
+            height: 7px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: var(--fg-secondary);
+        }
+        #chain-status.is-live .chain-status-dot {
+            background: var(--fg-success);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg-success) 16%, transparent);
+        }
+        #chain-status.has-error .chain-status-dot { background: var(--fg-error); }
+        .chain-status-divider {
+            width: 1px;
+            height: 14px;
+            flex: 0 0 auto;
+            background: var(--border-divider);
+        }
+        #conn-pill { color: var(--fg-secondary); }
         #conn-pill.ok { color: var(--fg-success); }
         #conn-pill.err { color: var(--fg-error); }
+        #chain-account {
+            max-width: 116px;
+            overflow: hidden;
+            color: var(--fg-primary);
+            text-overflow: ellipsis;
+        }
+        #chain-block {
+            color: var(--fg-secondary);
+            font-variant-numeric: tabular-nums;
+        }
         #game-actions { display: none; gap: 6px; margin-left: 0; }
         button.quiet {
             padding: 7px 10px;
@@ -618,7 +651,26 @@
             }
             header h1 { min-width: 0; font-size: 1.75rem; }
             header .tagline { grid-column: 1; grid-row: 2; }
-            #conn-pill { grid-column: 2; grid-row: 1; margin-left: 0; justify-self: end; }
+            #chain-status {
+                grid-column: 2;
+                grid-row: 1;
+                gap: 4px;
+                margin-left: 0;
+                padding: 4px 7px;
+                justify-self: end;
+            }
+            #conn-pill.ok {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+                clip-path: inset(50%);
+                white-space: nowrap;
+            }
+            #chain-status .chain-status-divider { display: none; }
+            #chain-account { max-width: 68px; }
             #game-actions { grid-column: 1 / -1; width: 100%; gap: 8px; }
             #game-actions button { flex: 1 1 0; min-width: 0; }
             .card { padding: 18px; }
@@ -674,7 +726,13 @@
         <header>
             <h1>Quizzler</h1>
             <span class="tagline">Proof of Knowledge</span>
-            <span id="conn-pill" data-testid="conn-pill">connecting…</span>
+            <div id="chain-status" data-testid="chain-status">
+                <span class="chain-status-dot" aria-hidden="true"></span>
+                <span id="conn-pill" data-testid="conn-pill" role="status">connecting…</span>
+                <span class="chain-status-divider" aria-hidden="true"></span>
+                <span id="chain-account" data-testid="chain-account" title="Active account">—</span>
+                <span id="chain-block" data-testid="chain-block" title="Latest chain block">#—</span>
+            </div>
             <div id="game-actions" class="row" data-testid="game-actions">
                 <button id="btn-leave-screen" class="quiet" data-testid="btn-leave-screen">Leave screen</button>
                 <button id="btn-forfeit-game" class="danger" data-testid="btn-forfeit-game" style="display: none;">Forfeit quiz</button>

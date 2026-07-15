@@ -168,6 +168,10 @@ interface CreatedGameConfig {
     maxPlayers: number;
 }
 
+interface BestBlock {
+    number: number;
+}
+
 // ── App state ────────────────────────────────────────────────────────
 
 const manager = new SignerManager({ ss58Prefix: 0, dappName: "quizzler" });
@@ -188,7 +192,8 @@ let pendingAbandonedForfeit: bigint | null = null;
 let latest: Snapshot | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let blockPollSubscription: { unsubscribe(): void } | null = null;
-let bestBlocks: { subscribe: (next: () => void) => { unsubscribe(): void } } | null = null;
+let chainStatusSubscription: { unsubscribe(): void } | null = null;
+let bestBlocks: { subscribe: (next: (blocks: readonly BestBlock[]) => void) => { unsubscribe(): void } } | null = null;
 let lastBlockSignalAt = 0;
 let selectedPackId: number | null = null;
 let selectedPack: PackView | null = null;
@@ -309,6 +314,9 @@ function forgetSavedGame(): void {
 
 const $bootLog = getEl("boot-log");
 const $connPill = getEl("conn-pill");
+const $chainStatus = getEl("chain-status");
+const $chainAccount = getEl("chain-account");
+const $chainBlock = getEl("chain-block");
 const $gameActions = getEl("game-actions");
 const $btnForfeitGame = getEl<HTMLButtonElement>("btn-forfeit-game");
 const $forfeitDialog = getEl<HTMLDialogElement>("forfeit-dialog");
@@ -320,6 +328,35 @@ function setGameActions(mode: "hidden" | "lobby" | "active"): void {
 
 function bootLog(msg: string, level: "info" | "ok" | "err" = "info"): void {
     appendLog($bootLog, msg, level);
+}
+
+function setConnectionStatus(label: string, state: "pending" | "ok" | "err"): void {
+    $connPill.textContent = label;
+    $connPill.className = state === "ok" ? "ok" : state === "err" ? "err" : "";
+    $chainStatus.classList.toggle("is-live", state === "ok");
+    $chainStatus.classList.toggle("has-error", state === "err");
+}
+
+function showActiveAccount(address: string): void {
+    $chainAccount.textContent = truncateAddress(address);
+    $chainAccount.title = `Active account: ${address}`;
+    $chainAccount.setAttribute("aria-label", `Active account: ${address}`);
+}
+
+function updateLatestBlock(blocks: readonly BestBlock[]): void {
+    const number = blocks[0]?.number;
+    if (number === undefined) return;
+
+    const formatted = number.toLocaleString();
+    $chainBlock.textContent = `#${formatted}`;
+    $chainBlock.title = `Latest chain block: ${formatted}`;
+    $chainBlock.setAttribute("aria-label", `Latest chain block: ${formatted}`);
+}
+
+function subscribeChainStatus(): void {
+    chainStatusSubscription?.unsubscribe();
+    if (!bestBlocks) return;
+    chainStatusSubscription = bestBlocks.subscribe(updateLatestBlock);
 }
 
 function fmtAddr(addr: string): string {
@@ -600,8 +637,7 @@ async function sealedPack(packId: number): Promise<PackView | null> {
 async function init(): Promise<void> {
     showScreen("boot");
     if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
-        $connPill.textContent = "no contract";
-        $connPill.className = "err";
+        setConnectionStatus("no contract", "err");
         bootLog("Contract addresses not configured.", "err");
         bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
         return;
@@ -610,8 +646,7 @@ async function init(): Promise<void> {
     bootLog("Connecting signer…");
     const connectRes = await manager.connect();
     if (!connectRes.ok) {
-        $connPill.textContent = "offline";
-        $connPill.className = "err";
+        setConnectionStatus("offline", "err");
         bootLog(`Signer connect failed: ${connectRes.error.message}`, "err");
         return;
     }
@@ -620,12 +655,14 @@ async function init(): Promise<void> {
     bootLog("Requesting product account quizzler.dot/0…");
     const productRes = await manager.getProductAccount("quizzler.dot", 0);
     if (!productRes.ok) {
+        setConnectionStatus("account unavailable", "err");
         bootLog(`getProductAccount failed: ${productRes.error.message}`, "err");
         return;
     }
     productAccount = productRes.value;
     myAddress = ss58ToH160(productAccount.address).toLowerCase();
     savedGameId = readSavedGame();
+    showActiveAccount(productAccount.address);
     bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
 
     bootLog("Opening chain client…");
@@ -636,6 +673,7 @@ async function init(): Promise<void> {
     const client = await createChainClient({ chains: { assetHub: paseo_asset_hub } });
     assetHub = client.assetHub;
     bestBlocks = client.raw.assetHub.bestBlocks$;
+    subscribeChainStatus();
     bootLog("Chain client ready", "ok");
 
     registry = createContractFromClient(
@@ -666,6 +704,7 @@ async function init(): Promise<void> {
         );
         bootLog(mapped === null ? "Account already mapped" : "Account mapped", "ok");
     } catch (e) {
+        setConnectionStatus("account setup failed", "err");
         bootLog(`Account mapping failed: ${txError(e)}`, "err");
         return;
     }
@@ -674,8 +713,7 @@ async function init(): Promise<void> {
     // shared with the first action if the player gets there before it returns.
     void syncNextTxNonce();
 
-    $connPill.textContent = "connected";
-    $connPill.className = "ok";
+    setConnectionStatus("connected", "ok");
     // Pack browsing is unrelated to reopening a live room. Start it in the
     // background so a refresh can return a player to the table without first
     // waiting for catalog RPCs.
@@ -2389,7 +2427,6 @@ function renderAbandoned(snap: Snapshot): void {
 // ── Go ───────────────────────────────────────────────────────────────
 
 init().catch((e) => {
-    $connPill.textContent = "error";
-    $connPill.className = "err";
+    setConnectionStatus("error", "err");
     bootLog(`Unhandled init error: ${txError(e)}`, "err");
 });
