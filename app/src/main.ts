@@ -39,6 +39,11 @@ import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
 import { deploymentCatalog, resolveDeployment, type ContractDeployment } from "./deployments";
 import {
+    clearPendingGameCreation,
+    readPendingGameCreation,
+    rememberPendingGameCreation,
+} from "./pending-game-creation";
+import {
     DebouncedPackDraftSaver,
     EMPTY_PACK_JSON,
     canResumePackPublish,
@@ -95,6 +100,10 @@ let activeDeployment = resolveDeployment(
     configuredDeployments,
     hasContractOverride ? undefined : sharedLobbyInvite.deploymentId,
 );
+// Keep the deployment the URL/build selected. A saved room may temporarily
+// select an allowlisted historical pair so it can be resumed, but a completed
+// or abandoned room must never strand the player on that old catalog.
+const preferredDeployment = activeDeployment;
 let activeContracts: { registry: string | undefined; game: string | undefined } = activeDeployment
     ? { registry: activeDeployment.registry, game: activeDeployment.game }
     : { registry: configuredRegistry, game: configuredGame };
@@ -117,6 +126,7 @@ const MAX_GAME_QUESTIONS = 10;
 const POLL_FALLBACK_MS = 8_000;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
+const PACK_VIEW_BATCH_SIZE = 32;
 
 // These marks are deliberately local-only: they make startup, catalog, and
 // first-snapshot timing visible in the browser Performance panel without
@@ -343,12 +353,12 @@ let optimisticAnswer: { qkey: number; answer: string; wager: number } | null = n
 // Registry content caches (immutable once sealed)
 const questionCache = new Map<string, string>();
 const answerCache = new Map<string, string>();
-const packTitleCache = new Map<number, string>();
+const packTitleCache = new Map<string, string>();
 // A sealed pack is immutable, so its metadata never needs another RPC read.
-const sealedPackCache = new Map<number, PackView>();
+const sealedPackCache = new Map<string, PackView>();
 const questionRequests = new Map<string, Promise<string>>();
 const answerRequests = new Map<string, Promise<string>>();
-const packTitleRequests = new Map<number, Promise<string>>();
+const packTitleRequests = new Map<string, Promise<string>>();
 
 // A dry-run is needed to size each contract call. Most game actions have
 // plenty of think time, so warm the estimate in the background and let the
@@ -376,6 +386,8 @@ let packDrafts: PackDraft[] = [];
 let activePackDraft: PackDraft | null = null;
 let packDraftValidation: PackDraftValidation | null = null;
 let packStudioLoaded = false;
+let packPublishInProgress = false;
+let publishingDraftId: string | null = null;
 
 // ── Screen switching ─────────────────────────────────────────────────
 
@@ -746,14 +758,28 @@ async function sendWarmedTx(handle: any, method: string, args: readonly unknown[
 
 // ── Registry content lookups (cached) ────────────────────────────────
 
+/** Pack IDs are local to a registry, so every immutable-content cache is scoped. */
+function registryCacheScope(): string {
+    return activeContracts.registry?.toLowerCase() ?? "unconfigured-registry";
+}
+
+function registryPackCacheKey(packId: number, scope = registryCacheScope()): string {
+    return `${scope}:${packId}`;
+}
+
+function registryQuestionCacheKey(packId: number, slot: number, scope = registryCacheScope()): string {
+    return `${registryPackCacheKey(packId, scope)}:${slot}`;
+}
+
 async function questionText(packId: number, slot: number): Promise<string> {
-    const key = `${packId}:${slot}`;
+    const key = registryQuestionCacheKey(packId, slot);
     const cached = questionCache.get(key);
     if (cached !== undefined) return cached;
     const pending = questionRequests.get(key);
     if (pending) return pending;
+    const registryAtRequest = registry;
     const request = (async () => {
-        const res = await registry.getQuestion.query(packId, slot);
+        const res = await registryAtRequest.getQuestion.query(packId, slot);
         if (!res.success) return "";
         const text = res.value as string;
         questionCache.set(key, text);
@@ -764,13 +790,14 @@ async function questionText(packId: number, slot: number): Promise<string> {
 }
 
 async function canonicalAnswer(packId: number, slot: number): Promise<string> {
-    const key = `${packId}:${slot}`;
+    const key = registryQuestionCacheKey(packId, slot);
     const cached = answerCache.get(key);
     if (cached !== undefined) return cached;
     const pending = answerRequests.get(key);
     if (pending) return pending;
+    const registryAtRequest = registry;
     const request = (async () => {
-        const res = await registry.getAnswers.query(packId, slot);
+        const res = await registryAtRequest.getAnswers.query(packId, slot);
         if (!res.success) return "";
         const answers = res.value as string[];
         const canonical = answers[0] ?? "";
@@ -782,41 +809,113 @@ async function canonicalAnswer(packId: number, slot: number): Promise<string> {
 }
 
 async function packTitle(packId: number): Promise<string> {
-    const sealedPack = sealedPackCache.get(packId);
+    const key = registryPackCacheKey(packId);
+    const sealedPack = sealedPackCache.get(key);
     if (sealedPack) return sealedPack.title;
-    const cached = packTitleCache.get(packId);
+    const cached = packTitleCache.get(key);
     if (cached !== undefined) return cached;
-    const pending = packTitleRequests.get(packId);
+    const pending = packTitleRequests.get(key);
     if (pending) return pending;
+    const registryAtRequest = registry;
     const request = (async () => {
-        const res = await registry.getPack.query(packId);
+        const res = await registryAtRequest.getPack.query(packId);
         if (!res.success) return `pack #${packId}`;
         const pack = res.value as PackView;
-        if (pack.sealed) sealedPackCache.set(packId, pack);
+        if (pack.sealed) sealedPackCache.set(key, pack);
         const title = pack.title;
-        packTitleCache.set(packId, title);
+        packTitleCache.set(key, title);
         return title;
-    })().finally(() => packTitleRequests.delete(packId));
-    packTitleRequests.set(packId, request);
+    })().finally(() => packTitleRequests.delete(key));
+    packTitleRequests.set(key, request);
     return request;
 }
 
-async function sealedPack(packId: number): Promise<PackView | null> {
-    const cached = sealedPackCache.get(packId);
+async function sealedPack(
+    packId: number,
+    registryAtRequest = registry,
+    scope = registryCacheScope(),
+): Promise<PackView | null> {
+    const key = registryPackCacheKey(packId, scope);
+    const cached = sealedPackCache.get(key);
     if (cached) return cached;
     try {
-        const res = await registry.getPack.query(packId);
+        const res = await registryAtRequest.getPack.query(packId);
         if (!res.success) return null;
         const pack = res.value as PackView;
         if (pack.sealed) {
-            sealedPackCache.set(packId, pack);
-            packTitleCache.set(packId, pack.title);
+            sealedPackCache.set(key, pack);
+            packTitleCache.set(key, pack.title);
             return pack;
         }
     } catch {
         // A transient query failure should not discard the currently rendered list.
     }
     return null;
+}
+
+/**
+ * Fetch catalog cards in bounded contract batches when the deployed registry
+ * supports it. Legacy pairs retain the one-at-a-time fallback so an older
+ * unfinished game remains playable during a staged rollout.
+ */
+async function sealedPacks(
+    packIds: readonly number[],
+    registryAtRequest = registry,
+    scope = registryCacheScope(),
+    supportsBatch = contractCapabilities.registryImport,
+): Promise<(PackView | null)[]> {
+    const byId = new Map<number, PackView | null>();
+    const uncached: number[] = [];
+    for (const packId of packIds) {
+        const cached = sealedPackCache.get(registryPackCacheKey(packId, scope));
+        if (cached) byId.set(packId, cached);
+        else if (!byId.has(packId)) uncached.push(packId);
+    }
+
+    if (supportsBatch && uncached.length > 0) {
+        const batches = Array.from(
+            { length: Math.ceil(uncached.length / PACK_VIEW_BATCH_SIZE) },
+            (_, index) => uncached.slice(index * PACK_VIEW_BATCH_SIZE, (index + 1) * PACK_VIEW_BATCH_SIZE),
+        );
+        const responses = await mapWithConcurrency(batches, 3, async (batch) => {
+            try {
+                const result = await registryAtRequest.getPacks.query(batch);
+                return result.success ? result.value as PackView[] : null;
+            } catch {
+                return null;
+            }
+        });
+        for (let index = 0; index < batches.length; index += 1) {
+            const batch = batches[index];
+            const views = responses[index];
+            if (views === null || views.length !== batch.length) continue;
+            for (let viewIndex = 0; viewIndex < batch.length; viewIndex += 1) {
+                const packId = batch[viewIndex];
+                const view = views[viewIndex];
+                if (view?.sealed) {
+                    const key = registryPackCacheKey(packId, scope);
+                    sealedPackCache.set(key, view);
+                    packTitleCache.set(key, view.title);
+                    byId.set(packId, view);
+                } else {
+                    byId.set(packId, null);
+                }
+            }
+        }
+    }
+
+    const unresolved = uncached.filter((packId) => !byId.has(packId));
+    if (unresolved.length > 0) {
+        const fallback = await mapWithConcurrency(
+            unresolved,
+            PACK_FETCH_CONCURRENCY,
+            (packId) => sealedPack(packId, registryAtRequest, scope),
+        );
+        for (let index = 0; index < unresolved.length; index += 1) {
+            byId.set(unresolved[index], fallback[index]);
+        }
+    }
+    return packIds.map((packId) => byId.get(packId) ?? null);
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────
@@ -862,6 +961,23 @@ async function detectContractCapabilities(): Promise<void> {
     };
     const $displayNameCard = getEl("display-name-card");
     $displayNameCard.style.display = contractCapabilities.gameLiveState ? "" : "none";
+}
+
+/** Return from a stale historical session to the pair the URL/build requested. */
+async function activatePreferredDeployment(client: any, descriptor: any): Promise<boolean> {
+    if (preferredDeployment === null || activeDeployment?.id === preferredDeployment.id) return true;
+    selectDeployment(preferredDeployment);
+    resetCatalogForDeployment();
+    createContractHandles(client, descriptor);
+    if (!await verifyActiveContractPair()) {
+        setConnectionStatus("contract mismatch", "err");
+        bootLog("The requested game deployment is not linked to its registry.", "err");
+        return false;
+    }
+    await detectContractCapabilities();
+    hydratePackCatalogCache();
+    void refreshPacks();
+    return true;
 }
 
 async function init(): Promise<void> {
@@ -963,8 +1079,17 @@ async function init(): Promise<void> {
     setConnectionStatus("connected", "ok");
     const resume = await resumeSavedGame();
     if (resume === "resumed") return;
+    if (resume === "not-active" && !await activatePreferredDeployment(client, paseo_asset_hub)) return;
+    // A saved active room takes precedence over a recovery marker. If its
+    // status is temporarily unavailable, do not risk opening another table.
+    const pendingCreation = resume === "unavailable"
+        ? "none"
+        : await resumePendingGameCreation();
+    if (pendingCreation === "resumed") return;
     let inviteError = "";
-    if (sharedLobbyInvite.present) {
+    if (pendingCreation === "unavailable") {
+        inviteError = "Your new lobby is still being confirmed. Reload in a moment to reopen it.";
+    } else if (sharedLobbyInvite.present) {
         if (sharedLobbyInvite.gameId === null) {
             inviteError = "This invite link doesn’t contain a valid six-digit game code.";
         } else if (savedGameId === null) {
@@ -1109,6 +1234,10 @@ let starterPacksLoading = false;
 let communityPacksLoading = false;
 let communityPacksRequested = false;
 let lastCommunityRequestAt = 0;
+// An allowlisted historical deployment can be selected briefly to resume a
+// room. Generation guards ensure an old catalog request can never paint packs
+// from that registry after the app returns to the preferred deployment.
+let catalogGeneration = 0;
 // E2E runs can opt in to their disposable packs without exposing them to
 // players on the normal home screen.
 const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
@@ -1158,8 +1287,9 @@ function hydratePackCatalogCache(): void {
         if (byId.size === 0) return;
         catalogPacks = [...byId.values()].slice(0, PACK_CATALOG_CACHE_LIMIT);
         for (const pack of catalogPacks) {
-            sealedPackCache.set(pack.id, pack);
-            packTitleCache.set(pack.id, pack.title);
+            const key = registryPackCacheKey(pack.id);
+            sealedPackCache.set(key, pack);
+            packTitleCache.set(key, pack.title);
         }
         renderPackList();
         performanceMark("catalog:cache-restored");
@@ -1180,6 +1310,20 @@ function persistPackCatalog(): void {
     } catch {
         // Private mode and quota limits should not affect normal browsing.
     }
+}
+
+function resetCatalogForDeployment(): void {
+    catalogGeneration += 1;
+    refreshingPacks = null;
+    communityRefresh = null;
+    catalogPacks = [];
+    knownPackCount = 0;
+    starterPacksLoading = false;
+    communityPacksLoading = false;
+    communityPacksRequested = false;
+    lastCommunityRequestAt = 0;
+    lastPackListSignature = null;
+    renderPackList();
 }
 
 function starterPackIds(count: number): number[] {
@@ -1238,19 +1382,24 @@ function refreshPacks({ includeCommunity = getEl("screen-pack-select").classList
 } = {}): Promise<void> {
     if (includeCommunity) communityPacksRequested = true;
     if (refreshingPacks) return refreshingPacks;
+    const generation = catalogGeneration;
     starterPacksLoading = true;
     renderPackList();
     const error = getEl("screen-pack-select").classList.contains("active")
         ? $packSelectionError
         : $homeError;
-    const request = refreshStarterPacks()
+    let request: Promise<void>;
+    request = refreshStarterPacks(generation)
         .then(() => {
+            if (generation !== catalogGeneration) return;
             error.textContent = "";
         })
         .catch(() => {
+            if (generation !== catalogGeneration) return;
             error.textContent = "Couldn’t refresh quiz packs. Retrying…";
         })
         .finally(() => {
+            if (generation !== catalogGeneration || refreshingPacks !== request) return;
             starterPacksLoading = false;
             refreshingPacks = null;
             renderPackList();
@@ -1263,15 +1412,20 @@ function refreshPacks({ includeCommunity = getEl("screen-pack-select").classList
     return request;
 }
 
-async function refreshStarterPacks(): Promise<void> {
+async function refreshStarterPacks(generation: number): Promise<void> {
     const startMark = performanceMark("catalog:starters:start");
-    const countRes = await registry.packCount.query();
+    const registryAtRequest = registry;
+    const scope = registryCacheScope();
+    const supportsBatch = contractCapabilities.registryImport;
+    const countRes = await registryAtRequest.packCount.query();
     if (!countRes.success) throw new Error("pack count query failed");
+    if (generation !== catalogGeneration) return;
     const count = Number(countRes.value);
     knownPackCount = count;
     retainCatalogWindow(count);
     const ids = starterPackIds(count);
-    const packs = await mapWithConcurrency(ids, PACK_FETCH_CONCURRENCY, sealedPack);
+    const packs = await sealedPacks(ids, registryAtRequest, scope, supportsBatch);
+    if (generation !== catalogGeneration) return;
     mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
     const readyMark = performanceMark("catalog:starters:ready");
     performanceMeasure("catalog:starters", startMark, readyMark);
@@ -1280,23 +1434,30 @@ async function refreshStarterPacks(): Promise<void> {
 /** Load the larger community window only after someone opens the picker. */
 function requestCommunityPacks(count: number): void {
     if (count <= STARTER_PACK_COUNT || communityRefresh) return;
+    const generation = catalogGeneration;
+    const registryAtRequest = registry;
+    const scope = registryCacheScope();
+    const supportsBatch = contractCapabilities.registryImport;
     const ids = communityPackIds(count);
     if (ids.length === 0) return;
     lastCommunityRequestAt = Date.now();
     communityPacksLoading = true;
     renderPackList();
-    const request = (async () => {
+    let request: Promise<void>;
+    request = (async () => {
         const startMark = performanceMark("catalog:community:start");
-        const packs = await mapWithConcurrency(ids, PACK_FETCH_CONCURRENCY, sealedPack);
+        const packs = await sealedPacks(ids, registryAtRequest, scope, supportsBatch);
+        if (generation !== catalogGeneration) return;
         mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
         const readyMark = performanceMark("catalog:community:ready");
         performanceMeasure("catalog:community", startMark, readyMark);
     })().catch(() => {
         // Keep the starter packs usable if a larger background refresh fails.
-        if (getEl("screen-pack-select").classList.contains("active")) {
+        if (generation === catalogGeneration && getEl("screen-pack-select").classList.contains("active")) {
             $packSelectionError.textContent = "Couldn’t load more community packs yet.";
         }
     }).finally(() => {
+        if (generation !== catalogGeneration || communityRefresh !== request) return;
         communityPacksLoading = false;
         communityRefresh = null;
         renderPackList();
@@ -1615,6 +1776,47 @@ async function resolveCreatedGame(nonce: bigint): Promise<bigint | null> {
     return null;
 }
 
+function pendingGameCreation() {
+    if (!contractCapabilities.gameLiveState || !myAddress || !isContractAddress(activeContracts.game)) return null;
+    try {
+        return readPendingGameCreation(window.sessionStorage, activeContracts.game, myAddress);
+    } catch {
+        return null;
+    }
+}
+
+function clearPendingGameCreationMarker(): void {
+    if (!myAddress || !isContractAddress(activeContracts.game)) return;
+    try {
+        clearPendingGameCreation(window.sessionStorage, activeContracts.game, myAddress);
+    } catch {
+        // Private browsing policies must not disrupt a successfully created lobby.
+    }
+}
+
+function rememberPendingGameCreationMarker(nonce: bigint, config: CreatedGameConfig): void {
+    if (!myAddress || !isContractAddress(activeContracts.game)) return;
+    try {
+        rememberPendingGameCreation(window.sessionStorage, activeContracts.game, myAddress, { nonce, config });
+    } catch {
+        // Storage is recovery-only; the in-memory path still opens the lobby.
+    }
+}
+
+/**
+ * A refresh can land after createGame has been included but before its nonce
+ * becomes a lobby code. Resolve that tiny gap before offering another table.
+ */
+async function resumePendingGameCreation(): Promise<"none" | "resumed" | "unavailable"> {
+    const pending = pendingGameCreation();
+    if (!pending) return "none";
+    const id = await resolveCreatedGame(pending.nonce);
+    if (id === null) return "unavailable";
+    clearPendingGameCreationMarker();
+    enterGame(id, createdLobbySnapshot(pending.config));
+    return "resumed";
+}
+
 /** `null` means the chain could not be queried; `false` is authoritative. */
 async function activePlayerStatus(id: bigint): Promise<boolean | null> {
     try {
@@ -1663,6 +1865,10 @@ async function resumeSavedGame(): Promise<ResumeResult> {
  * resume locally.
  */
 function canStartAnotherQuiz(error = $homeError): boolean {
+    if (pendingGameCreation()) {
+        error.textContent = "Your new lobby is still being confirmed. Give it a moment, then try again to reopen it.";
+        return false;
+    }
     if (savedGameId === null) return true;
     error.textContent = "You already have a quiz in progress. Resume it, leave its lobby, or forfeit it before starting another.";
     return false;
@@ -1673,6 +1879,12 @@ async function joinGameById(id: bigint, error: HTMLElement): Promise<boolean> {
     if (!productAccount || busy) return false;
     busy = true;
     try {
+        const pendingCreation = await resumePendingGameCreation();
+        if (pendingCreation === "resumed") return true;
+        if (pendingCreation === "unavailable") {
+            error.textContent = "Your new lobby is still being confirmed. Try again in a moment.";
+            return false;
+        }
         if (savedGameId !== null) {
             if (savedGameId === id) {
                 const result = await resumeSavedGame();
@@ -1718,6 +1930,12 @@ getEl("btn-create-game").addEventListener("click", async () => {
         createGamePreflightTimer = null;
     }
     $configError.textContent = "";
+    const pendingCreation = await resumePendingGameCreation();
+    if (pendingCreation === "resumed") return;
+    if (pendingCreation === "unavailable") {
+        $configError.textContent = "Your new lobby is still being confirmed. Try again in a moment.";
+        return;
+    }
     if (!canStartAnotherQuiz($configError)) return;
     const config = readCreatedGameConfig(true);
     if (!config) return;
@@ -1727,10 +1945,12 @@ getEl("btn-create-game").addEventListener("click", async () => {
         const call = gameCreateCall(config);
         await sendWarmedTx(game, call.method, call.args);
         $configError.textContent = "Game created — opening your lobby…";
+        if (call.nonce !== null) rememberPendingGameCreationMarker(call.nonce, config);
         const id = call.nonce === null
             ? await myLatestGameId()
             : await resolveCreatedGame(call.nonce);
         if (id === null) throw new Error("could not locate the created game");
+        clearPendingGameCreationMarker();
         enterGame(id, createdLobbySnapshot(config));
     } catch (e) {
         $configError.textContent = txError(e);
@@ -1811,6 +2031,23 @@ const FINAL_DIFFICULTIES = ["easy", "medium", "hard"] as const;
 type FinalDifficulty = (typeof FINAL_DIFFICULTIES)[number];
 type PublishQuestion = { text: string; answers: string[]; is_final: boolean; difficulty: number };
 
+function setPackStudioPublishing(publishing: boolean): void {
+    packPublishInProgress = publishing;
+    const controls = [
+        $draftName,
+        $packEmoji,
+        $packJson,
+        getEl<HTMLInputElement>("pack-file-input"),
+        getEl<HTMLButtonElement>("btn-new-draft"),
+        getEl<HTMLButtonElement>("btn-open-emoji-picker"),
+        getEl<HTMLButtonElement>("btn-insert-pack-template"),
+        getEl<HTMLButtonElement>("btn-export-pack-file"),
+        getEl<HTMLButtonElement>("btn-export-draft"),
+        getEl<HTMLButtonElement>("btn-builder-done"),
+    ];
+    for (const control of controls) control.disabled = publishing;
+}
+
 function setDraftSaveStatus(message: string): void {
     $draftSaveStatus.textContent = message;
 }
@@ -1846,6 +2083,7 @@ function renderPackDraftList(): void {
             const item = li(span("draft-emoji", draft.metadata.emoji));
             const button = document.createElement("button");
             button.type = "button";
+            button.disabled = packPublishInProgress;
             button.className = draft.metadata.id === activePackDraft?.metadata.id ? "draft-current" : "";
             button.setAttribute("aria-current", draft.metadata.id === activePackDraft?.metadata.id ? "true" : "false");
             const copy = document.createElement("span");
@@ -1933,6 +2171,7 @@ async function ensurePackStudio(): Promise<void> {
 }
 
 async function openExistingPackDraft(id: string): Promise<void> {
+    if (packPublishInProgress) return;
     await packDraftSaver.flush();
     const draft = packDrafts.find((candidate) => candidate.metadata.id === id)
         ?? await packDraftStore.get(id);
@@ -1952,6 +2191,7 @@ for (const id of ["btn-new-pack", "btn-new-pack-from-picker"]) {
 }
 
 getEl("btn-new-draft").addEventListener("click", async () => {
+    if (packPublishInProgress) return;
     await packDraftSaver.flush();
     const draft = createPackDraft();
     replaceActiveDraft(draft, { paintInputs: true });
@@ -1959,6 +2199,7 @@ getEl("btn-new-draft").addEventListener("click", async () => {
 });
 
 function updateActiveDraftFromEditor(change: Parameters<typeof updatePackDraft>[1]): void {
+    if (packPublishInProgress) return;
     const draft = activeDraftOrThrow();
     replaceActiveDraft(updatePackDraft(draft, change));
 }
@@ -1986,7 +2227,7 @@ function downloadText(filename: string, text: string): void {
 }
 
 getEl("btn-insert-pack-template").addEventListener("click", () => {
-    if (!activePackDraft) return;
+    if (packPublishInProgress || !activePackDraft) return;
     updateActiveDraftFromEditor({ rawJson: EMPTY_PACK_JSON });
     $packJson.value = EMPTY_PACK_JSON;
     setDraftSaveStatus("Template inserted — saving locally…");
@@ -2007,6 +2248,7 @@ getEl("btn-export-draft").addEventListener("click", () => {
 });
 
 getEl<HTMLInputElement>("pack-file-input").addEventListener("change", async (event) => {
+    if (packPublishInProgress) return;
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     input.value = "";
@@ -2022,6 +2264,7 @@ getEl<HTMLInputElement>("pack-file-input").addEventListener("change", async (eve
 });
 
 async function openEmojiPicker(): Promise<void> {
+    if (packPublishInProgress) return;
     $builderError.textContent = "";
     if (!$emojiPickerDialog.open) $emojiPickerDialog.showModal();
     if ($emojiPickerHost.childElementCount > 0) return;
@@ -2031,6 +2274,7 @@ async function openEmojiPicker(): Promise<void> {
         const picker = document.createElement("emoji-picker");
         picker.classList.add("dark");
         picker.addEventListener("emoji-click", (event) => {
+            if (packPublishInProgress) return;
             const unicode = (event as unknown as CustomEvent<{ unicode?: unknown }>).detail?.unicode;
             if (typeof unicode !== "string") return;
             $packEmoji.value = unicode;
@@ -2061,10 +2305,22 @@ function nextPublishResume(resume: PackPublishResume, patch: Partial<PackPublish
     return { ...resume, ...patch, updatedAt: Date.now() };
 }
 
-async function persistPublishResume(resume: PackPublishResume): Promise<void> {
-    const draft = activeDraftOrThrow();
-    replaceActiveDraft(updatePackDraft(draft, { publishResume: resume }), { paintInputs: false });
-    await packDraftSaver.flush();
+async function persistPublishResume(draftId: string, resume: PackPublishResume | null): Promise<PackDraft> {
+    if (publishingDraftId !== draftId) {
+        throw new Error("The active publish no longer matches this draft.");
+    }
+    const index = packDrafts.findIndex((draft) => draft.metadata.id === draftId);
+    if (index < 0) throw new Error("The publishing draft is no longer available locally.");
+    const next = updatePackDraft(packDrafts[index], { publishResume: resume });
+    packDrafts.splice(index, 1, next);
+    packDrafts.sort((a, b) => b.metadata.updatedAt - a.metadata.updatedAt);
+    if (activePackDraft?.metadata.id === draftId) activePackDraft = next;
+    renderPackDraftList();
+    renderPackDraftPreview();
+    // Publishing is locked to one draft, so save the exact updated record
+    // rather than relying on whichever draft happens to be open later.
+    await packDraftStore.save(next);
+    return next;
 }
 
 function creationNonce(): bigint {
@@ -2127,7 +2383,9 @@ async function reconcilePublishResume(
 
 async function publishPackDraft(): Promise<void> {
     if (busy || !productAccount || !activePackDraft) return;
-    const validation = validatePackDraft(activePackDraft);
+    const publishingDraft = activePackDraft;
+    const draftId = publishingDraft.metadata.id;
+    const validation = validatePackDraft(publishingDraft);
     if (!validation.valid) {
         renderPackDraftPreview();
         return;
@@ -2137,21 +2395,27 @@ async function publishPackDraft(): Promise<void> {
         return;
     }
     busy = true;
+    publishingDraftId = draftId;
+    setPackStudioPublishing(true);
     $builderError.textContent = "";
     setLoading("btn-publish-pack", true);
     try {
-        let resume = canResumePackPublish(activePackDraft, validation)
-            ? activePackDraft.publishResume!
+        // Flush any edits already queued before we write durable publish
+        // checkpoints. The studio stays locked until the sequence finishes.
+        await packDraftSaver.flush();
+        const persistedDraft = packDrafts.find((draft) => draft.metadata.id === draftId) ?? publishingDraft;
+        let resume = canResumePackPublish(persistedDraft, validation)
+            ? persistedDraft.publishResume!
             : createPackPublishResume({ contentHash: validation.contentHash });
         resume = await reconcilePublishResume(resume, validation);
-        await persistPublishResume(resume);
+        await persistPublishResume(draftId, resume);
 
         if (resume.packId === null) {
             $builderPublishStatus.textContent = "Creating the pack…";
             const nonce = resume.creationNonce ? BigInt(resume.creationNonce) : creationNonce();
             if (!resume.creationNonce) {
                 resume = nextPublishResume(resume, { creationNonce: nonce.toString() });
-                await persistPublishResume(resume);
+                await persistPublishResume(draftId, resume);
             }
             let packId = await resolveCreatedPack(nonce);
             if (packId === null) {
@@ -2160,7 +2424,7 @@ async function publishPackDraft(): Promise<void> {
             }
             if (packId === null) throw new Error("Couldn’t locate the created pack. Your draft is saved; try Publish again to resume.");
             resume = nextPublishResume(resume, { packId, phase: "questions" });
-            await persistPublishResume(resume);
+            await persistPublishResume(draftId, resume);
         }
 
         const packId = resume.packId;
@@ -2174,7 +2438,7 @@ async function publishPackDraft(): Promise<void> {
             await sendTx(registry, "addQuestions", packId, batch);
             resume = await reconcilePublishResume(resume, validation);
             if (resume.nextRegularQuestion <= start) throw new Error("The question batch is not visible on-chain yet. Try Publish again to resume safely.");
-            await persistPublishResume(resume);
+            await persistPublishResume(draftId, resume);
         }
 
         const remainingFinals = FINAL_DIFFICULTIES.filter((difficulty) => !resume.completedFinals.includes(difficulty));
@@ -2186,7 +2450,7 @@ async function publishPackDraft(): Promise<void> {
             await sendTx(registry, "addQuestions", packId, finals);
             resume = await reconcilePublishResume(resume, validation);
             if (resume.completedFinals.length < 3) throw new Error("The final-question batch is not visible on-chain yet. Try Publish again to resume safely.");
-            await persistPublishResume(resume);
+            await persistPublishResume(draftId, resume);
         }
 
         const finalState = await registry.getPack.query(packId);
@@ -2195,8 +2459,7 @@ async function publishPackDraft(): Promise<void> {
             $builderPublishStatus.textContent = "Sealing the pack…";
             await sendTx(registry, "sealPack", packId);
         }
-        replaceActiveDraft(updatePackDraft(activeDraftOrThrow(), { publishResume: null }), { paintInputs: false });
-        await packDraftSaver.flush();
+        await persistPublishResume(draftId, null);
         const published: CatalogPack = {
             id: packId,
             creator: myAddress,
@@ -2217,6 +2480,8 @@ async function publishPackDraft(): Promise<void> {
         $builderError.textContent = txError(error);
         $builderPublishStatus.textContent = "Publish paused. Your saved draft can resume from its last confirmed step.";
     } finally {
+        publishingDraftId = null;
+        setPackStudioPublishing(false);
         busy = false;
         setLoading("btn-publish-pack", false);
         renderPackDraftPreview();
@@ -2226,6 +2491,7 @@ async function publishPackDraft(): Promise<void> {
 getEl("btn-publish-pack").addEventListener("click", () => void publishPackDraft());
 
 getEl("btn-builder-done").addEventListener("click", async () => {
+    if (packPublishInProgress) return;
     await packDraftSaver.flush();
     showScreen("home");
     renderResumeCard();
@@ -2780,7 +3046,7 @@ function render(snap: Snapshot): void {
 // ── Lobby ────────────────────────────────────────────────────────────
 
 function prefetchQuestion(packId: number, slot: number): void {
-    const key = `${packId}:${slot}`;
+    const key = registryQuestionCacheKey(packId, slot);
     if (questionCache.has(key)) return;
     void questionText(packId, slot).catch(() => {
         // The normal poll remains the source of truth and will retry later.
@@ -2795,7 +3061,7 @@ function renderLobby(snap: Snapshot): void {
     // Never make the room wait on a cosmetic title lookup. Hosts normally
     // have it cached from the pack picker; joiners see a stable fallback for
     // one RPC round-trip and then the real title replaces it.
-    getEl("lobby-title").textContent = packTitleCache.get(snap.game.pack_id) ?? `pack #${snap.game.pack_id}`;
+    getEl("lobby-title").textContent = packTitleCache.get(registryPackCacheKey(snap.game.pack_id)) ?? `pack #${snap.game.pack_id}`;
     const starter = snap.players[0] ?? "";
     renderList(
         getEl("lobby-players"),
@@ -2911,7 +3177,7 @@ function showStartedGame(): void {
             continue_ready: false,
             active: true,
         })),
-        questionText: questionCache.get(`${previous.game.pack_id}:0`) ?? "",
+        questionText: questionCache.get(registryQuestionCacheKey(previous.game.pack_id, 0)) ?? "",
         answerText: "",
     };
     latest = snap;
