@@ -12,6 +12,8 @@
  * wagers after the local player locks in, while keeping correctness for review.
  */
 
+import "./styles.css";
+
 import { SignerManager, type SignerAccount } from "@parity/product-sdk-signer";
 import { createChainClient } from "@parity/product-sdk-chain-client";
 import { requestResourceAllocation } from "@parity/product-sdk-host";
