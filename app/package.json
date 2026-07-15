@@ -17,6 +17,7 @@
         "typecheck:tools": "tsc -p tsconfig.tools.json",
         "validate:packs": "tsx scripts/validate-packs.ts",
         "deploy:contract": "tsx scripts/deploy.ts",
+        "deploy:game-upgrade": "REUSE_ACTIVE_REGISTRY=1 tsx scripts/deploy.ts",
         "deploy:dot": "playground deploy --domain quizzler --no-build --buildDir dist --signer dev --env paseo-next-v2",
         "deploy:e2e-contracts": "DEPLOY_E2E_PROFILE=1 tsx scripts/deploy.ts",
         "seed:packs": "tsx scripts/seed-packs.ts",
@@ -28,9 +29,13 @@
         "@parity/product-sdk-chain-client": "^0.7.7",
         "@parity/product-sdk-contracts": "^0.8.3",
         "@parity/product-sdk-descriptors": "^0.6.2",
+        "@parity/product-sdk-host": "^0.12.0",
+        "@parity/product-sdk-keys": "^0.3.13",
+        "@parity/product-sdk-local-storage": "^0.2.12",
         "@parity/product-sdk-signer": "^0.9.0",
         "emoji-picker-element": "^1.29.1",
-        "polkadot-api": "^2.1.8"
+        "polkadot-api": "^2.1.8",
+        "viem": "^2.52.0"
     },
     "devDependencies": {
         "@parity/host-api-test-sdk": "^0.10.0",
@@ -39,7 +44,6 @@
         "@types/node": "^26.1.1",
         "tsx": "^4.19.0",
         "typescript": "^5.7.0",
-        "viem": "^2.52.0",
         "vite": "^6.4.3",
         "vitest": "^3.1.4"
     }

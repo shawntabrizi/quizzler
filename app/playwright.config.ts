@@ -37,11 +37,13 @@ export default defineConfig({
     webServer: {
         command: "pnpm vite --port 5302",
         port: 5302,
-        // Compile the test host against a dedicated registry/game pair. The
-        // player-facing address file is never used by destructive E2E tests.
+        // Compile the test host against a dedicated registry/session/game
+        // triple. The player-facing address file is never used by destructive
+        // E2E tests.
         env: {
             ...process.env,
             VITE_QUIZZLER_REGISTRY: e2eContracts.registry,
+            VITE_QUIZZLER_SESSION_REGISTRY: e2eContracts.sessionRegistry,
             VITE_QUIZZLER_GAME: e2eContracts.game,
             VITE_SHOW_E2E_PACKS: "1",
         },

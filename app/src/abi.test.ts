@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import gameAbi from "./abi-game.json";
 import registryAbi from "./abi-registry.json";
+import sessionRegistryAbi from "./abi-session-registry.json";
 
 type AbiItem = {
     type: string;
@@ -64,6 +65,16 @@ describe("transaction ABI", () => {
     });
 
     it("marks nonce-bound game creation as a state-changing call", () => {
+        const gameConstructor = (gameAbi as AbiItem[]).find((item) => item.type === "constructor");
+        expect(gameConstructor?.inputs).toEqual([
+            { name: "registry", type: "address" },
+            { name: "session_registry", type: "address" },
+        ]);
+
+        const sessionRegistry = method(gameAbi as AbiItem[], "sessionRegistry");
+        expect(sessionRegistry.stateMutability).toBe("view");
+        expect(sessionRegistry.outputs).toEqual([{ name: "", type: "address" }]);
+
         const createGame = method(gameAbi as AbiItem[], "createGameWithNonce");
         expect(createGame.stateMutability).toBe("nonpayable");
         expect(createGame.inputs).toEqual([
@@ -145,5 +156,27 @@ describe("transaction ABI", () => {
                 components: expect.arrayContaining([{ name: "active", type: "bool" }]),
             },
         ]);
+    });
+
+    it("requires session-key possession before enabling quick play", () => {
+        const request = method(sessionRegistryAbi as AbiItem[], "requestSession");
+        expect(request.stateMutability).toBe("nonpayable");
+        expect(request.inputs).toEqual([{ name: "session", type: "address" }]);
+
+        const activate = method(sessionRegistryAbi as AbiItem[], "activateSession");
+        expect(activate.stateMutability).toBe("nonpayable");
+        expect(activate.inputs).toEqual([{ name: "owner", type: "address" }]);
+
+        const pending = method(sessionRegistryAbi as AbiItem[], "pendingOwnerOf");
+        expect(pending.stateMutability).toBe("view");
+        expect(pending.inputs).toEqual([{ name: "session", type: "address" }]);
+        expect(pending.outputs).toEqual([{ name: "", type: "address" }]);
+
+        const sessionNames = new Set(
+            (sessionRegistryAbi as AbiItem[])
+                .filter((item) => item.type === "function")
+                .map((item) => item.name),
+        );
+        expect(sessionNames).not.toContain("registerSession");
     });
 });

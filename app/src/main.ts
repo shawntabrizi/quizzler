@@ -14,15 +14,20 @@
 
 import { SignerManager, type SignerAccount } from "@parity/product-sdk-signer";
 import { createChainClient } from "@parity/product-sdk-chain-client";
+import { requestResourceAllocation } from "@parity/product-sdk-host";
+import { SessionKeyManager, type SessionKeyInfo } from "@parity/product-sdk-keys";
+import { createLocalKvStore } from "@parity/product-sdk-local-storage";
 import {
     createContractFromClient,
     createContractRuntimeFromClient,
     ensureContractAccountMapped,
 } from "@parity/product-sdk-contracts";
 import { ss58ToH160, truncateAddress } from "@parity/product-sdk-address";
+import { encodeFunctionData, erc20Abi, hexToBytes } from "viem";
 
 import registryAbi from "./abi-registry.json";
 import gameAbi from "./abi-game.json";
+import sessionRegistryAbi from "./abi-session-registry.json";
 import contractInfo from "./contract-address.json";
 import {
     ANSWER_BLOCK_PRESETS,
@@ -71,8 +76,13 @@ function isContractAddress(value: unknown): value is `0x${string}` {
     return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
 }
 
+function sessionRegistryConfigured(): boolean {
+    return isContractAddress(activeContracts.sessionRegistry);
+}
+
 const configuredRegistry = import.meta.env.VITE_QUIZZLER_REGISTRY;
 const configuredGame = import.meta.env.VITE_QUIZZLER_GAME;
+const configuredSessionRegistry = import.meta.env.VITE_QUIZZLER_SESSION_REGISTRY;
 // Consume an invite once per page load so a refresh while a signer prompt is
 // open cannot prompt the player to join the same room twice.
 const sharedLobbyInvite = consumeSharedLobbyInvite(window.location.href);
@@ -86,10 +96,25 @@ if (sharedLobbyInvite.present) {
 
 // A test host can inject one isolated pair at build time. There is one active
 // contract pair for this unreleased app; lobby links contain only a game code.
-const hasContractOverride = configuredRegistry !== undefined || configuredGame !== undefined;
-const activeContracts: { registry: string | undefined; game: string | undefined } = hasContractOverride
-    ? { registry: configuredRegistry, game: configuredGame }
-    : { registry: contractInfo.registry, game: contractInfo.game };
+const hasContractOverride =
+    configuredRegistry !== undefined
+    || configuredGame !== undefined
+    || configuredSessionRegistry !== undefined;
+const activeContracts: {
+    registry: string | undefined;
+    game: string | undefined;
+    sessionRegistry: string | undefined;
+} = hasContractOverride
+    ? {
+        registry: configuredRegistry,
+        game: configuredGame,
+        sessionRegistry: configuredSessionRegistry,
+    }
+    : {
+        registry: contractInfo.registry,
+        game: contractInfo.game,
+        sessionRegistry: (contractInfo as { sessionRegistry?: string }).sessionRegistry,
+    };
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -110,6 +135,29 @@ const POLL_FALLBACK_MS = 8_000;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
 const PACK_VIEW_BATCH_SIZE = 32;
+const PRODUCT_DERIVATION_INDEX = 0;
+
+// Paseo Next Asset Hub's personhood-backed gas asset. The session setup
+// keeps its batch entirely Revive calls (including this ERC-20 transfer), so
+// the runtime can charge PGAS without requiring native tokens.
+const PGAS_ASSET_ID = 2_000_000_000;
+const PGAS_ERC20_PRECOMPILE = "0x7735940000000000000000000000000001200000" as const;
+const SESSION_PGAS_BUDGET = 10_000_000_000n;
+const SESSION_SETUP_STORAGE_LIMIT = 20_000_000_000n;
+const SESSION_SETUP_WEIGHT = {
+    ref_time: 2_000_000_000n,
+    proof_size: 500_000n,
+};
+
+// These are the only calls a session key may make on a Quizzler game. Pack
+// authoring, profile changes, lobby management, forfeiting, and creation stay
+// on the product account even when quick play is enabled.
+const SESSION_GAME_METHODS = new Set([
+    "submitAnswer",
+    "voteCorrect",
+    "readyContinue",
+    "voteDifficulty",
+]);
 
 // These marks are deliberately local-only: they make startup, catalog, and
 // first-snapshot timing visible in the browser Performance panel without
@@ -230,6 +278,17 @@ interface BestBlock {
     number: number;
 }
 
+interface TransactionActor {
+    /** SS58 address used as the Revive dry-run origin and nonce account. */
+    address: string;
+    /** H160 identity; product addresses are used in game state. */
+    h160: string;
+    signer: ReturnType<SignerAccount["getSigner"]>;
+    kind: "product" | "session";
+}
+
+type SessionAccount = SessionKeyInfo["account"];
+
 // ── App state ────────────────────────────────────────────────────────
 
 const manager = new SignerManager({ ss58Prefix: 0, dappName: "quizzler" });
@@ -237,11 +296,12 @@ const manager = new SignerManager({ ss58Prefix: 0, dappName: "quizzler" });
 let productAccount: SignerAccount | null = null;
 let registry: any = null;
 let game: any = null;
+let sessionRegistry: any = null;
 let assetHub: any = null;
 let myAddress = ""; // lowercase H160
 let savedGameId: bigint | null = null;
-let nextTxNonce: number | null = null;
-let nonceSync: Promise<number | null> | null = null;
+const nextTxNonceByAddress = new Map<string, number>();
+const nonceSyncByAddress = new Map<string, Promise<number | null>>();
 let gameId: bigint | null = null;
 // A final forfeit can make the game Abandoned. Keep that one terminal
 // snapshot long enough to show its scorecard, even though this account is no
@@ -256,6 +316,15 @@ let lastBlockSignalAt = 0;
 let selectedPackId: number | null = null;
 let selectedPack: PackView | null = null;
 let busy = false;
+
+// Quick play deliberately uses a locally held, narrow session key rather
+// than the host's broad AutoSigning capability. The mnemonic lives only in
+// host-backed per-app storage; it is never copied into browser storage.
+let sessionKeyManager: SessionKeyManager | null = null;
+let sessionAccount: SessionAccount | null = null;
+let quickPlaySetup: Promise<void> | null = null;
+let quickPlayMessage = "";
+let quickPlayPending = false;
 
 // Local per-stage action guards (cleared when the stage key changes) so we
 // don't re-send txs the chain would reject anyway.
@@ -363,10 +432,13 @@ function showScreen(name: Screen): void {
     const isPackPicker = name === "pack-select";
     const isGameStage = name === "question" || name === "review" || name === "vote";
     document.body.classList.toggle("pack-picker-open", isPackPicker);
+    document.body.classList.toggle("game-stage-open", isGameStage);
+    if (name !== "question") document.body.classList.remove("answer-input-focused");
     $appShell?.classList.toggle("pack-picker-open", isPackPicker);
     $appShell?.classList.toggle("game-stage-open", isGameStage);
     const changed = visibleScreen !== name;
     visibleScreen = name;
+    if (name === "home" || name === "lobby") renderQuickPlayStatus();
     // Announce a genuine stage transition without stealing the cursor from an
     // answer field on every block-driven re-render.
     if (changed && name !== "boot") {
@@ -503,15 +575,49 @@ function txError(e: unknown): string {
 }
 
 /** Transaction sizing, nonce handling, and submission helpers. */
-function preflightKey(method: string, args: readonly unknown[]): string {
-    return `${myAddress}:${method}:${args.map((arg) => String(arg)).join(":")}`;
+function productTransactionActor(): TransactionActor {
+    if (!productAccount) throw new Error("Account not ready");
+    return {
+        address: productAccount.address,
+        h160: myAddress,
+        signer: productAccount.getSigner(),
+        kind: "product",
+    };
+}
+
+function activeSessionActor(): TransactionActor | null {
+    if (!sessionAccount) return null;
+    return sessionTransactionActor(sessionAccount);
+}
+
+function sessionTransactionActor(account: SessionAccount): TransactionActor {
+    return {
+        address: account.ss58Address,
+        h160: account.h160Address.toLowerCase(),
+        signer: account.signer,
+        kind: "session",
+    };
+}
+
+/** Resolve the narrow signer allowed for this exact UI action. */
+function transactionActor(handle: any, method: string): TransactionActor {
+    const session = handle === game && SESSION_GAME_METHODS.has(method) ? activeSessionActor() : null;
+    return session ?? productTransactionActor();
+}
+
+function preflightKey(actor: TransactionActor, method: string, args: readonly unknown[]): string {
+    return `${actor.address}:${method}:${args.map((arg) => String(arg)).join(":")}`;
 }
 
 /** Dry-run once to validate a call and produce the safely padded gas limit. */
-async function estimateTx(handle: any, method: string, args: readonly unknown[]): Promise<TxOverrides | null> {
-    if (!productAccount) return null;
+async function estimateTx(
+    handle: any,
+    method: string,
+    args: readonly unknown[],
+    actor = transactionActor(handle, method),
+): Promise<TxOverrides | null> {
     try {
-        const q = await handle[method].query(...args, { origin: productAccount.address });
+        const q = await handle[method].query(...args, { origin: actor.address });
         // Do not turn a failed dry-run into a paid transaction. Leaving the
         // overrides empty lets the SDK surface the contract's revert reason.
         if (!q?.success || !q.gasRequired) return null;
@@ -531,7 +637,8 @@ async function estimateTx(handle: any, method: string, args: readonly unknown[])
 
 /** Start a best-effort preflight without making the UI wait for it. */
 function warmTx(handle: any, method: string, args: readonly unknown[]): string {
-    const key = preflightKey(method, args);
+    const actor = transactionActor(handle, method);
+    const key = preflightKey(actor, method, args);
     const existing = txPreflights.get(key);
     if (existing && existing.expiresAt > Date.now()) return key;
     const preflight: TxPreflight = {
@@ -539,7 +646,7 @@ function warmTx(handle: any, method: string, args: readonly unknown[]): string {
         overrides: null,
         pending: Promise.resolve(null),
     };
-    preflight.pending = estimateTx(handle, method, args).then((overrides) => {
+    preflight.pending = estimateTx(handle, method, args, actor).then((overrides) => {
         preflight.overrides = overrides;
         return overrides;
     });
@@ -556,32 +663,42 @@ async function warmedOverrides(handle: any, method: string, args: readonly unkno
     return overrides;
 }
 
-async function reserveTxNonce(): Promise<number | null> {
-    if (!productAccount || !assetHub) return null;
-    if (nextTxNonce === null) {
-        await syncNextTxNonce();
+async function reserveTxNonce(actor: TransactionActor): Promise<number | null> {
+    if (!assetHub) return null;
+    const key = actor.address;
+    if (!nextTxNonceByAddress.has(key)) {
+        await syncTxNonce(actor);
     }
-    if (nextTxNonce === null) return null;
-    const nonce = nextTxNonce;
-    nextTxNonce += 1;
+    const next = nextTxNonceByAddress.get(key);
+    if (next === undefined) return null;
+    const nonce = next;
+    nextTxNonceByAddress.set(key, nonce + 1);
     return nonce;
 }
 
-/** Fetch best-block nonce once, shared by boot and the first transaction. */
-function syncNextTxNonce(): Promise<number | null> {
-    if (!productAccount || !assetHub) return Promise.resolve(null);
-    if (nonceSync) return nonceSync;
-    const request: Promise<number | null> = assetHub.apis.AccountNonceApi.account_nonce(productAccount.address, { at: "best" })
+/** Fetch one actor's best-block nonce, shared by its first transaction. */
+function syncTxNonce(actor: TransactionActor): Promise<number | null> {
+    if (!assetHub) return Promise.resolve(null);
+    const key = actor.address;
+    const inFlight = nonceSyncByAddress.get(key);
+    if (inFlight) return inFlight;
+    const request: Promise<number | null> = assetHub.apis.AccountNonceApi.account_nonce(actor.address, { at: "best" })
         .then((nonce: number | bigint) => {
-            nextTxNonce = Number(nonce);
-            return nextTxNonce;
+            const next = Number(nonce);
+            nextTxNonceByAddress.set(key, next);
+            return next;
         })
         .catch(() => null)
         .finally(() => {
-            nonceSync = null;
+            nonceSyncByAddress.delete(key);
         });
-    nonceSync = request;
+    nonceSyncByAddress.set(key, request);
     return request;
+}
+
+function clearActorNonce(actor: TransactionActor): void {
+    nextTxNonceByAddress.delete(actor.address);
+    nonceSyncByAddress.delete(actor.address);
 }
 
 /**
@@ -590,10 +707,12 @@ function syncNextTxNonce(): Promise<number | null> {
  * stale transaction. Submit its prepared Revive call with our best-block
  * nonce, resolving at inclusion just like the helper does.
  */
-async function submitPreparedTx(transaction: any, nonce: number): Promise<void> {
-    if (!productAccount) throw new Error("Account not ready");
-    const signer = productAccount.getSigner();
-    setTransactionStatus("Waiting for wallet signature…");
+async function submitPreparedTx(
+    transaction: any,
+    actor: TransactionActor,
+    nonce: number | null,
+): Promise<void> {
+    setTransactionStatus(actor.kind === "session" ? "Submitting quick play action…" : "Waiting for wallet signature…");
     await new Promise<void>((resolve, reject) => {
         let settled = false;
         let subscription: { unsubscribe(): void } | null = null;
@@ -607,8 +726,8 @@ async function submitPreparedTx(transaction: any, nonce: number): Promise<void> 
         };
         const timer = setTimeout(() => finish(new Error("Transaction timed out waiting for a block.")), 90_000);
         try {
-            const nextSubscription = transaction.signSubmitAndWatch(signer, {
-                nonce,
+            const nextSubscription = transaction.signSubmitAndWatch(actor.signer, {
+                ...(nonce === null ? {} : { nonce }),
                 mortality: { mortal: true, period: 256 },
             }).subscribe({
                 next: (event: any) => {
@@ -637,39 +756,40 @@ async function submitTx(
     args: readonly unknown[],
     initialOverrides: TxOverrides | null = null,
 ): Promise<void> {
-    if (!productAccount) throw new Error("Account not ready");
+    const actor = transactionActor(handle, method);
     for (let attempt = 0; ; attempt++) {
         try {
-            setTransactionStatus(attempt === 0 ? "Checking transaction…" : "Refreshing transaction details…");
+            const initialStatus = actor.kind === "session" ? "Preparing quick play action…" : "Checking transaction…";
+            setTransactionStatus(attempt === 0 ? initialStatus : "Refreshing transaction details…");
             // A warmed estimate avoids an RPC on the tap path. On retries we
             // intentionally estimate again against current chain state.
             const overrides = attempt === 0 && initialOverrides !== null
                 ? initialOverrides
-                : await estimateTx(handle, method, args);
-            const nonce = await reserveTxNonce();
+                : await estimateTx(handle, method, args, actor);
+            const nonce = await reserveTxNonce(actor);
             if (nonce === null) {
                 // Degrade safely to the SDK's submission path if the account
                 // nonce API is unavailable in a host implementation.
-                setTransactionStatus("Waiting for wallet signature…");
+                setTransactionStatus(actor.kind === "session" ? "Submitting quick play action…" : "Waiting for wallet signature…");
                 const result = await handle[method].tx(...args, {
-                    signer: productAccount.getSigner(),
+                    signer: actor.signer,
+                    origin: actor.address,
                     ...(overrides ?? {}),
                 });
                 if (!result.ok) throw new Error(JSON.stringify(result.dispatchError));
                 setTransactionStatus("Included — checking chain state…");
             } else {
                 const transaction = await handle[method].prepare(...args, {
-                    origin: productAccount.address,
+                    origin: actor.address,
                     ...(overrides ?? {}),
                 });
-                await submitPreparedTx(transaction, nonce);
+                await submitPreparedTx(transaction, actor, nonce);
             }
             return;
         } catch (e) {
             // The tx may or may not have reached a best block. Re-read before
             // another action/retry instead of assuming a nonce is still free.
-            nextTxNonce = null;
-            nonceSync = null;
+            clearActorNonce(actor);
             const msg = e instanceof Error ? e.message : String(e);
             if (attempt === 0 && msg.includes("Stale")) {
                 setTransactionStatus("Refreshing chain state…");
@@ -688,6 +808,264 @@ async function sendTx(handle: any, method: string, ...args: unknown[]): Promise<
 
 async function sendWarmedTx(handle: any, method: string, args: readonly unknown[]): Promise<void> {
     await submitTx(handle, method, args, await warmedOverrides(handle, method, args));
+}
+
+// ── Quick play sessions ──────────────────────────────────────────────
+
+function quickPlayStorageName(): string {
+    const registryAddress = activeContracts.sessionRegistry;
+    if (!isContractAddress(registryAddress) || !myAddress) throw new Error("Quick play is not configured.");
+    // Contract addresses are chain-specific, so this isolates a session from
+    // future deployments without putting any secret in browser storage.
+    return `${registryAddress.toLowerCase()}:${myAddress}`;
+}
+
+async function getSessionKeyManager(): Promise<SessionKeyManager> {
+    if (sessionKeyManager) return sessionKeyManager;
+    const store = await createLocalKvStore({ prefix: "quizzler:quick-play" });
+    sessionKeyManager = new SessionKeyManager({
+        store,
+        name: quickPlayStorageName(),
+    });
+    return sessionKeyManager;
+}
+
+async function sessionIsRegistered(candidate: SessionAccount): Promise<boolean> {
+    if (!sessionRegistry || !productAccount) throw new Error("Quick play registry is unavailable.");
+    const registered = await sessionRegistry.sessionOf.query(myAddress, { origin: productAccount.address });
+    if (!registered.success) throw new Error("Could not verify the quick-play session on-chain.");
+    return String(registered.value).toLowerCase() === candidate.h160Address.toLowerCase();
+}
+
+async function sessionActivationPending(candidate: SessionAccount): Promise<boolean> {
+    if (!sessionRegistry || !productAccount) throw new Error("Quick play registry is unavailable.");
+    const pending = await sessionRegistry.pendingOwnerOf.query(candidate.h160Address, {
+        origin: productAccount.address,
+    });
+    if (!pending.success) throw new Error("Could not verify the quick-play setup on-chain.");
+    return String(pending.value).toLowerCase() === myAddress;
+}
+
+async function pgasBalance(address: string): Promise<bigint> {
+    if (!assetHub) return 0n;
+    const account = await assetHub.query.Assets.Account.getValue(PGAS_ASSET_ID, address);
+    const balance = account?.balance;
+    return typeof balance === "bigint" ? balance : balance === undefined ? 0n : BigInt(balance);
+}
+
+async function ensureQuickPlayAllowance(): Promise<void> {
+    // The host knows whether a personhood claim is still funded and can
+    // replenish it without another approval. Checking only for a non-zero
+    // balance can leave too little PGAS for the transfer plus storage.
+    const allocation = await requestResourceAllocation([
+        { tag: "SmartContractAllowance", value: PRODUCT_DERIVATION_INDEX },
+    ]);
+    if (!allocation.ok) throw allocation.error;
+    if (allocation.value[0] !== "Allocated") {
+        throw new Error("Quick play needs the free smart-contract allowance approved in your wallet.");
+    }
+}
+
+function reviveCall(destination: `0x${string}`, data: `0x${string}`, storageDepositLimit: bigint): any {
+    if (!assetHub) throw new Error("Chain client is not ready.");
+    return assetHub.tx.Revive.call({
+        dest: destination,
+        value: 0n,
+        weight_limit: SESSION_SETUP_WEIGHT,
+        storage_deposit_limit: storageDepositLimit,
+        data: hexToBytes(data),
+    });
+}
+
+async function submitStandaloneTx(transaction: any, actor: TransactionActor): Promise<void> {
+    const nonce = await reserveTxNonce(actor);
+    try {
+        await submitPreparedTx(transaction, actor, nonce);
+    } catch (error) {
+        clearActorNonce(actor);
+        throw error;
+    }
+}
+
+async function restoreQuickPlay(): Promise<void> {
+    if (!sessionRegistry || !sessionRegistryConfigured() || !productAccount) return;
+    try {
+        sessionAccount = null;
+        quickPlayPending = false;
+        const keys = await getSessionKeyManager();
+        const stored = await keys.get();
+        if (!stored) {
+            quickPlayMessage = "Enable once to submit answers and votes without wallet popups.";
+        } else if (await sessionIsRegistered(stored.account)) {
+            sessionAccount = stored.account;
+            quickPlayMessage = "Quick play is on for answers and votes.";
+        } else if (await sessionActivationPending(stored.account)) {
+            // The product-signed request may have landed just before an app
+            // reload. Retain the bearer key and let a tap finish the silent
+            // possession-proof call instead of stranding its PGAS.
+            quickPlayPending = true;
+            quickPlayMessage = "Quick play setup is ready to finish. Enable it to continue.";
+        } else {
+            // Both successful chain reads say the stored key is neither
+            // active nor pending, so it is safe to replace it.
+            await keys.clear();
+            quickPlayMessage = "Your previous quick-play session ended. Enable it again when you want it.";
+        }
+    } catch {
+        // Do not erase a bearer key on an indeterminate host or RPC failure.
+        // A later restore can still validate or finish the same session.
+        quickPlayMessage = "Quick play could not be checked right now. Normal play still works.";
+    }
+    renderQuickPlayStatus();
+}
+
+/** Complete the session-key half of the setup handshake without a wallet. */
+async function activatePendingQuickPlay(session: SessionAccount): Promise<void> {
+    const sessionRegistryAddress = activeContracts.sessionRegistry;
+    if (!isContractAddress(sessionRegistryAddress)) {
+        throw new Error("Quick play is not available for this game deployment.");
+    }
+    const activationData = encodeFunctionData({
+        abi: sessionRegistryAbi,
+        functionName: "activateSession",
+        args: [productTransactionActor().h160 as `0x${string}`],
+    });
+    quickPlayMessage = "Finishing quick play setup…";
+    renderQuickPlayStatus();
+    await submitStandaloneTx(
+        reviveCall(sessionRegistryAddress, activationData, SESSION_SETUP_STORAGE_LIMIT),
+        sessionTransactionActor(session),
+    );
+    if (!await sessionIsRegistered(session)) {
+        throw new Error("Quick play setup was not confirmed on-chain. Please try again.");
+    }
+    sessionAccount = session;
+    quickPlayPending = false;
+    quickPlayMessage = "Quick play is on for answers and votes.";
+}
+
+async function setupQuickPlay(): Promise<void> {
+    const sessionRegistryAddress = activeContracts.sessionRegistry;
+    if (!sessionRegistry || !isContractAddress(sessionRegistryAddress)) {
+        throw new Error("Quick play is not available for this game deployment.");
+    }
+    const keys = await getSessionKeyManager();
+    const stored = await keys.get();
+    if (sessionAccount && await sessionIsRegistered(sessionAccount)) return;
+    if (stored) {
+        if (await sessionIsRegistered(stored.account)) {
+            sessionAccount = stored.account;
+            quickPlayMessage = "Quick play is on for answers and votes.";
+            renderQuickPlayStatus();
+            return;
+        }
+        if (await sessionActivationPending(stored.account)) {
+            quickPlayPending = true;
+            await activatePendingQuickPlay(stored.account);
+            renderQuickPlayStatus();
+            return;
+        }
+        // The reads above completed successfully, so this cannot be a live
+        // funded session or a request waiting for its silent activation.
+        await keys.clear();
+        quickPlayPending = false;
+    }
+
+    quickPlayMessage = "Requesting your free game allowance…";
+    renderQuickPlayStatus();
+    await ensureQuickPlayAllowance();
+
+    const created = await keys.create();
+    // Host KV implementations may report a successful write while silently
+    // declining persistence. Verify the mnemonic-derived account before any
+    // PGAS is funded or a request is placed on-chain.
+    const session = await keys.get();
+    if (!session || session.account.h160Address.toLowerCase() !== created.account.h160Address.toLowerCase()) {
+        await keys.clear().catch(() => undefined);
+        throw new Error("Quick play could not save its local key. Please try again in a supported host.");
+    }
+    const product = productTransactionActor();
+    const fundData = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [session.account.h160Address, SESSION_PGAS_BUDGET],
+    });
+    const requestData = encodeFunctionData({
+        abi: sessionRegistryAbi,
+        functionName: "requestSession",
+        args: [session.account.h160Address],
+    });
+    const fund = reviveCall(PGAS_ERC20_PRECOMPILE, fundData, 0n);
+    const request = reviveCall(sessionRegistryAddress, requestData, SESSION_SETUP_STORAGE_LIMIT);
+    const setup = assetHub.tx.Utility.batch_all({
+        // Keep the batch pure Revive calls. A native Assets transfer or any
+        // other outer call would lose the PGAS fee path.
+        calls: [fund.decodedCall, request.decodedCall],
+    });
+
+    quickPlayMessage = "Confirm once to turn on quick play…";
+    renderQuickPlayStatus();
+    try {
+        await submitStandaloneTx(setup, product);
+        quickPlayPending = true;
+        await activatePendingQuickPlay(session.account);
+    } catch (error) {
+        // A watch timeout can occur after inclusion. Preserve the key either
+        // way; when the chain can confirm the pending request, also expose the
+        // explicit cancel/retry controls immediately.
+        if (await sessionIsRegistered(session.account).catch(() => false)) {
+            sessionAccount = session.account;
+            quickPlayPending = false;
+            quickPlayMessage = "Quick play is on for answers and votes.";
+            return;
+        }
+        quickPlayPending = await sessionActivationPending(session.account).catch(() => false);
+        throw error;
+    } finally {
+        renderQuickPlayStatus();
+    }
+}
+
+function enableQuickPlay(): Promise<void> {
+    if (quickPlaySetup) return quickPlaySetup;
+    quickPlaySetup = setupQuickPlay().finally(() => {
+        quickPlaySetup = null;
+    });
+    return quickPlaySetup;
+}
+
+async function endQuickPlay(): Promise<void> {
+    if (!sessionRegistry || !sessionKeyManager) return;
+    const stored = sessionAccount ?? (await sessionKeyManager.get())?.account;
+    if (!stored) return;
+    const session = sessionTransactionActor(stored);
+    quickPlayMessage = "Returning your unused game credit…";
+    renderQuickPlayStatus();
+
+    const balance = await pgasBalance(session.address);
+    if (balance > 0n) {
+        const drainData = encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [productTransactionActor().h160 as `0x${string}`, balance],
+        });
+        await submitStandaloneTx(reviveCall(PGAS_ERC20_PRECOMPILE, drainData, 0n), session);
+    }
+
+    quickPlayMessage = "Confirm to end quick play…";
+    renderQuickPlayStatus();
+    try {
+        await sendTx(sessionRegistry, "revokeSession");
+    } catch (error) {
+        // An expiry has already stopped the key from acting. Clearing its
+        // local mnemonic remains safe if the registry reports no live link.
+        if (!txError(error).includes("NoActiveSession")) throw error;
+    }
+    await sessionKeyManager.clear();
+    sessionAccount = null;
+    quickPlayPending = false;
+    quickPlayMessage = "Quick play is off. Future answers will ask your wallet to sign.";
+    renderQuickPlayStatus();
 }
 
 // ── Registry content lookups (cached) ────────────────────────────────
@@ -848,13 +1226,28 @@ function createContractHandles(client: any, descriptor: any): void {
         gameAbi as never,
         accountOptions,
     );
+    const sessionRegistryAddress = activeContracts.sessionRegistry;
+    sessionRegistry = isContractAddress(sessionRegistryAddress)
+        ? createContractFromClient(
+            client.raw.assetHub,
+            descriptor,
+            sessionRegistryAddress,
+            sessionRegistryAbi as never,
+            accountOptions,
+        )
+        : null;
 }
 
 async function verifyActiveContractPair(): Promise<boolean> {
     try {
         const linkedRegistry = await game.registry.query();
         if (!linkedRegistry.success) return false;
-        return String(linkedRegistry.value).toLowerCase() === activeContracts.registry?.toLowerCase();
+        if (String(linkedRegistry.value).toLowerCase() !== activeContracts.registry?.toLowerCase()) return false;
+        if (!sessionRegistryConfigured()) return true;
+        if (!sessionRegistry) return false;
+        const linkedSessionRegistry = await game.sessionRegistry.query();
+        return linkedSessionRegistry.success
+            && String(linkedSessionRegistry.value).toLowerCase() === activeContracts.sessionRegistry?.toLowerCase();
     } catch {
         return false;
     }
@@ -934,7 +1327,7 @@ async function init(): Promise<void> {
     }
 
     createContractHandles(client, paseo_asset_hub);
-    bootLog("Contract handles ready (registry + game)", "ok");
+    bootLog(sessionRegistry ? "Contract handles ready (registry + game + sessions)" : "Contract handles ready (registry + game)", "ok");
 
     if (!await verifyActiveContractPair()) {
         setConnectionStatus("contract mismatch", "err");
@@ -948,9 +1341,14 @@ async function init(): Promise<void> {
     hydratePackCatalogCache();
     void refreshPacks();
 
+    // A stored session is trusted only after its on-chain owner mapping is
+    // checked. This is intentionally best-effort: a storage/host outage must
+    // never block normal product-account play.
+    if (sessionRegistry) void restoreQuickPlay();
+
     // Prime the best-block nonce without holding up the home screen. It is
     // shared with the first action if the player gets there before it returns.
-    void syncNextTxNonce();
+    void syncTxNonce(productTransactionActor());
 
     setConnectionStatus("connected", "ok");
     const resume = await resumeSavedGame();
@@ -1008,6 +1406,80 @@ const $resumeGameCard = getEl("resume-game-card");
 const $resumeGameCode = getEl("resume-game-code");
 const $displayName = getEl<HTMLInputElement>("display-name");
 const $displayNameStatus = getEl("display-name-status");
+const $quickPlayCard = getEl("quick-play-card");
+const $quickPlayStatus = getEl("quick-play-status");
+const $quickPlayError = getEl("quick-play-error");
+const $btnEnableQuickPlay = getEl<HTMLButtonElement>("btn-enable-quick-play");
+const $btnEndQuickPlay = getEl<HTMLButtonElement>("btn-end-quick-play");
+const $lobbyQuickPlay = getEl("lobby-quick-play");
+const $lobbyQuickPlayStatus = getEl("lobby-quick-play-status");
+const $btnEnableQuickPlayLobby = getEl<HTMLButtonElement>("btn-enable-quick-play-lobby");
+
+function renderQuickPlayStatus(): void {
+    const configured = sessionRegistryConfigured();
+    const enabled = sessionAccount !== null;
+    const pending = !enabled && quickPlayPending;
+    $quickPlayCard.style.display = configured ? "" : "none";
+    if (!configured) {
+        $lobbyQuickPlay.style.display = "none";
+        return;
+    }
+
+    const message = quickPlayMessage || (enabled
+        ? "Quick play is on for answers and votes."
+        : "Enable once to submit answers and votes without wallet popups.");
+    $quickPlayStatus.textContent = message;
+    $btnEnableQuickPlay.style.display = enabled ? "none" : "";
+    $btnEnableQuickPlay.disabled = quickPlaySetup !== null || busy;
+    $btnEndQuickPlay.style.display = enabled || pending ? "" : "none";
+    $btnEndQuickPlay.textContent = pending ? "Cancel quick-play setup" : "End quick play";
+    $btnEndQuickPlay.disabled = busy;
+
+    const inLobby = visibleScreen === "lobby";
+    $lobbyQuickPlay.style.display = inLobby ? "" : "none";
+    $lobbyQuickPlayStatus.textContent = enabled
+        ? "Quick play is ready — answers and votes will not open your wallet."
+        : "Enable quick play now so answers and votes stay instant once the quiz starts.";
+    $btnEnableQuickPlayLobby.style.display = enabled ? "none" : "";
+    $btnEnableQuickPlayLobby.disabled = quickPlaySetup !== null || busy;
+}
+
+async function enableQuickPlayFrom(buttonId: string, error: HTMLElement): Promise<void> {
+    if (busy || quickPlaySetup) return;
+    busy = true;
+    error.textContent = "";
+    setLoading(buttonId, true);
+    renderQuickPlayStatus();
+    try {
+        await enableQuickPlay();
+    } catch (cause) {
+        quickPlayMessage = "Quick play could not be enabled.";
+        error.textContent = txError(cause);
+    } finally {
+        busy = false;
+        setLoading(buttonId, false);
+        renderQuickPlayStatus();
+    }
+}
+
+$btnEnableQuickPlay.addEventListener("click", () => void enableQuickPlayFrom("btn-enable-quick-play", $quickPlayError));
+$btnEnableQuickPlayLobby.addEventListener("click", () => void enableQuickPlayFrom("btn-enable-quick-play-lobby", getEl("lobby-error")));
+$btnEndQuickPlay.addEventListener("click", async () => {
+    if (busy || (!sessionAccount && !quickPlayPending)) return;
+    busy = true;
+    $quickPlayError.textContent = "";
+    setLoading("btn-end-quick-play", true);
+    renderQuickPlayStatus();
+    try {
+        await endQuickPlay();
+    } catch (cause) {
+        $quickPlayError.textContent = txError(cause);
+    } finally {
+        busy = false;
+        setLoading("btn-end-quick-play", false);
+        renderQuickPlayStatus();
+    }
+});
 
 getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", async () => {
     if (busy || !productAccount) return;
@@ -2802,9 +3274,6 @@ function renderLobby(snap: Snapshot): void {
     setGameActions("lobby");
     showScreen("lobby");
 
-    // First regular question is always slot zero. Fetch it while everyone is
-    // joining so the answer screen does not need another network round-trip.
-    prefetchQuestion(snap.game.pack_id, 0);
     if (isStarter) void warmTx(game, "startGame", [lobbyGameId]);
 
     void packTitle(snap.game.pack_id).then((title) => {
@@ -2868,9 +3337,9 @@ getEl<HTMLButtonElement>("btn-share-lobby").addEventListener("click", () => {
 
 /**
  * `startGame` has just landed in a best block. The lobby snapshot already
- * contains every immutable value needed for the first card, so switch screens
- * now instead of waiting for the reconciliation poll. Controls remain locked
- * until its real question text arrives.
+ * contains enough information to leave the lobby, so switch screens now
+ * instead of waiting for the reconciliation poll. The shuffled first slot is
+ * chain-authoritative, so controls remain locked until that snapshot arrives.
  */
 function showStartedGame(): void {
     if (gameId === null || latest?.phase.stage !== STAGE_LOBBY) return;
@@ -2880,7 +3349,7 @@ function showStartedGame(): void {
         stage: STAGE_ANSWER,
         cursor: 0,
         deadline: previous.phase.current_block + BigInt(previous.game.answer_blocks),
-        slot: 0,
+        slot: NO_SLOT,
         submit_count: 0,
         continue_count: 0,
     };
@@ -2897,7 +3366,7 @@ function showStartedGame(): void {
             continue_ready: false,
             active: true,
         })),
-        questionText: questionCache.get(registryQuestionCacheKey(previous.game.pack_id, 0)) ?? "",
+        questionText: "",
         answerText: "",
     };
     latest = snap;
@@ -3026,9 +3495,6 @@ function renderQuestion(snap: Snapshot): void {
             }),
         );
     }
-    if (!isFinal && snap.phase.cursor + 1 < snap.game.num_questions) {
-        prefetchQuestion(snap.game.pack_id, snap.phase.cursor + 1);
-    }
     setGameActions("active");
     showScreen("question");
 }
@@ -3092,6 +3558,33 @@ getEl<HTMLInputElement>("answer-input").addEventListener("keydown", (event) => {
         getEl<HTMLButtonElement>("btn-submit-answer").click();
     }
 });
+
+// Mobile browsers may scroll a focused text input into view after opening the
+// software keyboard. The answer dock is already within the visual viewport;
+// reset only its internal scroll region so the question stays above it. Use a
+// class rather than :has() for older mobile engines, then repeat after the
+// viewport animation finishes (some Android/iOS browsers resize late).
+const $answerInput = getEl<HTMLInputElement>("answer-input");
+function keepQuestionVisibleForKeyboard(): void {
+    if (!document.body.classList.contains("answer-input-focused")) return;
+    getEl("screen-question").querySelector<HTMLElement>(".game-stage-content")
+        ?.scrollTo({ top: 0, behavior: "auto" });
+}
+function scheduleQuestionVisibilityForKeyboard(): void {
+    window.requestAnimationFrame(() => {
+        keepQuestionVisibleForKeyboard();
+        window.requestAnimationFrame(keepQuestionVisibleForKeyboard);
+    });
+}
+$answerInput.addEventListener("focus", () => {
+    if (!window.matchMedia("(max-width: 599px)").matches) return;
+    document.body.classList.add("answer-input-focused");
+    scheduleQuestionVisibilityForKeyboard();
+});
+$answerInput.addEventListener("blur", () => {
+    document.body.classList.remove("answer-input-focused");
+});
+window.visualViewport?.addEventListener("resize", scheduleQuestionVisibilityForKeyboard);
 
 // ── Review screen ────────────────────────────────────────────────────
 

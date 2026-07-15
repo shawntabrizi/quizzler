@@ -9,6 +9,8 @@
 //! Casual trust model: answers are submitted in plaintext and scored at
 //! submission time. The client decides what to *display* per phase; the
 //! chain only enforces timing, scoring, and votes.
+//! A dedicated session registry resolves short-lived local game keys back to
+//! their product-account owner for the four reversible in-game actions.
 //!
 //! Phase pacing is a pure function of block number (see `quizzler-logic`):
 //! every mutating call first settles timeout transitions, then applies the
@@ -39,6 +41,10 @@ const MAX_WAGER: u32 = 10;
 /// Each wager value 1..=10 is usable once per game (Sporcle's system), so a
 /// game holds at most 10 regular questions.
 const MAX_GAME_QUESTIONS: u8 = 10;
+/// The registry reserves regular slots 0..200 and final-question slots above
+/// that range. Keeping this bound here makes the per-game shuffle allocation
+/// safe even if a differently configured registry is supplied at deployment.
+const MAX_REGULAR_SLOTS: u8 = 200;
 
 /// Registry slot for a final question of the given difficulty (regular
 /// questions occupy slots 0..regular_count).
@@ -166,6 +172,8 @@ struct PackStatus {
 struct Storage {
     // pack registry contract this game reads content from
     registry: [u8; 20],
+    // session-key registry consulted only for narrow, in-game interactions
+    session_registry: [u8; 20],
     game_count: u64,
     game_meta: pvm::storage::Mapping<u64, GameMeta>,
     players: pvm::storage::Mapping<u64, Vec<[u8; 20]>>,
@@ -176,6 +184,10 @@ struct Storage {
     forfeited: pvm::storage::Mapping<(u64, [u8; 20]), bool>,
     // (game, question_key, player)
     submissions: pvm::storage::Mapping<(u64, u8, [u8; 20]), Submission>,
+    // (game, regular-question cursor) → registry slot. Chosen once when the
+    // game is created, so every participant observes the same shuffled pack
+    // subset without changing the public game ABI.
+    regular_slots: pvm::storage::Mapping<(u64, u8), u8>,
     continue_flags: pvm::storage::Mapping<(u64, u8, [u8; 20]), bool>,
     // (game, question_key, target) → votes to overturn target's wrong answer
     overturn_voted: pvm::storage::Mapping<(u64, u8, [u8; 20], [u8; 20]), bool>,
@@ -233,6 +245,70 @@ fn gen_game_code(creator: &[u8; 20], seq: u64) -> u64 {
     fail("GameCodeSpaceExhausted")
 }
 
+/// Select an ordered, non-repeating subset of a pack's regular slots.
+///
+/// This is intentionally a deterministic shuffle rather than secret
+/// randomness: quiz content and answers are public in Quizzler's casual party
+/// model. Including the unique game id, creator nonce, sequence, and creation
+/// block makes separately created games naturally vary while persisting the
+/// resulting slots ensures every player sees the exact same sequence.
+fn shuffled_regular_slots(
+    creator: &[u8; 20],
+    game_id: u64,
+    sequence: u64,
+    creation_nonce: u64,
+    creation_block: u64,
+    pack_id: u32,
+    regular_count: u8,
+    num_questions: u8,
+) -> alloc::vec::Vec<u8> {
+    let mut slots = alloc::vec::Vec::with_capacity(regular_count as usize);
+    for slot in 0..regular_count {
+        slots.push(slot);
+    }
+
+    // Domain-separate this seed from join-code generation and include every
+    // stable piece of game-creation context. The hash is not a security
+    // boundary; it simply provides evenly spread shuffle choices.
+    let mut seed_input = [0u8; 64];
+    seed_input[..16].copy_from_slice(b"quizzler.shuffle");
+    seed_input[16..36].copy_from_slice(creator);
+    seed_input[36..44].copy_from_slice(&game_id.to_le_bytes());
+    seed_input[44..52].copy_from_slice(&sequence.to_le_bytes());
+    seed_input[52..60].copy_from_slice(&creation_nonce.to_le_bytes());
+    seed_input[60..64].copy_from_slice(&pack_id.to_le_bytes());
+    let mut seed = [0u8; 32];
+    pvm::api::hash_keccak_256(&seed_input, &mut seed);
+
+    // Mix the creation block into the first shuffle round without needing a
+    // separate host randomness primitive. The game id/sequence/nonce already
+    // make this unique for concurrently created games in the same block.
+    let mut block_bytes = creation_block.to_le_bytes();
+    for (index, byte) in block_bytes.iter_mut().enumerate() {
+        *byte ^= seed[index];
+    }
+
+    // A partial Fisher-Yates shuffle gives the requested subset without
+    // repeats. Only the first `num_questions` entries are durable, but the
+    // candidate vector is bounded by the registry's 200 regular slots.
+    for cursor in 0..num_questions {
+        let mut round_input = [0u8; 41];
+        round_input[..32].copy_from_slice(&seed);
+        round_input[32..40].copy_from_slice(&block_bytes);
+        round_input[40] = cursor;
+        let mut round_hash = [0u8; 32];
+        pvm::api::hash_keccak_256(&round_input, &mut round_hash);
+        seed = round_hash;
+
+        let remaining = u64::from(regular_count - cursor);
+        let random = u64::from_le_bytes(round_hash[..8].try_into().unwrap());
+        let selected = usize::from(cursor) + (random % remaining) as usize;
+        slots.swap(cursor as usize, selected);
+    }
+    slots.truncate(num_questions as usize);
+    slots
+}
+
 fn indexed_address(address: [u8; 20]) -> [u8; 32] {
     let mut topic = [0u8; 32];
     topic[12..].copy_from_slice(&address);
@@ -271,16 +347,23 @@ fn abi_word_u8(v: u8) -> [u8; 32] {
     w
 }
 
+fn abi_word_address(address: [u8; 20]) -> [u8; 32] {
+    let mut word = [0u8; 32];
+    word[12..].copy_from_slice(&address);
+    word
+}
+
 /// Call a registry view and ABI-decode its return. Mirrors the calling
 /// convention of the macro-generated cross-contract `Reference` methods.
-fn registry_call<T: pvm::SolAbi>(
+fn contract_view_call<T: pvm::SolAbi>(
+    target: [u8; 20],
     name: &str,
     types: &[&str],
     words: &[[u8; 32]],
     out_cap: usize,
+    error: &str,
 ) -> T {
     extern crate alloc;
-    let registry = Storage::registry().get().unwrap_or([0u8; 20]);
     let selector = pvm::compute_selector(name, types);
     let mut calldata = alloc::vec::Vec::with_capacity(4 + words.len() * 32);
     calldata.extend_from_slice(&selector);
@@ -294,7 +377,7 @@ fn registry_call<T: pvm::SolAbi>(
         // guard in place and prevent a configured registry from changing
         // state while the game is mid-transition.
         pvm::CallFlags::READ_ONLY,
-        &registry,
+        &target,
         u64::MAX,
         &[0u8; 32],
         &calldata,
@@ -305,8 +388,40 @@ fn registry_call<T: pvm::SolAbi>(
             let written = output_ref.len();
             T::abi_decode(&output_buf[..written], 0)
         }
-        Err(_) => fail("RegistryCallFailed"),
+        Err(_) => fail(error),
     }
+}
+
+fn registry_call<T: pvm::SolAbi>(
+    name: &str,
+    types: &[&str],
+    words: &[[u8; 32]],
+    out_cap: usize,
+) -> T {
+    contract_view_call(
+        Storage::registry().get().unwrap_or([0u8; 20]),
+        name,
+        types,
+        words,
+        out_cap,
+        "RegistryCallFailed",
+    )
+}
+
+fn session_registry_call<T: pvm::SolAbi>(
+    name: &str,
+    types: &[&str],
+    words: &[[u8; 32]],
+    out_cap: usize,
+) -> T {
+    contract_view_call(
+        Storage::session_registry().get().unwrap_or([0u8; 20]),
+        name,
+        types,
+        words,
+        out_cap,
+        "SessionRegistryCallFailed",
+    )
 }
 
 fn registry_pack_status(pack_id: u32) -> PackStatus {
@@ -320,6 +435,38 @@ fn registry_answers(pack_id: u32, slot: u8) -> Vec<String> {
         &[abi_word_u32(pack_id), abi_word_u8(slot)],
         1024,
     )
+}
+
+/// Resolve a direct product-account caller or a registered session key to the
+/// player address persisted by the game. A former/expired session resolves to
+/// zero in the registry, so fail before it can be treated as a new player.
+fn resolved_caller() -> [u8; 20] {
+    let caller = caller20();
+    let resolved: pvm::Address =
+        session_registry_call("resolve", &["address"], &[abi_word_address(caller)], 64);
+    let player = resolved.to_fixed_bytes();
+    if player == [0u8; 20] {
+        fail("InactiveSession");
+    }
+    player
+}
+
+/// Return the roster identity for a reversible in-game action. This is the
+/// intentionally narrow path through which a local session key may act.
+fn player_for_caller() -> [u8; 20] {
+    resolved_caller()
+}
+
+/// Operations that change a player's durable party membership or identity
+/// must be signed by that product account itself. Merely refusing to find a
+/// session key in the roster would leave a session key able to create its own
+/// lobby, profile, or pack-adjacent state by calling the contract directly.
+fn main_caller() -> [u8; 20] {
+    let caller = caller20();
+    if resolved_caller() != caller {
+        fail("MainKeyRequired");
+    }
+    caller
 }
 
 // ── Game helpers ─────────────────────────────────────────────────────
@@ -579,7 +726,9 @@ fn phase_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -
     let clock = clock_of(m);
     let question_key = logic::question_key(&clock);
     let slot = match m.stage {
-        STAGE_ANSWER | STAGE_REVIEW | STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => active_slot(m),
+        STAGE_ANSWER | STAGE_REVIEW | STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => {
+            active_slot(game_id, m)
+        }
         _ => 0xff,
     };
     let submit_count = if m.stage == STAGE_VOTE {
@@ -726,9 +875,12 @@ fn save_game(game_id: u64, m: &GameMeta) {
 
 /// The registry slot answered during this stage. Only valid in
 /// answer/review stages (final difficulty must be resolved by then).
-fn active_slot(m: &GameMeta) -> u8 {
+fn active_slot(game_id: u64, m: &GameMeta) -> u8 {
     match m.stage {
-        STAGE_ANSWER | STAGE_REVIEW => m.cursor,
+        STAGE_ANSWER | STAGE_REVIEW => match Storage::regular_slots().get(&(game_id, m.cursor)) {
+            Some(slot) => slot,
+            None => fail("QuestionSlotMissing"),
+        },
         STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => {
             if m.final_difficulty == DIFFICULTY_UNSET {
                 fail("DifficultyUnresolved");
@@ -747,22 +899,24 @@ mod quizzler {
     // imports into the module, which a `use super::*` would collide with.
     use super::{
         DIFFICULTY_UNSET, GameMeta, GameView, LiveGameView, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS,
-        MAX_PLAYERS, MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ABANDONED, STAGE_ANSWER,
-        STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE, Storage,
-        Submission, SubmissionView, active_continue_count, active_difficulty_total, active_slot,
-        active_submission_count, apply_overturn_if_quorum, caller20, clock_of, collapse,
-        collapse_if_everyone_ready, current_block, emit_game_created, fail, game_view_from,
-        gen_game_code, is_active_player, is_roster_player, live_game_view_from, load_game,
-        load_players, logic, phase_view_from, player_names_from, pvm,
-        reconcile_overturns_after_forfeit, registry_answers, registry_pack_status,
-        require_active_player, save_game, settle, settle_at, submission_views_from,
+        MAX_PLAYERS, MAX_REGULAR_SLOTS, MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ABANDONED,
+        STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW,
+        STAGE_VOTE, Storage, Submission, SubmissionView, active_continue_count,
+        active_difficulty_total, active_slot, active_submission_count, apply_overturn_if_quorum,
+        caller20, clock_of, collapse, collapse_if_everyone_ready, current_block, emit_game_created,
+        fail, game_view_from, gen_game_code, is_active_player, is_roster_player,
+        live_game_view_from, load_game, load_players, logic, main_caller, phase_view_from,
+        player_for_caller, player_names_from, pvm, reconcile_overturns_after_forfeit,
+        registry_answers, registry_pack_status, require_active_player, save_game, settle,
+        settle_at, shuffled_regular_slots, submission_views_from,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
 
     #[pvm::constructor]
-    pub fn new(registry: pvm::Address) -> Result<(), Error> {
+    pub fn new(registry: pvm::Address, session_registry: pvm::Address) -> Result<(), Error> {
         Storage::registry().set(&registry.to_fixed_bytes());
+        Storage::session_registry().set(&session_registry.to_fixed_bytes());
         Storage::game_count().set(&0);
         Ok(())
     }
@@ -773,12 +927,18 @@ mod quizzler {
         pvm::Address::from(Storage::registry().get().unwrap_or([0u8; 20]))
     }
 
+    /// The narrow session-key registry used for silent in-game actions.
+    #[pvm::method]
+    pub fn session_registry() -> pvm::Address {
+        pvm::Address::from(Storage::session_registry().get().unwrap_or([0u8; 20]))
+    }
+
     /// Set the optional social label shown next to this account in every
     /// lobby, review, and scorecard. Sending an empty string clears it;
     /// clients then fall back to their standard abbreviated address.
     #[pvm::method]
     pub fn set_display_name(name: String) {
-        let who = caller20();
+        let who = main_caller();
         if name.is_empty() {
             Storage::display_names().remove(&who);
             return;
@@ -801,7 +961,8 @@ mod quizzler {
         if !pack.exists || !pack.sealed {
             fail("PackNotSealed");
         }
-        if num_questions == 0
+        if pack.regular_count > MAX_REGULAR_SLOTS
+            || num_questions == 0
             || num_questions > pack.regular_count
             || num_questions > MAX_GAME_QUESTIONS
         {
@@ -817,7 +978,7 @@ mod quizzler {
             fail("BadMaxPlayers");
         }
 
-        let creator = caller20();
+        let creator = main_caller();
         if Storage::created_game_of().contains(&(creator, creation_nonce)) {
             fail("CreationNonceUsed");
         }
@@ -827,6 +988,16 @@ mod quizzler {
             None => fail("GameIdExhausted"),
         };
         let id = gen_game_code(&creator, seq);
+        let selected_slots = shuffled_regular_slots(
+            &creator,
+            id,
+            seq,
+            creation_nonce,
+            current_block(),
+            pack_id,
+            pack.regular_count,
+            num_questions,
+        );
         let meta = GameMeta {
             pack_id,
             creator,
@@ -840,6 +1011,9 @@ mod quizzler {
             final_difficulty: DIFFICULTY_UNSET,
         };
         save_game(id, &meta);
+        for (cursor, slot) in selected_slots.into_iter().enumerate() {
+            Storage::regular_slots().insert(&(id, cursor as u8), &slot);
+        }
         let players: Vec<[u8; 20]> = alloc::vec![creator];
         Storage::players().insert(&id, &players);
         Storage::scores().insert(&(id, creator), &0);
@@ -877,7 +1051,7 @@ mod quizzler {
         if meta.stage != STAGE_LOBBY {
             fail("GameAlreadyStarted");
         }
-        let who = caller20();
+        let who = main_caller();
         let mut players = load_players(game_id);
         if players.iter().any(|p| *p == who) {
             fail("AlreadyJoined");
@@ -899,7 +1073,7 @@ mod quizzler {
         if meta.stage != STAGE_LOBBY {
             fail("LobbyClosed");
         }
-        let who = caller20();
+        let who = main_caller();
         let mut players = load_players(game_id);
         let Some(index) = players.iter().position(|player| *player == who) else {
             fail("NotAPlayer");
@@ -926,7 +1100,7 @@ mod quizzler {
             Some(player) => *player,
             None => fail("LobbyEmpty"),
         };
-        if starter != caller20() {
+        if starter != main_caller() {
             fail("NotLobbyStarter");
         }
         meta.stage = STAGE_ANSWER;
@@ -944,7 +1118,7 @@ mod quizzler {
         if meta.stage != STAGE_ANSWER && meta.stage != STAGE_FINAL_ANSWER {
             fail("NotAcceptingAnswers");
         }
-        let who = caller20();
+        let who = player_for_caller();
         let active_count = require_active_player(game_id, &who);
         let qkey = logic::question_key(&clock_of(&meta));
 
@@ -981,7 +1155,7 @@ mod quizzler {
         if norm.len() > MAX_ANSWER_BYTES {
             fail("AnswerTooLong");
         }
-        let accepted = registry_answers(meta.pack_id, active_slot(&meta));
+        let accepted = registry_answers(meta.pack_id, active_slot(game_id, &meta));
         let correct = !norm.is_empty() && logic::answer_matches(&norm, &accepted);
 
         if correct {
@@ -1014,7 +1188,7 @@ mod quizzler {
         if meta.stage != STAGE_REVIEW && meta.stage != STAGE_FINAL_REVIEW {
             fail("NotInReview");
         }
-        let voter = caller20();
+        let voter = player_for_caller();
         require_active_player(game_id, &voter);
         let target20: [u8; 20] = target.to_fixed_bytes();
         if voter == target20 {
@@ -1049,7 +1223,7 @@ mod quizzler {
         if meta.stage != STAGE_REVIEW && meta.stage != STAGE_FINAL_REVIEW {
             fail("NotInReview");
         }
-        let who = caller20();
+        let who = player_for_caller();
         let active_count = require_active_player(game_id, &who);
         let qkey = logic::question_key(&clock_of(&meta));
         if Storage::continue_flags().contains(&(game_id, qkey, who)) {
@@ -1074,7 +1248,7 @@ mod quizzler {
         if difficulty > 2 {
             fail("BadDifficulty");
         }
-        let who = caller20();
+        let who = player_for_caller();
         let active_count = require_active_player(game_id, &who);
         if Storage::difficulty_choice().contains(&(game_id, who)) {
             fail("AlreadyVoted");
@@ -1098,7 +1272,7 @@ mod quizzler {
             STAGE_LOBBY => fail("UseLeaveLobby"),
             _ => fail("GameNotActive"),
         }
-        let who = caller20();
+        let who = main_caller();
         require_active_player(game_id, &who);
         Storage::forfeited().insert(&(game_id, who), &true);
         reconcile_overturns_after_forfeit(game_id, &meta);

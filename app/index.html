@@ -319,6 +319,18 @@
         .lobby-players-heading h3 { font-size: 0.9rem; font-weight: 600; }
         .lobby-players-heading p { color: var(--fg-secondary); font-size: 0.78rem; text-align: right; }
         .lobby-actions { margin-top: 18px; }
+        .quick-play-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--bg-surface-nested);
+            border-radius: var(--radius-nested);
+        }
+        .quick-play-row p { color: var(--fg-secondary); font-size: 0.8rem; line-height: 1.35; }
+        .quick-play-row button { flex: 0 0 auto; }
         .lobby-actions #lobby-waiting { flex: 1; }
         .lobby-actions #btn-leave-lobby { margin-left: auto; }
 
@@ -932,6 +944,8 @@
             .lobby-actions #btn-start-game,
             .lobby-actions #btn-leave-lobby { width: 100%; margin-left: 0; }
             .lobby-actions #lobby-waiting { text-align: center; }
+            .quick-play-row { align-items: stretch; flex-direction: column; }
+            .quick-play-row button { width: 100%; }
             input[type="text"], input[type="number"], input[type="search"], select, textarea { font-size: 16px; }
             ul.pack-grid { grid-template-columns: 1fr; }
             .pack-card { min-height: 104px; }
@@ -975,6 +989,60 @@
             ul.list li { align-items: flex-start; }
             .wager-row { align-items: stretch; flex-direction: column; }
             #wager-final { width: 100% !important; }
+        }
+
+        /* A software keyboard can leave only a few hundred pixels of visual
+           viewport on a phone. Keep the question in that space by trading
+           away the non-essential header and compacting the answer controls
+           only while the answer field has focus. The wager choices remain
+           visible and comfortably tappable, so typing an answer never makes
+           the prompt disappear behind the dock. */
+        @media (max-width: 599px) {
+            body.game-stage-open { overflow: hidden; overscroll-behavior: none; }
+            body.answer-input-focused main.game-stage-open > header { display: none; }
+            body.answer-input-focused main.game-stage-open .game-stage-content { padding-bottom: 6px; }
+            body.answer-input-focused main.game-stage-open .game-stage-content .card {
+                padding: 14px 16px;
+                margin-bottom: 0;
+            }
+            body.answer-input-focused main.game-stage-open .question-text {
+                margin: 8px 0 2px;
+                font-size: 1.12rem;
+            }
+            body.answer-input-focused main.game-stage-open #answer-form.game-action-dock {
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 8px;
+                margin-top: 4px;
+                padding-top: 8px;
+                padding-bottom: max(8px, env(safe-area-inset-bottom));
+            }
+            body.answer-input-focused main.game-stage-open #answer-form.game-action-dock > input {
+                grid-column: auto;
+            }
+            body.answer-input-focused main.game-stage-open #answer-form.game-action-dock > #btn-submit-answer {
+                grid-column: auto;
+                width: auto;
+                min-width: 108px;
+            }
+            body.answer-input-focused main.game-stage-open #wager-label {
+                margin: 0;
+                font-size: 0.75rem;
+            }
+            body.answer-input-focused main.game-stage-open .wager-grid {
+                grid-template-columns: repeat(5, minmax(40px, 1fr));
+                width: min(100%, 254px);
+                gap: 6px;
+                margin: 6px 0 0;
+            }
+            body.answer-input-focused main.game-stage-open .wager-btn { min-height: 40px; }
+            body.answer-input-focused main.game-stage-open #wager-final-row {
+                align-items: center;
+                flex-direction: row;
+                gap: 8px;
+                margin: 0;
+            }
+            body.answer-input-focused main.game-stage-open #wager-final { width: 100% !important; }
+            body.answer-input-focused main.game-stage-open #question-error:empty { display: none; }
         }
 
         @media (max-width: 359px) {
@@ -1055,6 +1123,15 @@
                     <button id="btn-save-display-name" class="primary" data-testid="btn-save-display-name" style="align-self: end;">Save name</button>
                 </div>
                 <div id="display-name-status" class="draft-save-status" data-testid="display-name-status" role="status" aria-live="polite"></div>
+            </div>
+            <div id="quick-play-card" class="card" data-testid="quick-play-card" style="display: none;">
+                <h2>Quick play</h2>
+                <p class="hint" id="quick-play-status" data-testid="quick-play-status" role="status" aria-live="polite"></p>
+                <div class="row">
+                    <button id="btn-enable-quick-play" class="primary" data-testid="btn-enable-quick-play">Enable quick play</button>
+                    <button id="btn-end-quick-play" class="quiet" data-testid="btn-end-quick-play" style="display: none;">End quick play</button>
+                </div>
+                <div id="quick-play-error" class="error-text" data-testid="quick-play-error" role="alert"></div>
             </div>
         </section>
 
@@ -1206,6 +1283,10 @@
                     <p><span id="lobby-occupancy" data-testid="lobby-occupancy"></span> · Invite friends, then start when you’re ready. Starting closes the lobby.</p>
                 </div>
                 <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
+                <div id="lobby-quick-play" class="quick-play-row" data-testid="lobby-quick-play" style="display: none;">
+                    <p id="lobby-quick-play-status"></p>
+                    <button id="btn-enable-quick-play-lobby" class="primary" data-testid="btn-enable-quick-play-lobby">Enable quick play</button>
+                </div>
                 <div class="row lobby-actions">
                     <button id="btn-start-game" class="primary" data-testid="btn-start-game" style="display: none;">Start game</button>
                     <span class="muted" id="lobby-waiting" data-testid="lobby-waiting">Waiting for the lobby starter…</span>
