@@ -23,6 +23,9 @@ importers:
       '@parity/product-sdk-signer':
         specifier: ^0.9.0
         version: 0.9.0(esbuild@0.28.1)(rxjs@7.8.2)
+      emoji-picker-element:
+        specifier: ^1.29.1
+        version: 1.29.1
       polkadot-api:
         specifier: ^2.1.8
         version: 2.1.8(esbuild@0.28.1)(rxjs@7.8.2)
@@ -856,6 +859,9 @@ packages:
   detect-indent@7.0.2:
     resolution: {integrity: sha512-y+8xyqdGLL+6sh0tVeHcfP/QDd8gUgbasolJJpY7NgeQGSZ739bDtSiaiDgtoicy+mtYB81dKLxO9xRhCyIB3A==}
     engines: {node: '>=12.20'}
+
+  emoji-picker-element@1.29.1:
+    resolution: {integrity: sha512-TOiHzu9Dqib3x4MwcAi3wi3RdyT4SoeB4b15AvH1ks4SBwTl7DeebhZ0d3x6dNi4XfNU7IGRZ7NBQllj0RqwrQ==}
 
   es-module-lexer@1.7.0:
     resolution: {integrity: sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==}
@@ -2149,6 +2155,8 @@ snapshots:
   deepmerge-ts@7.1.5: {}
 
   detect-indent@7.0.2: {}
+
+  emoji-picker-element@1.29.1: {}
 
   es-module-lexer@1.7.0: {}
 
