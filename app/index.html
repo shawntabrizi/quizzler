@@ -319,7 +319,7 @@
         .lobby-players-heading h3 { font-size: 0.9rem; font-weight: 600; }
         .lobby-players-heading p { color: var(--fg-secondary); font-size: 0.78rem; text-align: right; }
         .lobby-actions { margin-top: 18px; }
-        .quick-play-row {
+        .instant-play-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -329,8 +329,8 @@
             background: var(--bg-surface-nested);
             border-radius: var(--radius-nested);
         }
-        .quick-play-row p { color: var(--fg-secondary); font-size: 0.8rem; line-height: 1.35; }
-        .quick-play-row button { flex: 0 0 auto; }
+        .instant-play-row p { color: var(--fg-secondary); font-size: 0.8rem; line-height: 1.35; }
+        .instant-play-row button { flex: 0 0 auto; }
         .lobby-actions #lobby-waiting { flex: 1; }
         .lobby-actions #btn-leave-lobby { margin-left: auto; }
 
@@ -944,8 +944,8 @@
             .lobby-actions #btn-start-game,
             .lobby-actions #btn-leave-lobby { width: 100%; margin-left: 0; }
             .lobby-actions #lobby-waiting { text-align: center; }
-            .quick-play-row { align-items: stretch; flex-direction: column; }
-            .quick-play-row button { width: 100%; }
+            .instant-play-row { align-items: stretch; flex-direction: column; }
+            .instant-play-row button { width: 100%; }
             input[type="text"], input[type="number"], input[type="search"], select, textarea { font-size: 16px; }
             ul.pack-grid { grid-template-columns: 1fr; }
             .pack-card { min-height: 104px; }
@@ -1124,14 +1124,13 @@
                 </div>
                 <div id="display-name-status" class="draft-save-status" data-testid="display-name-status" role="status" aria-live="polite"></div>
             </div>
-            <div id="quick-play-card" class="card" data-testid="quick-play-card" style="display: none;">
-                <h2>Quick play</h2>
-                <p class="hint" id="quick-play-status" data-testid="quick-play-status" role="status" aria-live="polite"></p>
+            <div id="instant-play-card" class="card" data-testid="instant-play-card" style="display: none;">
+                <h2>Instant actions</h2>
+                <p class="hint" id="instant-play-status" data-testid="instant-play-status" role="status" aria-live="polite"></p>
                 <div class="row">
-                    <button id="btn-enable-quick-play" class="primary" data-testid="btn-enable-quick-play">Enable quick play</button>
-                    <button id="btn-end-quick-play" class="quiet" data-testid="btn-end-quick-play" style="display: none;">End quick play</button>
+                    <button id="btn-turn-off-instant-play" class="quiet" data-testid="btn-turn-off-instant-play">End instant actions</button>
                 </div>
-                <div id="quick-play-error" class="error-text" data-testid="quick-play-error" role="alert"></div>
+                <div id="instant-play-error" class="error-text" data-testid="instant-play-error" role="alert"></div>
             </div>
         </section>
 
@@ -1283,9 +1282,9 @@
                     <p><span id="lobby-occupancy" data-testid="lobby-occupancy"></span> · Invite friends, then start when you’re ready. Starting closes the lobby.</p>
                 </div>
                 <ul class="list" id="lobby-players" data-testid="lobby-players"></ul>
-                <div id="lobby-quick-play" class="quick-play-row" data-testid="lobby-quick-play" style="display: none;">
-                    <p id="lobby-quick-play-status"></p>
-                    <button id="btn-enable-quick-play-lobby" class="primary" data-testid="btn-enable-quick-play-lobby">Enable quick play</button>
+                <div id="lobby-instant-play" class="instant-play-row" data-testid="lobby-instant-play" style="display: none;">
+                    <p id="lobby-instant-play-status" role="status" aria-live="polite"></p>
+                    <button id="btn-retry-instant-play" class="quiet" data-testid="btn-retry-instant-play" style="display: none;">Try instant actions</button>
                 </div>
                 <div class="row lobby-actions">
                     <button id="btn-start-game" class="primary" data-testid="btn-start-game" style="display: none;">Start game</button>

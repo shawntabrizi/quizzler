@@ -158,7 +158,7 @@ describe("transaction ABI", () => {
         ]);
     });
 
-    it("requires session-key possession before enabling quick play", () => {
+    it("requires session-key possession before enabling instant actions", () => {
         const request = method(sessionRegistryAbi as AbiItem[], "requestSession");
         expect(request.stateMutability).toBe("nonpayable");
         expect(request.inputs).toEqual([{ name: "session", type: "address" }]);

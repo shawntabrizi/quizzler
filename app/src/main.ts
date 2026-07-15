@@ -16,7 +16,7 @@ import { SignerManager, type SignerAccount } from "@parity/product-sdk-signer";
 import { createChainClient } from "@parity/product-sdk-chain-client";
 import { requestResourceAllocation } from "@parity/product-sdk-host";
 import { SessionKeyManager, type SessionKeyInfo } from "@parity/product-sdk-keys";
-import { createLocalKvStore } from "@parity/product-sdk-local-storage";
+import { createLocalKvStore, type LocalKvStore } from "@parity/product-sdk-local-storage";
 import {
     createContractFromClient,
     createContractRuntimeFromClient,
@@ -42,6 +42,12 @@ import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
+import {
+    automaticInstantPlayAllowed,
+    normalizeInstantPlayPreference,
+    temporaryInstantPlayFailure,
+    type InstantPlayPreference,
+} from "./instant-play-preference";
 import {
     clearPendingGameCreation,
     readPendingGameCreation,
@@ -152,7 +158,7 @@ const MIN_REVIVE_STORAGE_HEADROOM = 1_000_000_000n;
 
 // These are the only calls a session key may make on a Quizzler game. Pack
 // authoring, profile changes, lobby management, forfeiting, and creation stay
-// on the product account even when quick play is enabled.
+// on the product account even when instant actions are enabled.
 const SESSION_GAME_METHODS = new Set([
     "submitAnswer",
     "voteCorrect",
@@ -327,12 +333,20 @@ let selectedPackId: number | null = null;
 let selectedPack: PackView | null = null;
 let busy = false;
 
-// Quick play deliberately uses a locally held, narrow session key rather
+// Instant actions deliberately use a locally held, narrow session key rather
 // than the host's broad AutoSigning capability. The mnemonic lives only in
 // host-backed per-app storage; it is never copied into browser storage.
 let sessionKeyManager: SessionKeyManager | null = null;
+let instantPlayPreferenceStore: LocalKvStore | null = null;
 let sessionAccount: SessionAccount | null = null;
 let quickPlaySetup: Promise<void> | null = null;
+let quickPlayHydration: Promise<void> | null = null;
+let automaticInstantPlaySetup: Promise<void> | null = null;
+let automaticInstantPlayAttempted = false;
+let pendingInstantPlayRequest: { gameSession: number; force: boolean } | null = null;
+let instantPlayFallback = false;
+let instantPlayPreference: InstantPlayPreference | null = null;
+let instantPlayPreferenceLoaded = false;
 let quickPlayMessage = "";
 let quickPlayPending = false;
 
@@ -615,6 +629,44 @@ function transactionActor(handle: any, method: string): TransactionActor {
     return session ?? productTransactionActor();
 }
 
+/**
+ * Session infrastructure can disappear between lobby entry and a move. Retry
+ * exactly once with the product account only when the owner mapping is gone
+ * or the error clearly concerns the session's gas/fee path; semantic game
+ * errors still surface normally and are never replayed.
+ */
+function isSessionInfrastructureFailure(error: unknown): boolean {
+    return /\b(out\s*of\s*gas|outofgas|pgas|insufficient\s+(?:balance|funds|gas)|(?:fee|payment)\s+(?:failed|required|unavailable))\b/i
+        .test(txError(error));
+}
+
+async function fallBackFromUnavailableSession(actor: TransactionActor, error: unknown): Promise<boolean> {
+    if (actor.kind !== "session" || !sessionAccount) return false;
+    let registered: boolean;
+    try {
+        registered = await sessionIsRegistered(sessionAccount);
+    } catch {
+        // An RPC outage is not proof that the session is inactive, so avoid
+        // opening an unnecessary wallet approval in that case.
+        return false;
+    }
+    if (registered && !isSessionInfrastructureFailure(error)) return false;
+
+    sessionAccount = null;
+    quickPlayPending = false;
+    // Keep the local key until the next serialized setup can reconcile it.
+    // Clearing it here races a new enrollment and can erase the new key.
+    // When the failure is gas/fee related, skip sessions for the rest of this
+    // page visit; a reload can safely re-check the still-live mapping.
+    if (registered) automaticInstantPlayAttempted = true;
+    instantPlayFallback = true;
+    quickPlayMessage = registered
+        ? "Instant actions could not cover this move. Your wallet will sign instead."
+        : "Instant actions ended. Your wallet will sign this action instead.";
+    renderQuickPlayStatus();
+    return true;
+}
+
 function preflightKey(actor: TransactionActor, method: string, args: readonly unknown[]): string {
     return `${actor.address}:${method}:${args.map((arg) => String(arg)).join(":")}`;
 }
@@ -722,7 +774,7 @@ async function submitPreparedTx(
     actor: TransactionActor,
     nonce: number | null,
 ): Promise<void> {
-    setTransactionStatus(actor.kind === "session" ? "Submitting quick play action…" : "Waiting for wallet signature…");
+    setTransactionStatus(actor.kind === "session" ? "Submitting instant action…" : "Waiting for wallet signature…");
     await new Promise<void>((resolve, reject) => {
         let settled = false;
         let subscription: { unsubscribe(): void } | null = null;
@@ -769,7 +821,7 @@ async function submitTx(
     const actor = transactionActor(handle, method);
     for (let attempt = 0; ; attempt++) {
         try {
-            const initialStatus = actor.kind === "session" ? "Preparing quick play action…" : "Checking transaction…";
+            const initialStatus = actor.kind === "session" ? "Preparing instant action…" : "Checking transaction…";
             setTransactionStatus(attempt === 0 ? initialStatus : "Refreshing transaction details…");
             // A warmed estimate avoids an RPC on the tap path. On retries we
             // intentionally estimate again against current chain state.
@@ -780,7 +832,7 @@ async function submitTx(
             if (nonce === null) {
                 // Degrade safely to the SDK's submission path if the account
                 // nonce API is unavailable in a host implementation.
-                setTransactionStatus(actor.kind === "session" ? "Submitting quick play action…" : "Waiting for wallet signature…");
+                setTransactionStatus(actor.kind === "session" ? "Submitting instant action…" : "Waiting for wallet signature…");
                 const result = await handle[method].tx(...args, {
                     signer: actor.signer,
                     origin: actor.address,
@@ -806,6 +858,12 @@ async function submitTx(
                 await new Promise((r) => setTimeout(r, 5_000));
                 continue;
             }
+            if (await fallBackFromUnavailableSession(actor, e)) {
+                setTransactionStatus("Instant actions unavailable — waiting for wallet signature…");
+                // Drop the session-specific warm estimate and let the product
+                // account dry-run/sign this one action normally.
+                return submitTx(handle, method, args);
+            }
             setTransactionStatus("Transaction was not confirmed. Check your wallet and try again.");
             throw e;
         }
@@ -820,11 +878,81 @@ async function sendWarmedTx(handle: any, method: string, args: readonly unknown[
     await submitTx(handle, method, args, await warmedOverrides(handle, method, args));
 }
 
-// ── Quick play sessions ──────────────────────────────────────────────
+// ── Instant-action sessions ──────────────────────────────────────────
+
+class InstantPlayAllowanceError extends Error {
+    constructor(
+        readonly outcome: "Rejected" | "NotAvailable" | "HostError",
+        message: string,
+    ) {
+        super(message);
+        this.name = "InstantPlayAllowanceError";
+    }
+}
+
+/** An automatic attempt became irrelevant because its lobby was left. */
+class InstantPlaySetupCancelled extends Error {
+    constructor() {
+        super("Instant-action setup was cancelled because the game was left.");
+        this.name = "InstantPlaySetupCancelled";
+    }
+}
+
+type InstantPlaySetupGuard = () => boolean;
+const alwaysContinueInstantPlaySetup: InstantPlaySetupGuard = () => true;
+
+function assertInstantPlaySetupCurrent(canContinue: InstantPlaySetupGuard): void {
+    if (!canContinue()) throw new InstantPlaySetupCancelled();
+}
+
+function instantPlayPreferenceName(): string {
+    if (!myAddress) throw new Error("Instant actions are not configured.");
+    // This is intentionally scoped to the product identity and network, not
+    // the session-registry address. A contract upgrade must not re-prompt a
+    // player who previously chose normal wallet signing.
+    return `autosign-preference:paseo-asset-hub:${myAddress}`;
+}
+
+async function getInstantPlayPreferenceStore(): Promise<LocalKvStore> {
+    if (instantPlayPreferenceStore) return instantPlayPreferenceStore;
+    instantPlayPreferenceStore = await createLocalKvStore({ prefix: "quizzler:instant-play" });
+    return instantPlayPreferenceStore;
+}
+
+async function loadInstantPlayPreference(): Promise<InstantPlayPreference | null> {
+    if (instantPlayPreferenceLoaded) return instantPlayPreference;
+    try {
+        const store = await getInstantPlayPreferenceStore();
+        instantPlayPreference = normalizeInstantPlayPreference(
+            await store.getJSON<InstantPlayPreference>(instantPlayPreferenceName()),
+        );
+    } catch {
+        // If host KV is unavailable, setup itself cannot safely persist a
+        // bearer key either. The in-memory one-attempt guard still prevents
+        // repeated prompts during this visit.
+        instantPlayPreference = null;
+    }
+    instantPlayPreferenceLoaded = true;
+    return instantPlayPreference;
+}
+
+async function saveInstantPlayPreference(preference: InstantPlayPreference | null): Promise<void> {
+    instantPlayPreference = preference;
+    instantPlayPreferenceLoaded = true;
+    try {
+        const store = await getInstantPlayPreferenceStore();
+        const name = instantPlayPreferenceName();
+        if (preference === null) await store.remove(name);
+        else await store.setJSON(name, preference);
+    } catch {
+        // This is only a non-secret UX preference. In-memory state remains a
+        // safe fallback if host storage is unavailable.
+    }
+}
 
 function quickPlayStorageName(): string {
     const registryAddress = activeContracts.sessionRegistry;
-    if (!isContractAddress(registryAddress) || !myAddress) throw new Error("Quick play is not configured.");
+    if (!isContractAddress(registryAddress) || !myAddress) throw new Error("Instant actions are not configured.");
     // Contract addresses are chain-specific, so this isolates a session from
     // future deployments without putting any secret in browser storage.
     return `${registryAddress.toLowerCase()}:${myAddress}`;
@@ -832,6 +960,8 @@ function quickPlayStorageName(): string {
 
 async function getSessionKeyManager(): Promise<SessionKeyManager> {
     if (sessionKeyManager) return sessionKeyManager;
+    // Keep the established secret-store namespace so a player who already
+    // completed setup keeps their live seven-day session after this UI rename.
     const store = await createLocalKvStore({ prefix: "quizzler:quick-play" });
     sessionKeyManager = new SessionKeyManager({
         store,
@@ -841,19 +971,27 @@ async function getSessionKeyManager(): Promise<SessionKeyManager> {
 }
 
 async function sessionIsRegistered(candidate: SessionAccount): Promise<boolean> {
-    if (!sessionRegistry || !productAccount) throw new Error("Quick play registry is unavailable.");
+    if (!sessionRegistry || !productAccount) throw new Error("Instant-action registry is unavailable.");
     const registered = await sessionRegistry.sessionOf.query(myAddress, { origin: productAccount.address });
-    if (!registered.success) throw new Error("Could not verify the quick-play session on-chain.");
+    if (!registered.success) throw new Error("Could not verify the instant-action session on-chain.");
     return String(registered.value).toLowerCase() === candidate.h160Address.toLowerCase();
 }
 
 async function sessionActivationPending(candidate: SessionAccount): Promise<boolean> {
-    if (!sessionRegistry || !productAccount) throw new Error("Quick play registry is unavailable.");
+    if (!sessionRegistry || !productAccount) throw new Error("Instant-action registry is unavailable.");
     const pending = await sessionRegistry.pendingOwnerOf.query(candidate.h160Address, {
         origin: productAccount.address,
     });
-    if (!pending.success) throw new Error("Could not verify the quick-play setup on-chain.");
+    if (!pending.success) throw new Error("Could not verify the instant-action setup on-chain.");
     return String(pending.value).toLowerCase() === myAddress;
+}
+
+/** A fresh, unbound key resolves to itself; used or tombstoned keys resolve to zero. */
+async function sessionKeyCanBeRequested(candidate: SessionAccount): Promise<boolean> {
+    if (!sessionRegistry || !productAccount) throw new Error("Instant-action registry is unavailable.");
+    const resolved = await sessionRegistry.resolve.query(candidate.h160Address, { origin: productAccount.address });
+    if (!resolved.success) throw new Error("Could not verify the saved instant-action key on-chain.");
+    return String(resolved.value).toLowerCase() === candidate.h160Address.toLowerCase();
 }
 
 async function pgasBalance(address: string): Promise<bigint> {
@@ -864,15 +1002,26 @@ async function pgasBalance(address: string): Promise<bigint> {
 }
 
 async function ensureQuickPlayAllowance(): Promise<void> {
-    // The host knows whether a personhood claim is still funded and can
-    // replenish it without another approval. Checking only for a non-zero
-    // balance can leave too little PGAS for the transfer plus storage.
+    // This is a setup request, not a passive balance query. The host may show
+    // an allocation prompt (and may increase an existing allowance), so the
+    // automatic lifecycle calls it only once when no valid session exists.
     const allocation = await requestResourceAllocation([
         { tag: "SmartContractAllowance", value: PRODUCT_DERIVATION_INDEX },
     ]);
-    if (!allocation.ok) throw allocation.error;
-    if (allocation.value[0] !== "Allocated") {
-        throw new Error("Quick play needs the free smart-contract allowance approved in your wallet.");
+    if (!allocation.ok) {
+        throw new InstantPlayAllowanceError("HostError", "Instant actions could not request the free game allowance.");
+    }
+    const outcome = allocation.value[0];
+    if (outcome === "Rejected" || outcome === "NotAvailable") {
+        throw new InstantPlayAllowanceError(
+            outcome,
+            outcome === "Rejected"
+                ? "Instant actions were skipped."
+                : "This wallet does not support instant actions right now.",
+        );
+    }
+    if (outcome !== "Allocated") {
+        throw new InstantPlayAllowanceError("HostError", "Instant actions could not request the free game allowance.");
     }
 }
 
@@ -886,7 +1035,7 @@ function stringifyChainError(value: unknown): string {
 
 /**
  * Estimate a raw Revive call before signing it. The contract helper does this
- * for ABI methods, but quick play also calls the PGAS ERC-20 precompile and
+ * for ABI methods, but instant actions also call the PGAS ERC-20 precompile and
  * batches decoded calls, so it needs the same protection explicitly.
  */
 async function estimateReviveCall(
@@ -905,11 +1054,11 @@ async function estimateReviveCall(
         { at: "best" },
     );
     if (!result?.result?.success || result.result.value?.flags !== 0) {
-        throw new Error(`Quick play call could not be estimated: ${stringifyChainError(result?.result?.value ?? result)}`);
+        throw new Error(`Instant-action call could not be estimated: ${stringifyChainError(result?.result?.value ?? result)}`);
     }
     const gas = result.weight_required;
     if (typeof gas?.ref_time !== "bigint" || typeof gas?.proof_size !== "bigint") {
-        throw new Error("Quick play call did not return a gas estimate.");
+        throw new Error("Instant-action call did not return a gas estimate.");
     }
     const deposit = result.storage_deposit?.type === "Charge" && typeof result.storage_deposit.value === "bigint"
         ? result.storage_deposit.value
@@ -965,148 +1114,342 @@ async function restoreQuickPlay(): Promise<void> {
         const keys = await getSessionKeyManager();
         const stored = await keys.get();
         if (!stored) {
-            quickPlayMessage = "Enable once to submit answers and votes without wallet popups.";
+            quickPlayMessage = "Instant actions will be set up when you join a game.";
         } else if (await sessionIsRegistered(stored.account)) {
             sessionAccount = stored.account;
-            quickPlayMessage = "Quick play is on for answers and votes.";
+            instantPlayFallback = false;
+            quickPlayMessage = "Instant actions are ready.";
         } else if (await sessionActivationPending(stored.account)) {
             // The product-signed request may have landed just before an app
-            // reload. Retain the bearer key and let a tap finish the silent
-            // possession-proof call instead of stranding its PGAS.
+            // reload. Retain the bearer key and resume the silent
+            // possession-proof call the next time the player enters a game,
+            // without another wallet prompt.
             quickPlayPending = true;
-            quickPlayMessage = "Quick play setup is ready to finish. Enable it to continue.";
+            quickPlayMessage = "Instant actions will finish when you join a game.";
+        } else if (await sessionKeyCanBeRequested(stored.account)) {
+            // A declined setup may have created and safely persisted a fresh
+            // key before the allowance prompt. Keep it for an explicit retry
+            // instead of replacing it and asking the wallet twice.
+            quickPlayMessage = "Instant actions will be retried when you play.";
         } else {
-            // Both successful chain reads say the stored key is neither
-            // active nor pending, so it is safe to replace it.
+            // This key was used or tombstoned by an earlier session and can
+            // never be requested again. Replace it only when setup resumes.
             await keys.clear();
-            quickPlayMessage = "Your previous quick-play session ended. Enable it again when you want it.";
+            quickPlayMessage = "Instant actions will be renewed when you play.";
         }
     } catch {
         // Do not erase a bearer key on an indeterminate host or RPC failure.
         // A later restore can still validate or finish the same session.
-        quickPlayMessage = "Quick play could not be checked right now. Normal play still works.";
+        quickPlayMessage = "Instant actions could not be checked. Normal signing is ready.";
     }
     renderQuickPlayStatus();
 }
 
+/** Serialize the boot restore with later automatic game-entry setup. */
+function hydrateQuickPlay(): Promise<void> {
+    if (!quickPlayHydration) quickPlayHydration = restoreQuickPlay();
+    return quickPlayHydration;
+}
+
 /** Complete the session-key half of the setup handshake without a wallet. */
-async function activatePendingQuickPlay(session: SessionAccount): Promise<void> {
+async function activatePendingQuickPlay(
+    session: SessionAccount,
+    canContinue: InstantPlaySetupGuard = alwaysContinueInstantPlaySetup,
+): Promise<void> {
+    assertInstantPlaySetupCurrent(canContinue);
     const sessionRegistryAddress = activeContracts.sessionRegistry;
     if (!isContractAddress(sessionRegistryAddress)) {
-        throw new Error("Quick play is not available for this game deployment.");
+        throw new Error("Instant actions are not available for this game deployment.");
     }
     const activationData = encodeFunctionData({
         abi: sessionRegistryAbi,
         functionName: "activateSession",
         args: [productTransactionActor().h160 as `0x${string}`],
     });
-    quickPlayMessage = "Finishing quick play setup…";
+    quickPlayMessage = "Finishing instant actions…";
     renderQuickPlayStatus();
     const actor = sessionTransactionActor(session);
-    await submitStandaloneTx(
-        await estimatedReviveCall(sessionRegistryAddress, activationData, actor),
-        actor,
-    );
+    const activation = await estimatedReviveCall(sessionRegistryAddress, activationData, actor);
+    assertInstantPlaySetupCurrent(canContinue);
+    await submitStandaloneTx(activation, actor);
+    assertInstantPlaySetupCurrent(canContinue);
     if (!await sessionIsRegistered(session)) {
-        throw new Error("Quick play setup was not confirmed on-chain. Please try again.");
+        throw new Error("Instant actions were not confirmed on-chain. Please try again.");
     }
+    assertInstantPlaySetupCurrent(canContinue);
     sessionAccount = session;
+    instantPlayFallback = false;
     quickPlayPending = false;
-    quickPlayMessage = "Quick play is on for answers and votes.";
+    quickPlayMessage = "Instant actions are ready.";
 }
 
-async function setupQuickPlay(): Promise<void> {
+async function setupQuickPlay(
+    canContinue: InstantPlaySetupGuard = alwaysContinueInstantPlaySetup,
+): Promise<void> {
+    assertInstantPlaySetupCurrent(canContinue);
     const sessionRegistryAddress = activeContracts.sessionRegistry;
     if (!sessionRegistry || !isContractAddress(sessionRegistryAddress)) {
-        throw new Error("Quick play is not available for this game deployment.");
+        throw new Error("Instant actions are not available for this game deployment.");
     }
     const keys = await getSessionKeyManager();
+    assertInstantPlaySetupCurrent(canContinue);
     const stored = await keys.get();
-    if (sessionAccount && await sessionIsRegistered(sessionAccount)) return;
+    assertInstantPlaySetupCurrent(canContinue);
+    if (sessionAccount) {
+        if (await sessionIsRegistered(sessionAccount)) {
+            assertInstantPlaySetupCurrent(canContinue);
+            instantPlayFallback = false;
+            quickPlayMessage = "Instant actions are ready.";
+            renderQuickPlayStatus();
+            return;
+        }
+        assertInstantPlaySetupCurrent(canContinue);
+        sessionAccount = null;
+    }
+
+    let session = stored;
     if (stored) {
         if (await sessionIsRegistered(stored.account)) {
+            assertInstantPlaySetupCurrent(canContinue);
             sessionAccount = stored.account;
-            quickPlayMessage = "Quick play is on for answers and votes.";
+            instantPlayFallback = false;
+            quickPlayMessage = "Instant actions are ready.";
             renderQuickPlayStatus();
             return;
         }
         if (await sessionActivationPending(stored.account)) {
+            assertInstantPlaySetupCurrent(canContinue);
             quickPlayPending = true;
-            await activatePendingQuickPlay(stored.account);
+            await activatePendingQuickPlay(stored.account, canContinue);
             renderQuickPlayStatus();
             return;
         }
-        // The reads above completed successfully, so this cannot be a live
-        // funded session or a request waiting for its silent activation.
-        await keys.clear();
+        assertInstantPlaySetupCurrent(canContinue);
+        // A rejected allowance request can leave behind a safe, unbound key.
+        // Reuse it on the next manual retry; only tombstoned/used keys must
+        // be replaced before asking the wallet for another allowance.
+        if (!await sessionKeyCanBeRequested(stored.account)) {
+            assertInstantPlaySetupCurrent(canContinue);
+            await keys.clear();
+            assertInstantPlaySetupCurrent(canContinue);
+            session = null;
+        }
         quickPlayPending = false;
     }
 
-    quickPlayMessage = "Requesting your free game allowance…";
+    if (!session) {
+        const created = await keys.create();
+        // Host KV implementations may report a successful write while silently
+        // declining persistence. Verify the mnemonic-derived account before
+        // showing any allowance prompt or funding a key on-chain.
+        const persisted = await keys.get();
+        if (!persisted || persisted.account.h160Address.toLowerCase() !== created.account.h160Address.toLowerCase()) {
+            await keys.clear().catch(() => undefined);
+            throw new Error("Instant actions could not save their local key. Please try again in a supported host.");
+        }
+        if (!canContinue()) {
+            await keys.clear().catch(() => undefined);
+            throw new InstantPlaySetupCancelled();
+        }
+        session = persisted;
+    }
+
+    assertInstantPlaySetupCurrent(canContinue);
+    quickPlayMessage = "Requesting your free instant-action allowance…";
     renderQuickPlayStatus();
     await ensureQuickPlayAllowance();
+    assertInstantPlaySetupCurrent(canContinue);
 
-    const created = await keys.create();
-    // Host KV implementations may report a successful write while silently
-    // declining persistence. Verify the mnemonic-derived account before any
-    // PGAS is funded or a request is placed on-chain.
-    const session = await keys.get();
-    if (!session || session.account.h160Address.toLowerCase() !== created.account.h160Address.toLowerCase()) {
-        await keys.clear().catch(() => undefined);
-        throw new Error("Quick play could not save its local key. Please try again in a supported host.");
-    }
+    const candidate = session;
     const product = productTransactionActor();
     const fundData = encodeFunctionData({
         abi: erc20Abi,
         functionName: "transfer",
-        args: [session.account.h160Address, SESSION_PGAS_BUDGET],
+        args: [candidate.account.h160Address, SESSION_PGAS_BUDGET],
     });
     const requestData = encodeFunctionData({
         abi: sessionRegistryAbi,
         functionName: "requestSession",
-        args: [session.account.h160Address],
+        args: [candidate.account.h160Address],
     });
-    quickPlayMessage = "Preparing quick play setup…";
+    quickPlayMessage = "Preparing instant actions…";
     renderQuickPlayStatus();
     const [fund, request] = await Promise.all([
         estimatedReviveCall(PGAS_ERC20_PRECOMPILE, fundData, product),
         estimatedReviveCall(sessionRegistryAddress, requestData, product),
     ]);
+    assertInstantPlaySetupCurrent(canContinue);
     const setup = assetHub.tx.Utility.batch_all({
         // Keep the batch pure Revive calls. A native Assets transfer or any
         // other outer call would lose the PGAS fee path.
         calls: [fund.decodedCall, request.decodedCall],
     });
 
-    quickPlayMessage = "Confirm once to turn on quick play…";
+    quickPlayMessage = "Confirm once to turn on instant actions…";
     renderQuickPlayStatus();
     try {
         await submitStandaloneTx(setup, product);
         quickPlayPending = true;
-        await activatePendingQuickPlay(session.account);
+        assertInstantPlaySetupCurrent(canContinue);
+        await activatePendingQuickPlay(candidate.account, canContinue);
     } catch (error) {
+        if (error instanceof InstantPlaySetupCancelled) throw error;
         // A watch timeout can occur after inclusion. Preserve the key either
         // way; when the chain can confirm the pending request, also expose the
         // explicit cancel/retry controls immediately.
-        if (await sessionIsRegistered(session.account).catch(() => false)) {
-            sessionAccount = session.account;
+        if (await sessionIsRegistered(candidate.account).catch(() => false)) {
+            sessionAccount = candidate.account;
+            instantPlayFallback = false;
             quickPlayPending = false;
-            quickPlayMessage = "Quick play is on for answers and votes.";
+            quickPlayMessage = "Instant actions are ready.";
             return;
         }
-        quickPlayPending = await sessionActivationPending(session.account).catch(() => false);
+        quickPlayPending = await sessionActivationPending(candidate.account).catch(() => false);
         throw error;
     } finally {
         renderQuickPlayStatus();
     }
 }
 
-function enableQuickPlay(): Promise<void> {
+function enableQuickPlay(canContinue: InstantPlaySetupGuard = alwaysContinueInstantPlaySetup): Promise<void> {
     if (quickPlaySetup) return quickPlaySetup;
-    quickPlaySetup = setupQuickPlay().finally(() => {
+    quickPlaySetup = setupQuickPlay(canContinue).finally(() => {
         quickPlaySetup = null;
     });
     return quickPlaySetup;
+}
+
+function instantPlayUsesManualSigning(error: unknown): boolean {
+    if (error instanceof InstantPlayAllowanceError) {
+        return error.outcome === "Rejected" || error.outcome === "NotAvailable";
+    }
+    // Wallet hosts do not share one error class for an explicitly dismissed
+    // approval. Treat the common cancellation text as an opt-out rather than
+    // opening the same modal again on the next lobby.
+    return /\b(reject(?:ed|ion)?|cancel(?:led|ed)?|declin(?:ed|e)|denied|dismissed)\b/i.test(txError(error));
+}
+
+/**
+ * Default path after entering a party: reuse a live session silently, or make
+ * one non-blocking enrollment attempt. Any failure leaves `sessionAccount`
+ * empty, which routes every game action to the normal product signer.
+ */
+function instantPlayRequestIsCurrent(request: { gameSession: number }): boolean {
+    return gameId !== null && gameSession === request.gameSession;
+}
+
+async function ensureDefaultInstantPlay(
+    request: { gameSession: number; force: boolean },
+): Promise<void> {
+    if (!sessionRegistry || !sessionRegistryConfigured() || !productAccount) return;
+    const canContinue = () => instantPlayRequestIsCurrent(request);
+    await hydrateQuickPlay();
+    if (!canContinue()) return;
+    if (sessionAccount) {
+        try {
+            if (await sessionIsRegistered(sessionAccount)) {
+                if (!canContinue()) return;
+                instantPlayFallback = false;
+                return;
+            }
+        } catch {
+            // A failed on-chain check must not create a new allowance prompt.
+            // Normal signing remains available, and the next game can retry
+            // the passive verification before it considers a new setup.
+            if (!canContinue()) return;
+            sessionAccount = null;
+            instantPlayFallback = true;
+            quickPlayMessage = "Instant actions could not be verified. Normal signing is ready.";
+            renderQuickPlayStatus();
+            return;
+        }
+        if (!canContinue()) return;
+        // Keep the key until setup can determine whether it was tombstoned;
+        // a fire-and-forget clear here could race a new enrollment.
+        sessionAccount = null;
+        quickPlayPending = false;
+    }
+    if (quickPlaySetup) return;
+
+    const preference = await loadInstantPlayPreference();
+    if (!canContinue()) return;
+    // A persisted transient cooldown can expire while this tab remains open.
+    // An in-memory-only failure stays blocked for the visit, because we have
+    // no durable signal that it is safe to surface the host prompt again.
+    const inMemoryAttemptStillBlocked = automaticInstantPlayAttempted && preference?.retryAfter === undefined;
+    if (!request.force && (!automaticInstantPlayAllowed(preference) || inMemoryAttemptStillBlocked)) {
+        instantPlayFallback = true;
+        quickPlayMessage = preference?.mode === "manual"
+            ? "Playing with normal wallet approvals."
+            : "Instant actions are unavailable right now. Normal signing is ready.";
+        renderQuickPlayStatus();
+        return;
+    }
+
+    automaticInstantPlayAttempted = true;
+    instantPlayFallback = false;
+    quickPlayMessage = "Setting up instant actions…";
+    renderQuickPlayStatus();
+    try {
+        await enableQuickPlay(canContinue);
+        if (!canContinue()) return;
+        if (sessionAccount) {
+            automaticInstantPlayAttempted = false;
+            await saveInstantPlayPreference(null);
+        }
+    } catch (error) {
+        if (error instanceof InstantPlaySetupCancelled) {
+            // A later lobby gets its own fresh, single setup attempt.
+            automaticInstantPlayAttempted = false;
+            return;
+        }
+        const useManualSigning = instantPlayUsesManualSigning(error);
+        if (!canContinue() && !useManualSigning) {
+            automaticInstantPlayAttempted = false;
+            return;
+        }
+        if (quickPlayPending) {
+            // The product-approved batch landed. A later retry will use the
+            // stored pending key and only repeat its silent activation call,
+            // never the allowance request or product-signed setup batch.
+            quickPlayPending = false;
+            instantPlayFallback = true;
+            quickPlayMessage = "Instant actions are still finishing. Playing with normal wallet approvals meanwhile.";
+        } else {
+            instantPlayFallback = true;
+            await saveInstantPlayPreference(
+                useManualSigning ? { mode: "manual" } : temporaryInstantPlayFailure(),
+            );
+            quickPlayMessage = useManualSigning
+                ? "Playing with normal wallet approvals."
+                : "Instant actions are unavailable right now. Normal signing is ready.";
+            console.warn("instant action setup fell back to normal signing", error);
+        }
+    } finally {
+        if (canContinue()) renderQuickPlayStatus();
+    }
+}
+
+function startDefaultInstantPlay(force = false): void {
+    if (gameId === null) return;
+    const request = { gameSession, force };
+    if (automaticInstantPlaySetup || quickPlaySetup) {
+        pendingInstantPlayRequest = request;
+        return;
+    }
+    if (pendingInstantPlayRequest?.gameSession === request.gameSession) {
+        pendingInstantPlayRequest = null;
+    }
+    automaticInstantPlaySetup = ensureDefaultInstantPlay(request).catch((error) => {
+        // This must never break the party flow. Known setup failures are
+        // handled above; retain a log for an unexpected host integration bug.
+        console.warn("instant action setup stopped unexpectedly", error);
+    }).finally(() => {
+        automaticInstantPlaySetup = null;
+        const queued = pendingInstantPlayRequest;
+        pendingInstantPlayRequest = null;
+        if (queued && instantPlayRequestIsCurrent(queued)) startDefaultInstantPlay(queued.force);
+    });
 }
 
 async function endQuickPlay(): Promise<void> {
@@ -1114,7 +1457,7 @@ async function endQuickPlay(): Promise<void> {
     const stored = sessionAccount ?? (await sessionKeyManager.get())?.account;
     if (!stored) return;
     const session = sessionTransactionActor(stored);
-    quickPlayMessage = "Returning your unused game credit…";
+    quickPlayMessage = "Turning off instant actions…";
     renderQuickPlayStatus();
 
     const balance = await pgasBalance(session.address);
@@ -1127,7 +1470,7 @@ async function endQuickPlay(): Promise<void> {
         await submitStandaloneTx(await estimatedReviveCall(PGAS_ERC20_PRECOMPILE, drainData, session), session);
     }
 
-    quickPlayMessage = "Confirm to end quick play…";
+    quickPlayMessage = "Confirm turning off instant actions…";
     renderQuickPlayStatus();
     try {
         await sendTx(sessionRegistry, "revokeSession");
@@ -1139,7 +1482,10 @@ async function endQuickPlay(): Promise<void> {
     await sessionKeyManager.clear();
     sessionAccount = null;
     quickPlayPending = false;
-    quickPlayMessage = "Quick play is off. Future answers will ask your wallet to sign.";
+    automaticInstantPlayAttempted = true;
+    instantPlayFallback = true;
+    await saveInstantPlayPreference({ mode: "manual" });
+    quickPlayMessage = "Playing with normal wallet approvals.";
     renderQuickPlayStatus();
 }
 
@@ -1420,7 +1766,7 @@ async function init(): Promise<void> {
     // A stored session is trusted only after its on-chain owner mapping is
     // checked. This is intentionally best-effort: a storage/host outage must
     // never block normal product-account play.
-    if (sessionRegistry) void restoreQuickPlay();
+    if (sessionRegistry) void hydrateQuickPlay();
 
     // Prime the best-block nonce without holding up the home screen. It is
     // shared with the first action if the player gets there before it returns.
@@ -1482,77 +1828,65 @@ const $resumeGameCard = getEl("resume-game-card");
 const $resumeGameCode = getEl("resume-game-code");
 const $displayName = getEl<HTMLInputElement>("display-name");
 const $displayNameStatus = getEl("display-name-status");
-const $quickPlayCard = getEl("quick-play-card");
-const $quickPlayStatus = getEl("quick-play-status");
-const $quickPlayError = getEl("quick-play-error");
-const $btnEnableQuickPlay = getEl<HTMLButtonElement>("btn-enable-quick-play");
-const $btnEndQuickPlay = getEl<HTMLButtonElement>("btn-end-quick-play");
-const $lobbyQuickPlay = getEl("lobby-quick-play");
-const $lobbyQuickPlayStatus = getEl("lobby-quick-play-status");
-const $btnEnableQuickPlayLobby = getEl<HTMLButtonElement>("btn-enable-quick-play-lobby");
+const $instantPlayCard = getEl("instant-play-card");
+const $instantPlayStatus = getEl("instant-play-status");
+const $instantPlayError = getEl("instant-play-error");
+const $btnTurnOffInstantPlay = getEl<HTMLButtonElement>("btn-turn-off-instant-play");
+const $lobbyInstantPlay = getEl("lobby-instant-play");
+const $lobbyInstantPlayStatus = getEl("lobby-instant-play-status");
+const $btnRetryInstantPlay = getEl<HTMLButtonElement>("btn-retry-instant-play");
 
 function renderQuickPlayStatus(): void {
     const configured = sessionRegistryConfigured();
     const enabled = sessionAccount !== null;
     const pending = !enabled && quickPlayPending;
-    $quickPlayCard.style.display = configured ? "" : "none";
+    const settingUp = quickPlaySetup !== null || automaticInstantPlaySetup !== null || pending;
+    $instantPlayCard.style.display = configured && enabled ? "" : "none";
     if (!configured) {
-        $lobbyQuickPlay.style.display = "none";
+        $lobbyInstantPlay.style.display = "none";
         return;
     }
 
-    const message = quickPlayMessage || (enabled
-        ? "Quick play is on for answers and votes."
-        : "Enable once to submit answers and votes without wallet popups.");
-    $quickPlayStatus.textContent = message;
-    $btnEnableQuickPlay.style.display = enabled ? "none" : "";
-    $btnEnableQuickPlay.disabled = quickPlaySetup !== null || busy;
-    $btnEndQuickPlay.style.display = enabled || pending ? "" : "none";
-    $btnEndQuickPlay.textContent = pending ? "Cancel quick-play setup" : "End quick play";
-    $btnEndQuickPlay.disabled = busy;
+    $instantPlayStatus.textContent = "Instant actions are on for this account. Ending them revokes the current session, including on any other device.";
+    $btnTurnOffInstantPlay.disabled = busy;
 
     const inLobby = visibleScreen === "lobby";
-    $lobbyQuickPlay.style.display = inLobby ? "" : "none";
-    $lobbyQuickPlayStatus.textContent = enabled
-        ? "Quick play is ready — answers and votes will not open your wallet."
-        : "Enable quick play now so answers and votes stay instant once the quiz starts.";
-    $btnEnableQuickPlayLobby.style.display = enabled ? "none" : "";
-    $btnEnableQuickPlayLobby.disabled = quickPlaySetup !== null || busy;
+    const showLobbyStatus = inLobby && !enabled;
+    $lobbyInstantPlay.style.display = showLobbyStatus ? "" : "none";
+    if (!showLobbyStatus) return;
+
+    $lobbyInstantPlayStatus.textContent = settingUp
+        ? quickPlayMessage || "Setting up instant actions…"
+        : quickPlayMessage || "Playing with normal wallet approvals.";
+    const canRetry = !settingUp && instantPlayFallback;
+    $btnRetryInstantPlay.style.display = canRetry ? "" : "none";
+    $btnRetryInstantPlay.disabled = !canRetry || busy;
 }
 
-async function enableQuickPlayFrom(buttonId: string, error: HTMLElement): Promise<void> {
-    if (busy || quickPlaySetup) return;
-    busy = true;
-    error.textContent = "";
-    setLoading(buttonId, true);
-    renderQuickPlayStatus();
-    try {
-        await enableQuickPlay();
-    } catch (cause) {
-        quickPlayMessage = "Quick play could not be enabled.";
-        error.textContent = txError(cause);
-    } finally {
-        busy = false;
-        setLoading(buttonId, false);
+$btnRetryInstantPlay.addEventListener("click", () => {
+    if (busy || quickPlaySetup || automaticInstantPlaySetup) return;
+    void (async () => {
+        automaticInstantPlayAttempted = false;
+        instantPlayFallback = false;
+        await saveInstantPlayPreference(null);
+        startDefaultInstantPlay(true);
         renderQuickPlayStatus();
-    }
-}
+    })();
+});
 
-$btnEnableQuickPlay.addEventListener("click", () => void enableQuickPlayFrom("btn-enable-quick-play", $quickPlayError));
-$btnEnableQuickPlayLobby.addEventListener("click", () => void enableQuickPlayFrom("btn-enable-quick-play-lobby", getEl("lobby-error")));
-$btnEndQuickPlay.addEventListener("click", async () => {
-    if (busy || (!sessionAccount && !quickPlayPending)) return;
+$btnTurnOffInstantPlay.addEventListener("click", async () => {
+    if (busy || !sessionAccount) return;
     busy = true;
-    $quickPlayError.textContent = "";
-    setLoading("btn-end-quick-play", true);
+    $instantPlayError.textContent = "";
+    setLoading("btn-turn-off-instant-play", true);
     renderQuickPlayStatus();
     try {
         await endQuickPlay();
     } catch (cause) {
-        $quickPlayError.textContent = txError(cause);
+        $instantPlayError.textContent = txError(cause);
     } finally {
         busy = false;
-        setLoading("btn-end-quick-play", false);
+        setLoading("btn-turn-off-instant-play", false);
         renderQuickPlayStatus();
     }
 });
@@ -2967,10 +3301,17 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
         render(initialSnapshot);
     }
     startGamePolling();
+    // Joining, creating, rejoining, and invite links all converge here. Set
+    // up the reusable narrow session in the background without holding the
+    // party flow hostage if the host cannot provide it.
+    startDefaultInstantPlay();
 }
 
 function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean } = {}): void {
     gameSession += 1;
+    // Any allowance/setup work tied to the room we just left must not resume
+    // into a later screen. A new room will queue its own attempt.
+    pendingInstantPlayRequest = null;
     gameId = null;
     pendingAbandonedForfeit = null;
     latest = null;
