@@ -80,8 +80,10 @@ LIVE_E2E=1 pnpm test:e2e  # destructive Playwright run against public Paseo
 
 `deploy:contract` waits for finalized inclusion before it records a contract address. It is a
 fresh game-contract cutover: existing unfinished rooms remain on the old game contract and are
-not automatically migrated into the new app configuration. Keep the prior build available or
-schedule the cutover between games when those rooms matter.
+not automatically migrated. Promotion retains the prior registry/game pair in the bounded
+`previousDeployments` allowlist in `src/contract-address.json`, so a saved browser session or
+an invite link can continue to open that known older room. The browser still presents one
+resumable quiz at a time; this is continuity, not a multi-game mode.
 
 The e2e suite (`app/e2e/`) runs the app inside `@parity/host-api-test-sdk`'s test host
 against public Paseo — `game.spec.ts` plays a complete two-player game (one player through
@@ -94,6 +96,32 @@ The E2E host uses its own Vite server on port 5302 and fails rather than
 falling back to an active player-facing profile or server.
 
 Current deployment: see `app/src/contract-address.json`.
+
+## Creating a pack
+
+The app’s **Pack studio** is import-first: paste a JSON document or import a
+`.json` file, review its local validation and preview, then publish it. Drafts
+are saved locally before anything is sent on-chain. A portable pack file has
+one title, one or more regular questions, and all three final difficulties:
+
+```json
+{
+  "title": "Friday food quiz",
+  "questions": [
+    { "text": "What fruit is used in guacamole?", "answers": ["avocado"] }
+  ],
+  "finals": {
+    "easy": { "text": "…", "answers": ["…"] },
+    "medium": { "text": "…", "answers": ["…"] },
+    "hard": { "text": "…", "answers": ["…"] }
+  }
+}
+```
+
+The optional top-level `emoji` is preserved on import; authors can also choose
+or paste any raw emoji in Pack studio. The publisher normalizes equivalent
+answer variants before batching them to the registry, and keeps a local resume
+cursor if a publish is interrupted.
 
 ## Fresh registry migration
 
@@ -130,8 +158,9 @@ use the same `DEPLOY_DEV_ACCOUNT` for deploy and seed so they have one
 canonical creator.
 
 Promotion requires the explicit confirmation variable and a completed seed
-marker. It copies the generated ABI files and swaps in the staged registry and
-game addresses. Rebuild/redeploy the app and commit those updated tracked
-files afterwards. The old registry and its games remain on-chain; this flow
-does not delete or mutate them. The staging file is ignored and never read by
-the app or E2E suite, keeping unpromoted deployments isolated.
+marker. It copies the generated ABI files, swaps in the staged registry and
+game addresses, and retains the old pair as a known historical deployment for
+invite/resume continuity. Rebuild/redeploy the app and commit those updated
+tracked files afterwards. The old registry and its games remain on-chain; this
+flow does not delete or mutate them. The staging file is ignored and never
+read by the app or E2E suite, keeping unpromoted deployments isolated.

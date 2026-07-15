@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 
 import { starterPacks } from "./starter-packs";
 import { starterCatalogFingerprint } from "./catalog-fingerprint";
+import { promoteDeploymentConfig } from "../src/deployment-history";
+import type { ContractDeploymentConfig } from "../src/deployments";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_DIR = join(__dirname, "..");
@@ -109,16 +111,21 @@ async function main(): Promise<void> {
         throw new Error("Generated ABI artifacts no longer match the staged deployment. Rebuild/re-stage before promotion.");
     }
 
+    const currentConfig = JSON.parse(await readFile(ACTIVE_ADDRESS_FILE, "utf8")) as ContractDeploymentConfig;
+    const promotedConfig = promoteDeploymentConfig(currentConfig, {
+        registry: state.registry,
+        game: state.game,
+        deployedAt: state.deployedAt,
+    });
+
     await writeFile(ACTIVE_REGISTRY_ABI_FILE, registryAbi);
     await writeFile(ACTIVE_GAME_ABI_FILE, gameAbi);
     await writeFile(
         ACTIVE_ADDRESS_FILE,
         `${JSON.stringify(
             {
-                registry: state.registry,
-                game: state.game,
+                ...promotedConfig,
                 chain: state.chain,
-                deployedAt: state.deployedAt,
             },
             null,
             4,

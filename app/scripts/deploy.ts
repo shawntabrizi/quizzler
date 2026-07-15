@@ -31,6 +31,8 @@ import { ss58ToH160 } from "@parity/product-sdk-address";
 import { encodeAbiParameters, hexToBytes } from "viem";
 
 import { instantiatedContractAddress } from "../src/deployment-events";
+import { promoteDeploymentConfig } from "../src/deployment-history";
+import type { ContractDeploymentConfig } from "../src/deployments";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONTRACTS = join(__dirname, "..", "..", "contracts");
@@ -276,7 +278,7 @@ async function main(): Promise<void> {
 
     const existing = STAGE_REGISTRY_MIGRATION || DEPLOY_E2E_PROFILE
         ? { registry: pendingMigration?.registry ?? "" }
-        : JSON.parse(await readFile(ADDRESS_FILE, "utf8")) as { registry?: string };
+        : JSON.parse(await readFile(ADDRESS_FILE, "utf8")) as ContractDeploymentConfig;
     let registry = existing.registry ?? "";
     let deployedRegistryCodeSha256: string | undefined;
     const migrationDeployedAt = pendingMigration?.deployedAt ?? new Date().toISOString();
@@ -402,10 +404,18 @@ async function main(): Promise<void> {
         );
         console.log(`\nWrote isolated LIVE_E2E profile to ${E2E_ADDRESS_FILE}`);
     } else {
+        const existingConfig = existing as ContractDeploymentConfig;
         await writeFile(
             ADDRESS_FILE,
             `${JSON.stringify(
-                { registry, game, chain: "paseo-asset-hub", deployedAt: new Date().toISOString() },
+                {
+                    ...promoteDeploymentConfig(existingConfig, {
+                        registry,
+                        game,
+                        deployedAt: new Date().toISOString(),
+                    }),
+                    chain: "paseo-asset-hub",
+                },
                 null,
                 4,
             )}\n`,
