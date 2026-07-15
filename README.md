@@ -45,6 +45,11 @@ is an explicit, permanent on-chain action. The player remains on the historical 
 does not block future answer, review, or difficulty-vote quorums. If the last active player
 forfeits, the room becomes `Abandoned`; it is not recorded as a normal finished result.
 
+The app intentionally keeps one resumable current quiz per browser session and will not silently
+replace it when someone tries to join another room. The contract itself does not impose a global
+one-game-per-account rule, so this stays a lightweight party-game UX choice rather than permanent
+on-chain account state.
+
 ## Development
 
 Contract (needs Rust nightly + `cargo-pvm-contract`):
@@ -68,6 +73,11 @@ pnpm seed:packs           # seed shared/packs/*.json on-chain (resume-safe)
 pnpm dev                  # vite dev server on :5301
 LIVE_E2E=1 pnpm test:e2e  # destructive Playwright run against public Paseo
 ```
+
+`deploy:contract` waits for finalized inclusion before it records a contract address. It is a
+fresh game-contract cutover: existing unfinished rooms remain on the old game contract and are
+not automatically migrated into the new app configuration. Keep the prior build available or
+schedule the cutover between games when those rooms matter.
 
 The e2e suite (`app/e2e/`) runs the app inside `@parity/host-api-test-sdk`'s test host
 against public Paseo — `game.spec.ts` plays a complete two-player game (one player through

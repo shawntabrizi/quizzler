@@ -176,6 +176,10 @@ let savedGameId: bigint | null = null;
 let nextTxNonce: number | null = null;
 let nonceSync: Promise<number | null> | null = null;
 let gameId: bigint | null = null;
+// A final forfeit can make the game Abandoned. Keep that one terminal
+// snapshot long enough to show its scorecard, even though this account is no
+// longer active and therefore cannot resume it later.
+let pendingAbandonedForfeit: bigint | null = null;
 let latest: Snapshot | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let blockPollSubscription: { unsubscribe(): void } | null = null;
@@ -1014,7 +1018,11 @@ async function myLatestGameId(): Promise<bigint | null> {
 async function activePlayerStatus(id: bigint): Promise<boolean | null> {
     try {
         const res = await game.isPlayerActive.query(id, myAddress);
-        return res.success && Boolean(res.value);
+        // A failed contract read is not evidence that the player left. Keep
+        // the saved room so a temporary RPC/fork error cannot erase their
+        // ability to resume it on the next attempt.
+        if (!res.success) return null;
+        return Boolean(res.value);
     } catch {
         return null;
     }
@@ -1047,6 +1055,18 @@ async function resumeSavedGame(): Promise<ResumeResult> {
     return "resumed";
 }
 
+/**
+ * A party is deliberately one current table per browser session. The
+ * contract remains permissive — it does not maintain a costly global
+ * account-to-game index — but never silently replace the room a player can
+ * resume locally.
+ */
+function canStartAnotherQuiz(): boolean {
+    if (savedGameId === null) return true;
+    $homeError.textContent = "You already have a quiz in progress. Resume it, leave its lobby, or forfeit it before starting another.";
+    return false;
+}
+
 getEl("btn-create-game").addEventListener("click", async () => {
     if (busy || selectedPackId === null || selectedPack === null || !productAccount) return;
     if (createGamePreflightTimer) {
@@ -1054,6 +1074,7 @@ getEl("btn-create-game").addEventListener("click", async () => {
         createGamePreflightTimer = null;
     }
     $homeError.textContent = "";
+    if (!canStartAnotherQuiz()) return;
     const config = readCreatedGameConfig(true);
     if (!config) return;
     busy = true;
@@ -1087,6 +1108,14 @@ getEl("btn-join-game").addEventListener("click", async () => {
     const id = parseGameCode(raw);
     if (id === null) {
         $homeError.textContent = "Enter a six-digit game code.";
+        return;
+    }
+    if (savedGameId !== null) {
+        if (savedGameId === id) {
+            void resumeSavedGame();
+            return;
+        }
+        canStartAnotherQuiz();
         return;
     }
     busy = true;
@@ -1380,6 +1409,7 @@ function startGamePolling(): void {
 function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     gameSession += 1;
     gameId = id;
+    pendingAbandonedForfeit = null;
     rememberGame(id);
     latest = initialSnapshot;
     actionKey = "";
@@ -1406,6 +1436,7 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
 function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean } = {}): void {
     gameSession += 1;
     gameId = null;
+    pendingAbandonedForfeit = null;
     latest = null;
     selectedWager = null;
     activeAnswerKey = "";
@@ -1469,8 +1500,18 @@ getEl("btn-confirm-forfeit").addEventListener("click", async () => {
     try {
         await sendTx(game, "forfeitGame", id);
         if ($forfeitDialog.open) $forfeitDialog.close();
-        leaveGame();
-        $homeError.textContent = "You forfeited this quiz. Your score remains on its scorecard.";
+        const phaseRes = await game.getPhase.query(id);
+        if (phaseRes.success && (phaseRes.value as PhaseView).stage === STAGE_ABANDONED) {
+            // This player was the last active participant. Their membership
+            // is gone, but preserve the terminal scorecard for this view.
+            pendingAbandonedForfeit = id;
+            forgetSavedGame();
+            setGameActions("hidden");
+            void poll();
+        } else {
+            leaveGame();
+            $homeError.textContent = "You forfeited this quiz. Your score remains on its scorecard.";
+        }
     } catch (e) {
         getEl("forfeit-error").textContent = txError(e);
     } finally {
@@ -1655,6 +1696,12 @@ async function poll(): Promise<void> {
         };
         const mine = snap.submissions.find((submission) => submission.player.toLowerCase() === myAddress);
         if (!players.includes(myAddress) || mine?.active === false) {
+            if (phase.stage === STAGE_ABANDONED && pendingAbandonedForfeit === polledGameId) {
+                latest = snap;
+                latestObservedAt = Date.now();
+                renderAbandoned(snap);
+                return;
+            }
             // Another tab can submit a leave/forfeit transaction. Stop this
             // stale table immediately rather than letting it offer actions the
             // contract will correctly reject.
@@ -2192,7 +2239,9 @@ function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
             score: snap.scores[i],
             active: snap.submissions.find((submission) => submission.player.toLowerCase() === p.toLowerCase())?.active ?? true,
         }))
-        .sort((a, b) => b.score - a.score);
+        // A forfeit is a permanent withdrawal, not a way to keep a leading
+        // score and still win. Keep historical rows visible after finish.
+        .sort((a, b) => Number(b.active) - Number(a.active) || b.score - a.score);
     renderList(
         list,
         ranked.map((r, i) =>
@@ -2207,8 +2256,11 @@ function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
 }
 
 function renderResults(snap: Snapshot): void {
-    const top = Math.max(...snap.scores);
-    const winners = snap.players.filter((_, i) => snap.scores[i] === top);
+    const activePlayers = snap.players.filter((player) =>
+        snap.submissions.find((submission) => submission.player.toLowerCase() === player.toLowerCase())?.active ?? true,
+    );
+    const top = Math.max(...activePlayers.map((player) => snap.scores[snap.players.indexOf(player)]));
+    const winners = activePlayers.filter((player) => snap.scores[snap.players.indexOf(player)] === top);
     getEl("results-winner").textContent = winners.map(fmtAddr).join(" & ");
     renderLeaderboard(getEl("results-leaderboard"), snap);
     stopGamePolling();
@@ -2216,8 +2268,9 @@ function renderResults(snap: Snapshot): void {
     showScreen("results");
 }
 
-function renderAbandoned(_snap: Snapshot): void {
+function renderAbandoned(snap: Snapshot): void {
     getEl("abandoned-message").textContent = "Everyone left this quiz before it finished.";
+    renderLeaderboard(getEl("abandoned-leaderboard"), snap);
     stopGamePolling();
     forgetSavedGame();
     setGameActions("hidden");
