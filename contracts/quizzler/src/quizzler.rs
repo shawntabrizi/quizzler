@@ -372,6 +372,58 @@ fn active_overturn_voters(game_id: u64, target: &[u8; 20]) -> u32 {
     }
 }
 
+/// Apply an overturn once its currently active jury reaches quorum. The
+/// `Submission::correct` guard makes this idempotent: it is safe to call when
+/// a new vote arrives and again when a later forfeit changes the quorum.
+/// Returns whether this call changed the answer and score.
+fn apply_overturn_if_quorum(
+    game_id: u64,
+    question_key: u8,
+    target: &[u8; 20],
+    is_final_review: bool,
+) -> bool {
+    let mut sub = match Storage::submissions().get(&(game_id, question_key, *target)) {
+        Some(submission) => submission,
+        None => return false,
+    };
+    if sub.correct {
+        return false;
+    }
+
+    let votes = active_overturn_votes(game_id, question_key, target);
+    let eligible_voters = active_overturn_voters(game_id, target);
+    if !logic::overturn_passes(votes, eligible_voters) {
+        return false;
+    }
+
+    sub.correct = true;
+    Storage::submissions().insert(&(game_id, question_key, *target), &sub);
+    let score = Storage::scores().get(&(game_id, *target)).unwrap_or(0);
+    // Regular: grant the wager. Final: refund the original loss and grant it.
+    let delta = if is_final_review {
+        sub.wager.saturating_mul(2)
+    } else {
+        sub.wager
+    };
+    Storage::scores().insert(&(game_id, *target), &score.saturating_add(delta));
+    true
+}
+
+/// A forfeit changes every pending jury's electorate, not just the forfeiter's
+/// own answer. Re-check all submissions for the live review question so prior
+/// votes that now meet quorum take effect without waiting for another vote.
+fn reconcile_overturns_after_forfeit(game_id: u64, m: &GameMeta) {
+    let is_final_review = match m.stage {
+        STAGE_REVIEW => false,
+        STAGE_FINAL_REVIEW => true,
+        _ => return,
+    };
+    let question_key = logic::question_key(&clock_of(m));
+    for player in load_players(game_id) {
+        apply_overturn_if_quorum(game_id, question_key, &player, is_final_review);
+    }
+}
+
 /// Apply timeout transitions to the stored clock; resolves the final
 /// difficulty if the roll crossed the end of the Vote stage.
 fn settle(game_id: u64, m: &mut GameMeta) {
@@ -445,12 +497,12 @@ mod quizzler {
         DIFFICULTY_UNSET, GameMeta, GameView, MAX_ANSWER_BYTES, MAX_GAME_QUESTIONS, MAX_PLAYERS,
         MAX_STAGE_BLOCKS, MAX_WAGER, PhaseView, STAGE_ABANDONED, STAGE_ANSWER, STAGE_FINAL_ANSWER,
         STAGE_FINAL_REVIEW, STAGE_LOBBY, STAGE_REVIEW, STAGE_VOTE, Storage, Submission,
-        SubmissionView, active_continue_count, active_difficulty_counts, active_difficulty_total,
-        active_overturn_voters, active_overturn_votes, active_player_count, active_slot,
-        active_submission_count, caller20, cfg_of, clock_of, collapse, collapse_if_everyone_ready,
-        current_block, fail, gen_game_code, is_active_player, is_roster_player, load_game,
-        load_players, logic, pvm, registry_answers, registry_pack_status, require_active_player,
-        save_game, settle,
+        SubmissionView, active_continue_count, active_difficulty_total, active_overturn_votes,
+        active_player_count, active_slot, active_submission_count, apply_overturn_if_quorum,
+        caller20, cfg_of, clock_of, collapse, collapse_if_everyone_ready, current_block, fail,
+        gen_game_code, is_active_player, is_roster_player, load_game, load_players, logic, pvm,
+        reconcile_overturns_after_forfeit, registry_answers, registry_pack_status,
+        require_active_player, save_game, settle,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -669,7 +721,7 @@ mod quizzler {
         }
         let qkey = logic::question_key(&clock_of(&meta));
 
-        let mut sub = match Storage::submissions().get(&(game_id, qkey, target20)) {
+        let sub = match Storage::submissions().get(&(game_id, qkey, target20)) {
             Some(s) => s,
             None => fail("NoSubmission"),
         };
@@ -680,20 +732,7 @@ mod quizzler {
             fail("AlreadyVoted");
         }
         Storage::overturn_voted().insert(&(game_id, qkey, target20, voter), &true);
-
-        let votes = active_overturn_votes(game_id, qkey, &target20);
-        if votes >= logic::majority_threshold(active_overturn_voters(game_id, &target20)) {
-            sub.correct = true;
-            Storage::submissions().insert(&(game_id, qkey, target20), &sub);
-            let score = Storage::scores().get(&(game_id, target20)).unwrap_or(0);
-            // regular: grant the wager; final: refund the loss AND grant it
-            let delta = if meta.stage == STAGE_FINAL_REVIEW {
-                sub.wager.saturating_mul(2)
-            } else {
-                sub.wager
-            };
-            Storage::scores().insert(&(game_id, target20), &score.saturating_add(delta));
-        }
+        apply_overturn_if_quorum(game_id, qkey, &target20, meta.stage == STAGE_FINAL_REVIEW);
         save_game(game_id, &meta);
     }
 
@@ -758,6 +797,7 @@ mod quizzler {
         let who = caller20();
         require_active_player(game_id, &who);
         Storage::forfeited().insert(&(game_id, who), &true);
+        reconcile_overturns_after_forfeit(game_id, &meta);
         collapse_if_everyone_ready(game_id, &mut meta);
         save_game(game_id, &meta);
     }

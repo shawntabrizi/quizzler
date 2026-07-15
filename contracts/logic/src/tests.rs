@@ -184,6 +184,20 @@ fn eligible_voter_majorities_cover_forfeited_targets() {
 }
 
 #[test]
+fn pending_overturn_votes_can_cross_the_reduced_quorum_after_a_forfeit() {
+    // Five active players, including the answer owner, leave four eligible
+    // jurors. Two existing votes are not enough. If a non-voting juror
+    // forfeits, there are three eligible jurors and the same two votes must
+    // immediately overturn the answer when the contract re-checks it.
+    assert!(!overturn_passes(2, 4));
+    assert!(overturn_passes(2, 3));
+
+    // A reduced roster must still contain an actual vote; an empty jury does
+    // not auto-correct an answer.
+    assert!(!overturn_passes(0, 0));
+}
+
+#[test]
 fn difficulty_resolution() {
     assert_eq!(resolve_difficulty([0, 0, 0]), 1, "no votes → medium");
     assert_eq!(resolve_difficulty([3, 1, 1]), 0);

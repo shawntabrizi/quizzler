@@ -76,7 +76,7 @@ pub struct PhaseConfig {
 }
 
 /// Duration of a stage in blocks. `None` for stages that do not expire
-/// (Lobby waits for the creator, Finished is terminal).
+/// (the lobby waits for its current starter; terminal stages do not roll).
 pub fn stage_duration(stage: u8, cfg: &PhaseConfig) -> Option<u64> {
     match stage {
         STAGE_ANSWER | STAGE_FINAL_ANSWER => Some(cfg.answer_blocks),
@@ -238,6 +238,15 @@ pub fn overturn_threshold(player_count: u32) -> u32 {
 /// rather than smuggling it through a misleading total-player count.
 pub fn majority_threshold(eligible_voters: u32) -> u32 {
     eligible_voters / 2 + 1
+}
+
+/// Whether the already-cast votes are enough to overturn an answer.
+///
+/// Keeping this comparison alongside the quorum calculation makes it safe for
+/// callers to re-check a pending vote when the eligible set changes (for
+/// example, when somebody leaves a review by forfeiting).
+pub fn overturn_passes(votes: u32, eligible_voters: u32) -> bool {
+    votes >= majority_threshold(eligible_voters)
 }
 
 /// Majority difficulty, ties broken toward harder; no votes at all → medium.
