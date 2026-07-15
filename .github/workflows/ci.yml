@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check tooling and E2E helpers
+        run: pnpm typecheck:tools
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Build the app
+        run: pnpm build
+
+      - name: Validate starter packs
+        run: pnpm validate:packs
+
+  rust-logic:
+    name: Rust logic tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up stable Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            contracts/logic/target
+          key: ${{ runner.os }}-cargo-logic-${{ hashFiles('contracts/logic/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-logic-
+
+      - name: Run pure logic tests
+        run: cargo test --locked --manifest-path contracts/logic/Cargo.toml
