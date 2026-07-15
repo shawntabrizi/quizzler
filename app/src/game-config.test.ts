@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
     ANSWER_BLOCK_PRESETS,
+    BLOCK_SECONDS_ESTIMATE,
     MAX_LOBBY_PLAYERS,
     MAX_STAGE_BLOCKS,
     MIN_STAGE_BLOCKS,
     REVIEW_BLOCK_PRESETS,
+    countdownLabel,
     isAllowedBlockPreset,
     presetLabel,
     questionCountOptions,
@@ -35,5 +37,27 @@ describe("game configuration presets", () => {
     it("recognizes only the configured duration choices", () => {
         expect(isAllowedBlockPreset(30, ANSWER_BLOCK_PRESETS)).toBe(true);
         expect(isAllowedBlockPreset(31, ANSWER_BLOCK_PRESETS)).toBe(false);
+    });
+});
+
+describe("countdown label", () => {
+    it("renders nothing for the contract's no-deadline sentinel", () => {
+        // Lobby/finished stages use 2^64-1; anything >= 2^63 means "no timer",
+        // not a very long countdown.
+        expect(countdownLabel(2n ** 64n - 1n, 0n, 0)).toBe("");
+        expect(countdownLabel(2n ** 63n, 0n, 0)).toBe("");
+    });
+
+    it("extrapolates blocks from wall time between polls", () => {
+        // The snapshot said 10 blocks remain. After ~3 blocks of wall time the
+        // countdown must keep moving even though no new poll has landed.
+        const perBlockMs = BLOCK_SECONDS_ESTIMATE * 1_000;
+        expect(countdownLabel(110n, 100n, 0)).toBe(`~${10 * BLOCK_SECONDS_ESTIMATE}s`);
+        expect(countdownLabel(110n, 100n, 3 * perBlockMs)).toBe(`~${7 * BLOCK_SECONDS_ESTIMATE}s`);
+    });
+
+    it("announces expiry instead of counting into negatives", () => {
+        expect(countdownLabel(110n, 110n, 0)).toBe("Time’s up");
+        expect(countdownLabel(110n, 100n, 20 * BLOCK_SECONDS_ESTIMATE * 1_000)).toBe("Time’s up");
     });
 });

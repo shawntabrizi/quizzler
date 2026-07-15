@@ -172,7 +172,7 @@ export class ScriptedPlayer {
                 sub.unsubscribe();
                 reject(new Error(`${functionName} timed out waiting for best block`));
             }, 90_000);
-            const sub = tx.signSubmitAndWatch(this.signer, { nonce: useNonce }).subscribe({
+            const sub = tx.signSubmitAndWatch(this.signer, { nonce: useNonce, mortality: { mortal: true, period: 256 } }).subscribe({
                 next: (ev: any) => {
                     if (ev.type === "txBestBlocksState" && ev.found) {
                         clearTimeout(timer);

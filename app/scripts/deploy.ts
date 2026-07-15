@@ -132,7 +132,9 @@ async function submitFinalized(tx: any, signer: PolkadotSigner, label: string): 
         };
         const timer = setTimeout(() => finish(new Error(`${label} timed out waiting for finalization`)), 120_000);
         try {
-            subscription = tx.signSubmitAndWatch(signer).subscribe({
+            // Mortal txs cannot linger in the pool across reruns and collide
+            // with a later run's manually assigned nonces.
+            subscription = tx.signSubmitAndWatch(signer, { mortality: { mortal: true, period: 256 } }).subscribe({
                 next: (event: any) => {
                     if (event.type !== "finalized") return;
                     if (!event.ok) {

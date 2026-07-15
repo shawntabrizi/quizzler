@@ -17,5 +17,8 @@ export default defineConfig({
     },
     build: {
         outDir: "dist",
+        // Never inline assets as data: URIs — the Triangle sandbox CSP can
+        // reject inline content, and hashed files cache independently.
+        assetsInlineLimit: 0,
     },
 });

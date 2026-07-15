@@ -12,6 +12,8 @@
  * wagers after the local player locks in, while keeping correctness for review.
  */
 
+import "./styles.css";
+
 import { SignerManager, type SignerAccount } from "@parity/product-sdk-signer";
 import { createChainClient } from "@parity/product-sdk-chain-client";
 import { requestResourceAllocation } from "@parity/product-sdk-host";
@@ -31,7 +33,7 @@ import sessionRegistryAbi from "./abi-session-registry.json";
 import contractInfo from "./contract-address.json";
 import {
     ANSWER_BLOCK_PRESETS,
-    BLOCK_SECONDS_ESTIMATE,
+    countdownLabel,
     isAllowedBlockPreset,
     MAX_LOBBY_PLAYERS,
     presetLabel,
@@ -42,7 +44,15 @@ import { activeGameSessionKey, parseStoredGameId } from "./game-session";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
-import { rankFinalStandings, type FinalStanding } from "./results";
+import {
+    finalOutcomeText,
+    finalWagerValue,
+    ordinal,
+    PLACEMENT_TROPHIES,
+    placementText,
+    rankFinalStandings,
+    type FinalStanding,
+} from "./results";
 import {
     automaticInstantPlayAllowed,
     normalizeInstantPlayPreference,
@@ -155,6 +165,12 @@ const PASEO_SS58_PREFIX = 0;
 // minimal reference registry. Fund enough for activation plus a game, while
 // retaining product-account PGAS for the setup batch itself.
 const SESSION_PGAS_BUDGET = 20_000_000_000n;
+// Ending instant actions drains the session's PGAS back to the product
+// account with a Revive call whose own fee is charged from that same PGAS
+// balance. Leave a reserve behind so the transfer never competes with its
+// fee; dust on a revoked key is acceptable, a failed drain that blocks
+// revocation is not.
+const SESSION_DRAIN_FEE_RESERVE = 1_000_000_000n;
 // Revive calls vary materially with the storage they touch. In particular,
 // registering a session writes four mappings and is larger than a normal game
 // move, so always dry-run it rather than relying on a static gas guess.
@@ -299,6 +315,8 @@ interface TxPreflight {
     expiresAt: number;
     overrides: TxOverrides | null;
     pending: Promise<TxOverrides | null>;
+    /** The warm estimate failed on transport; re-estimate on the tap path. */
+    failed?: boolean;
 }
 
 interface CreatedGameConfig {
@@ -411,7 +429,7 @@ function reconcileActionGuards(snap: Snapshot): void {
     for (const [action, sentAt] of actionSentAt) {
         if (now - sentAt < 18_000) continue;
         clearActionSent(action);
-        setTransactionStatus("Still checking chain state — you can retry safely if needed.");
+        setTransactionStatus("Still confirming — you can retry safely if needed.");
     }
 }
 
@@ -555,7 +573,6 @@ const $bootLog = getEl("boot-log");
 const $connPill = getEl("conn-pill");
 const $chainStatus = getEl("chain-status");
 const $chainAccount = getEl("chain-account");
-const $chainBlock = getEl("chain-block");
 const $gameActions = getEl("game-actions");
 const $btnForfeitGame = getEl<HTMLButtonElement>("btn-forfeit-game");
 const $forfeitDialog = getEl<HTMLDialogElement>("forfeit-dialog");
@@ -568,6 +585,17 @@ function setGameActions(mode: "hidden" | "lobby" | "active"): void {
 
 function bootLog(msg: string, level: "info" | "ok" | "err" = "info"): void {
     appendLog($bootLog, msg, level);
+}
+
+/**
+ * The one player-facing line on the boot screen. The step-by-step log stays
+ * in a collapsed details section for diagnosis (and the e2e boot ordering
+ * assertions); players only ever need the headline.
+ */
+function setBootHeadline(message: string, failed = false): void {
+    const headline = getEl("boot-headline");
+    headline.textContent = message;
+    headline.classList.toggle("is-error", failed);
 }
 
 function setConnectionStatus(label: string, state: "pending" | "ok" | "err"): void {
@@ -590,20 +618,17 @@ function showActiveAccount(address: string): void {
     $chainAccount.setAttribute("aria-label", `Active account: ${address}`);
 }
 
-function updateLatestBlock(blocks: readonly BestBlock[]): void {
-    const number = blocks[0]?.number;
-    if (number === undefined) return;
-
-    const formatted = number.toLocaleString();
-    $chainBlock.textContent = `#${formatted}`;
-    $chainBlock.title = `Latest chain block: ${formatted}`;
-    $chainBlock.setAttribute("aria-label", `Latest chain block: ${formatted}`);
+// Chain plumbing (block numbers) stays out of the header; the shared block
+// subscription instead keeps an open pack picker gently fresh.
+function onBlockSignal(blocks: readonly BestBlock[]): void {
+    if (blocks[0]?.number === undefined) return;
+    maybeRefreshOpenCatalog();
 }
 
 function subscribeChainStatus(): void {
     chainStatusSubscription?.unsubscribe();
     if (!bestBlocks) return;
-    chainStatusSubscription = bestBlocks.subscribe(updateLatestBlock);
+    chainStatusSubscription = bestBlocks.subscribe(onBlockSignal);
 }
 
 function fmtAddr(addr: string): string {
@@ -624,10 +649,70 @@ function setLoading(id: string, on: boolean): void {
     btn.setAttribute("aria-busy", String(on));
 }
 
+/** Raw error text, for control flow (`includes("AlreadyJoined")`) and logs. */
 function txError(e: unknown): string {
     const msg = e instanceof Error ? e.message : String(e);
     // contract reverts carry the raw revert string (e.g. "AlreadyJoined")
     return msg.length > 200 ? `${msg.slice(0, 200)}…` : msg;
+}
+
+// Player-facing copy for the contract reverts a real table can hit. Anything
+// technical that slips past this list falls into the calm generic buckets in
+// `friendlyError` — raw revert names, dispatch-error JSON, and hex never
+// reach the screen.
+const REVERT_MESSAGES: readonly (readonly [pattern: string, copy: string])[] = [
+    ["AlreadyJoined", "You’re already in this game."],
+    ["GameAlreadyStarted", "This game has already started."],
+    ["GameFull", "This lobby is full."],
+    ["NoSuchGame", "No game found with that code — check the six digits."],
+    ["LobbyClosed", "This lobby is no longer open."],
+    ["NotLobbyStarter", "Only the longest-waiting player can start the game."],
+    ["NotAPlayer", "You’re not part of this quiz."],
+    ["PlayerForfeited", "You forfeited this quiz, so this move isn’t available."],
+    ["GameNotActive", "This quiz has ended."],
+    ["AlreadyAnswered", "Your answer is already in."],
+    ["NotAcceptingFinalAnswer", "Time’s up for the final question."],
+    ["NotAcceptingAnswers", "Time’s up for this question."],
+    ["FinalWagerLocked", "Your final wager is already locked."],
+    ["BadWager", "That wager isn’t available — pick an unused number."],
+    ["AlreadyVoted", "Your vote is already recorded."],
+    ["AlreadyContinued", "You’re already ready for the next question."],
+    ["AlreadyCorrect", "That answer is already marked correct."],
+    ["CannotVoteForSelf", "You can’t vote on your own answer."],
+    ["NotInReview", "The table has moved on — this screen will catch up in a moment."],
+    ["NotInDifficultyVote", "The table has moved on — this screen will catch up in a moment."],
+    ["NotInFinalWager", "The table has moved on — this screen will catch up in a moment."],
+    ["BadDisplayName", "That name can’t be used — try a shorter one-line name."],
+];
+
+/**
+ * Player-facing error copy. Known reverts get specific guidance; everything
+ * technical collapses to a calm, action-oriented fallback. Messages our own
+ * code authored (human sentences) pass through unchanged. The raw error is
+ * kept in the console for diagnosis.
+ */
+function friendlyError(e: unknown): string {
+    console.warn("action failed", e);
+    const raw = txError(e);
+    for (const [pattern, copy] of REVERT_MESSAGES) {
+        if (raw.includes(pattern)) return copy;
+    }
+    const lower = raw.toLowerCase();
+    if (/\b(reject|cancel|declin|denied|dismiss)/.test(lower)) {
+        return "No changes made. Tap Allow when you’re ready.";
+    }
+    if (/timed? ?out|network|fetch|disconnect|unreachable/.test(lower)) {
+        return "Trouble reaching the network — nothing changed. Try again.";
+    }
+    if (/out ?of ?gas|exhaustsresources|stale|nonce|priority|insufficient|payment/.test(lower)) {
+        return "That didn’t go through — nothing changed. Try again.";
+    }
+    // Dispatch-error JSON, hex blobs, bare revert tokens, and chain jargon
+    // are never player copy.
+    if (/[{}"]|0x[0-9a-f]{6,}|revert|extrinsic|dispatch/i.test(raw) || !raw.includes(" ")) {
+        return "That didn’t go through — nothing changed. Try again.";
+    }
+    return raw;
 }
 
 function clearInstantPlayFailure(): void {
@@ -635,7 +720,7 @@ function clearInstantPlayFailure(): void {
 }
 
 function rememberInstantPlayFailure(error: unknown): void {
-    instantPlayFailureDetail = txError(error);
+    instantPlayFailureDetail = friendlyError(error);
 }
 
 /** Transaction sizing, nonce handling, and submission helpers. */
@@ -708,8 +793,8 @@ async function fallBackFromUnavailableSession(actor: TransactionActor, error: un
     if (registered) automaticInstantPlayAttempted = true;
     instantPlayFallback = true;
     quickPlayMessage = registered
-        ? "Instant actions could not cover this move. Your wallet will sign instead."
-        : "Instant actions ended. Your wallet will sign this action instead.";
+        ? "Instant actions couldn’t cover this move — approve it yourself instead."
+        : "Instant actions ended — approve this action yourself instead.";
     renderQuickPlayStatus();
     return true;
 }
@@ -725,22 +810,33 @@ async function estimateTx(
     args: readonly unknown[],
     actor = transactionActor(handle, method),
 ): Promise<TxOverrides | null> {
-    try {
-        const q = await handle[method].query(...args, { origin: actor.address });
-        // Do not turn a failed dry-run into a paid transaction. Leaving the
-        // overrides empty lets the SDK surface the contract's revert reason.
-        if (!q?.success || !q.gasRequired) return null;
-        return {
-            gasLimit: {
-                ref_time: (q.gasRequired.ref_time * 3n) / 2n,
-                proof_size: (q.gasRequired.proof_size * 3n) / 2n,
-            },
-            // This is a cap rather than a cost. Supplying both values tells
-            // the SDK not to repeat this exact dry-run before signing.
-            storageDepositLimit: 20_000_000_000n,
-        };
-    } catch {
-        return null;
+    for (let attempt = 0; ; attempt += 1) {
+        try {
+            const q = await handle[method].query(...args, { origin: actor.address });
+            // Do not turn a failed dry-run into a paid transaction. Leaving the
+            // overrides empty lets the SDK surface the contract's revert reason.
+            if (!q?.success || !q.gasRequired) return null;
+            return {
+                gasLimit: {
+                    ref_time: (q.gasRequired.ref_time * 3n) / 2n,
+                    proof_size: (q.gasRequired.proof_size * 3n) / 2n,
+                },
+                // This is a cap rather than a cost. Supplying both values tells
+                // the SDK not to repeat this exact dry-run before signing.
+                storageDepositLimit: 20_000_000_000n,
+            };
+        } catch (error) {
+            // A *thrown* dry-run is a transport failure, not a contract
+            // revert. Falling through to an unpadded submit would let the SDK
+            // sign with the exact dry-run weight, which OutOfGas-es the
+            // game's nested registry calls on-chain — a paid failure. Retry
+            // the estimate once, then refuse to submit.
+            if (attempt === 0) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                continue;
+            }
+            throw new Error("Couldn’t size this action — check your connection and try again.", { cause: error });
+        }
     }
 }
 
@@ -758,6 +854,11 @@ function warmTx(handle: any, method: string, args: readonly unknown[]): string {
     preflight.pending = estimateTx(handle, method, args, actor).then((overrides) => {
         preflight.overrides = overrides;
         return overrides;
+    }).catch(() => {
+        // A background warm-up must never surface as an unhandled rejection.
+        // Mark it failed so the tap path runs a fresh, error-visible estimate.
+        preflight.failed = true;
+        return null;
     });
     txPreflights.set(key, preflight);
     return key;
@@ -769,6 +870,7 @@ async function warmedOverrides(handle: any, method: string, args: readonly unkno
     if (!preflight) return estimateTx(handle, method, args);
     const overrides = preflight.overrides ?? await preflight.pending;
     txPreflights.delete(key); // estimates are one-use and state-sensitive
+    if (overrides === null && preflight.failed) return estimateTx(handle, method, args);
     return overrides;
 }
 
@@ -822,7 +924,7 @@ async function submitPreparedTx(
     nonce: number | null,
     signingOptions: Record<string, unknown> = {},
 ): Promise<void> {
-    setTransactionStatus(actor.kind === "session" ? "Submitting instant action…" : "Waiting for wallet signature…");
+    setTransactionStatus(actor.kind === "session" ? null : "Waiting for your approval…");
     await new Promise<void>((resolve, reject) => {
         let settled = false;
         let subscription: { unsubscribe(): void } | null = null;
@@ -834,7 +936,7 @@ async function submitPreparedTx(
             if (error) reject(error);
             else resolve();
         };
-        const timer = setTimeout(() => finish(new Error("Transaction timed out waiting for a block.")), 90_000);
+        const timer = setTimeout(() => finish(new Error("Timed out waiting for a block.")), 90_000);
         try {
             const nextSubscription = transaction.signSubmitAndWatch(actor.signer, {
                 ...signingOptions,
@@ -844,16 +946,19 @@ async function submitPreparedTx(
                 next: (event: any) => {
                     if (event.type !== "txBestBlocksState" || !event.found || event.ok === undefined) return;
                     if (!event.ok) {
-                        finish(new Error(JSON.stringify(event.dispatchError)));
+                        // Plain JSON.stringify throws on the bigints a dispatch
+                        // error can carry, which would leave this promise
+                        // hanging until the timeout with the reason lost.
+                        finish(new Error(stringifyChainError(event.dispatchError)));
                     } else {
-                        setTransactionStatus("Included — checking chain state…");
+                        setTransactionStatus(null);
                         finish();
                     }
                 },
                 error: (error: unknown) => finish(error instanceof Error ? error : new Error(String(error))),
             });
             subscription = nextSubscription;
-            setTransactionStatus("Submitting to chain…");
+            if (actor.kind === "session") setTransactionStatus(null);
             if (settled) nextSubscription.unsubscribe();
         } catch (error) {
             finish(error instanceof Error ? error : new Error(String(error)));
@@ -870,8 +975,9 @@ async function submitTx(
     const actor = transactionActor(handle, method);
     for (let attempt = 0; ; attempt++) {
         try {
-            const initialStatus = actor.kind === "session" ? "Preparing instant action…" : "Checking transaction…";
-            setTransactionStatus(attempt === 0 ? initialStatus : "Refreshing transaction details…");
+            // Buttons already show their own in-flight state; the shared
+            // status line only narrates when the player must act or retry.
+            setTransactionStatus(attempt === 0 ? null : "Retrying…");
             // A warmed estimate avoids an RPC on the tap path. On retries we
             // intentionally estimate again against current chain state.
             const overrides = attempt === 0 && initialOverrides !== null
@@ -881,14 +987,14 @@ async function submitTx(
             if (nonce === null) {
                 // Degrade safely to the SDK's submission path if the account
                 // nonce API is unavailable in a host implementation.
-                setTransactionStatus(actor.kind === "session" ? "Submitting instant action…" : "Waiting for wallet signature…");
+                setTransactionStatus(actor.kind === "session" ? null : "Waiting for your approval…");
                 const result = await handle[method].tx(...args, {
                     signer: actor.signer,
                     origin: actor.address,
                     ...(overrides ?? {}),
                 });
-                if (!result.ok) throw new Error(JSON.stringify(result.dispatchError));
-                setTransactionStatus("Included — checking chain state…");
+                if (!result.ok) throw new Error(stringifyChainError(result.dispatchError));
+                setTransactionStatus(null);
             } else {
                 const transaction = await handle[method].prepare(...args, {
                     origin: actor.address,
@@ -903,17 +1009,27 @@ async function submitTx(
             clearActorNonce(actor);
             const msg = e instanceof Error ? e.message : String(e);
             if (attempt === 0 && msg.includes("Stale")) {
-                setTransactionStatus("Refreshing chain state…");
+                setTransactionStatus("Retrying…");
                 await new Promise((r) => setTimeout(r, 5_000));
                 continue;
             }
+            // A gas-shaped dispatch failure usually means the state moved
+            // between the (possibly warmed) estimate and inclusion — e.g. more
+            // players joined before startGame. One fresh estimate normally
+            // resolves it; a second failure surfaces normally.
+            if (attempt === 0 && /out ?of ?gas|exhaustsresources|weight/i.test(msg)) {
+                setTransactionStatus("Retrying…");
+                continue;
+            }
             if (await fallBackFromUnavailableSession(actor, e)) {
-                setTransactionStatus("Instant actions unavailable — waiting for wallet signature…");
+                setTransactionStatus("Instant actions unavailable — waiting for your approval…");
                 // Drop the session-specific warm estimate and let the product
                 // account dry-run/sign this one action normally.
                 return submitTx(handle, method, args);
             }
-            setTransactionStatus("Transaction was not confirmed. Check your wallet and try again.");
+            // The local action's own error line carries the friendly message;
+            // clear the shared status so the failure isn't narrated twice.
+            setTransactionStatus(null);
             throw e;
         }
     }
@@ -1020,7 +1136,7 @@ async function getSessionKeyManager(): Promise<SessionKeyManager> {
 async function sessionIsRegistered(candidate: SessionAccount): Promise<boolean> {
     if (!sessionRegistry || !productAccount) throw new Error("Instant-action registry is unavailable.");
     const registered = await sessionRegistry.sessionOf.query(myAddress, { origin: productAccount.address });
-    if (!registered.success) throw new Error("Could not verify the instant-action session on-chain.");
+    if (!registered.success) throw new Error("Couldn’t check the instant-action session. Try again in a moment.");
     return String(registered.value).toLowerCase() === candidate.h160Address.toLowerCase();
 }
 
@@ -1029,7 +1145,7 @@ async function sessionActivationPending(candidate: SessionAccount): Promise<bool
     const pending = await sessionRegistry.pendingOwnerOf.query(candidate.h160Address, {
         origin: productAccount.address,
     });
-    if (!pending.success) throw new Error("Could not verify the instant-action setup on-chain.");
+    if (!pending.success) throw new Error("Couldn’t check the instant-action setup. Try again in a moment.");
     return String(pending.value).toLowerCase() === myAddress;
 }
 
@@ -1077,7 +1193,7 @@ function waitForPgasBalance(address: string, minimum: bigint): Promise<boolean> 
 async function sessionKeyCanBeRequested(candidate: SessionAccount): Promise<boolean> {
     if (!sessionRegistry || !productAccount) throw new Error("Instant-action registry is unavailable.");
     const resolved = await sessionRegistry.resolve.query(candidate.h160Address, { origin: productAccount.address });
-    if (!resolved.success) throw new Error("Could not verify the saved instant-action key on-chain.");
+    if (!resolved.success) throw new Error("Couldn’t check the saved instant-action key. Try again in a moment.");
     return String(resolved.value).toLowerCase() === candidate.h160Address.toLowerCase();
 }
 
@@ -1121,7 +1237,7 @@ async function ensureQuickPlayAllowance(): Promise<void> {
             outcome,
             outcome === "Rejected"
                 ? "Instant actions were skipped."
-                : "This wallet does not support instant actions right now.",
+                : "Instant actions aren’t available here right now.",
         );
     }
     if (outcome !== "Allocated") {
@@ -1249,7 +1365,7 @@ async function restoreQuickPlay(): Promise<void> {
     } catch {
         // Do not erase a bearer key on an indeterminate host or RPC failure.
         // A later restore can still validate or finish the same session.
-        quickPlayMessage = "Instant actions could not be checked. Normal signing is ready.";
+        quickPlayMessage = "Instant actions couldn’t be checked — you’ll approve each move.";
     }
     renderQuickPlayStatus();
 }
@@ -1282,11 +1398,17 @@ async function activatePendingQuickPlay(
     // and AutoMap records the H160 ↔ session-key relationship. Do not trust a
     // Revive dry-run here: it temporarily maps an account for simulation, so
     // it can succeed even when a signed activation would never be accepted.
-    if (!await waitForSessionMapping(session)) {
-        throw new Error("The temporary game account was not prepared on-chain. Please try instant actions again.");
+    // Both facts land in the same setup batch, so wait for them in parallel
+    // rather than serializing two full polling windows.
+    const [mapped, funded] = await Promise.all([
+        waitForSessionMapping(session),
+        waitForPgasBalance(actor.address, 1n),
+    ]);
+    if (!mapped) {
+        throw new Error("The temporary game account was not prepared in time. Please try instant actions again.");
     }
-    if (!await waitForPgasBalance(actor.address, 1n)) {
-        throw new Error("The temporary game account was not funded on-chain. Please try instant actions again.");
+    if (!funded) {
+        throw new Error("The temporary game account was not funded in time. Please try instant actions again.");
     }
     assertInstantPlaySetupCurrent(canContinue);
     const limits = await estimateReviveCall(sessionRegistryAddress, activationData, actor);
@@ -1294,7 +1416,7 @@ async function activatePendingQuickPlay(
     await submitStandaloneTx(reviveCall(sessionRegistryAddress, activationData, limits), actor);
     assertInstantPlaySetupCurrent(canContinue);
     if (!await waitForSessionRegistration(session)) {
-        throw new Error("Instant actions were not confirmed on-chain. Please try again.");
+        throw new Error("Instant actions weren’t confirmed in time. Please try again.");
     }
     assertInstantPlaySetupCurrent(canContinue);
     sessionAccount = session;
@@ -1485,7 +1607,7 @@ async function ensureDefaultInstantPlay(
             if (!canContinue()) return;
             sessionAccount = null;
             instantPlayFallback = true;
-            quickPlayMessage = "Instant actions could not be verified. Normal signing is ready.";
+            quickPlayMessage = "Instant actions couldn’t be checked — you’ll approve each move.";
             renderQuickPlayStatus();
             return;
         }
@@ -1506,8 +1628,8 @@ async function ensureDefaultInstantPlay(
     if (!request.force && (!automaticInstantPlayAllowed(preference) || inMemoryAttemptStillBlocked)) {
         instantPlayFallback = true;
         quickPlayMessage = preference?.mode === "manual"
-            ? "Playing with normal wallet approvals."
-            : "Instant actions are unavailable right now. Normal signing is ready.";
+            ? "You’ll approve each move."
+            : "Instant actions are unavailable right now — you’ll approve each move.";
         renderQuickPlayStatus();
         return;
     }
@@ -1541,7 +1663,7 @@ async function ensureDefaultInstantPlay(
             // stored pending key and only repeat its silent activation call,
             // never the allowance request or product-signed setup batch.
             instantPlayFallback = true;
-            quickPlayMessage = "Instant actions could not finish. Playing with normal wallet approvals meanwhile.";
+            quickPlayMessage = "Instant actions couldn’t finish — you’ll approve each move for now.";
             console.warn("instant action activation is still pending", error);
         } else {
             instantPlayFallback = true;
@@ -1549,8 +1671,8 @@ async function ensureDefaultInstantPlay(
                 useManualSigning ? { mode: "manual" } : temporaryInstantPlayFailure(),
             );
             quickPlayMessage = useManualSigning
-                ? "Playing with normal wallet approvals."
-                : "Instant actions are unavailable right now. Normal signing is ready.";
+                ? "You’ll approve each move."
+                : "Instant actions are unavailable right now — you’ll approve each move.";
             console.warn("instant action setup fell back to normal signing", error);
         }
     } finally {
@@ -1589,11 +1711,12 @@ async function endQuickPlay(): Promise<void> {
     renderQuickPlayStatus();
 
     const balance = await pgasBalance(session.address);
-    if (balance > 0n) {
+    const drainable = balance > SESSION_DRAIN_FEE_RESERVE ? balance - SESSION_DRAIN_FEE_RESERVE : 0n;
+    if (drainable > 0n) {
         const drainData = encodeFunctionData({
             abi: erc20Abi,
             functionName: "transfer",
-            args: [productTransactionActor().h160 as `0x${string}`, balance],
+            args: [productTransactionActor().h160 as `0x${string}`, drainable],
         });
         await submitStandaloneTx(await estimatedReviveCall(PGAS_ERC20_PRECOMPILE, drainData, session), session);
     }
@@ -1613,7 +1736,7 @@ async function endQuickPlay(): Promise<void> {
     automaticInstantPlayAttempted = true;
     instantPlayFallback = true;
     await saveInstantPlayPreference({ mode: "manual" });
-    quickPlayMessage = "Playing with normal wallet approvals.";
+    quickPlayMessage = "You’ll approve each move.";
     renderQuickPlayStatus();
 }
 
@@ -1680,7 +1803,7 @@ async function packTitle(packId: number): Promise<string> {
     const registryAtRequest = registry;
     const request = (async () => {
         const res = await registryAtRequest.getPack.query(packId);
-        if (!res.success) return `pack #${packId}`;
+        if (!res.success) return "Quiz pack";
         const pack = res.value as PackView;
         if (pack.sealed) sealedPackCache.set(key, pack);
         const title = pack.title;
@@ -1789,12 +1912,15 @@ function createContractHandles(client: any, descriptor: any): void {
 
 async function verifyActiveContractPair(): Promise<boolean> {
     try {
-        const linkedRegistry = await game.registry.query();
+        // The two linkage reads are independent; don't serialize boot on them.
+        const [linkedRegistry, linkedSessionRegistry] = await Promise.all([
+            game.registry.query(),
+            sessionRegistryConfigured() && sessionRegistry ? game.sessionRegistry.query() : Promise.resolve(null),
+        ]);
         if (!linkedRegistry.success) return false;
         if (String(linkedRegistry.value).toLowerCase() !== activeContracts.registry?.toLowerCase()) return false;
         if (!sessionRegistryConfigured()) return true;
-        if (!sessionRegistry) return false;
-        const linkedSessionRegistry = await game.sessionRegistry.query();
+        if (!sessionRegistry || linkedSessionRegistry === null) return false;
         return linkedSessionRegistry.success
             && String(linkedSessionRegistry.value).toLowerCase() === activeContracts.sessionRegistry?.toLowerCase();
     } catch {
@@ -1805,8 +1931,10 @@ async function verifyActiveContractPair(): Promise<boolean> {
 async function init(): Promise<void> {
     const bootStartMark = performanceMark("boot:start");
     showScreen("boot");
+    setBootHeadline("Setting up your game night…");
     if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
-        setConnectionStatus("no contract", "err");
+        setConnectionStatus("not connected", "err");
+        setBootHeadline("This build isn’t set up yet.", true);
         bootLog("Contract addresses not configured.", "err");
         bootLog("Run `pnpm deploy:contract` and rebuild.", "err");
         return;
@@ -1823,7 +1951,8 @@ async function init(): Promise<void> {
     bootLog("Connecting signer…");
     const connectRes = await manager.connect();
     if (!connectRes.ok) {
-        setConnectionStatus("offline", "err");
+        setConnectionStatus("not connected", "err");
+        setBootHeadline("Couldn’t connect — check your connection and reload.", true);
         bootLog(`Signer connect failed: ${connectRes.error.message}`, "err");
         return;
     }
@@ -1834,7 +1963,8 @@ async function init(): Promise<void> {
     bootLog("Requesting product account quizzler.dot/0…");
     const productRes = await manager.getProductAccount("quizzler.dot", 0);
     if (!productRes.ok) {
-        setConnectionStatus("account unavailable", "err");
+        setConnectionStatus("not connected", "err");
+        setBootHeadline("Couldn’t set up your account — reload to try again.", true);
         bootLog(`getProductAccount failed: ${productRes.error.message}`, "err");
         return;
     }
@@ -1871,7 +2001,8 @@ async function init(): Promise<void> {
         );
         bootLog(mapped === null ? "Account already mapped" : "Account mapped", "ok");
     } catch (e) {
-        setConnectionStatus("account setup failed", "err");
+        setConnectionStatus("not connected", "err");
+        setBootHeadline("Couldn’t finish setting up — reload to try again.", true);
         bootLog(`Account mapping failed: ${txError(e)}`, "err");
         return;
     }
@@ -1880,8 +2011,9 @@ async function init(): Promise<void> {
     bootLog(sessionRegistry ? "Contract handles ready (registry + game + sessions)" : "Contract handles ready (registry + game)", "ok");
 
     if (!await verifyActiveContractPair()) {
-        setConnectionStatus("contract mismatch", "err");
-        bootLog("The game contract is not linked to this registry deployment.", "err");
+        setConnectionStatus("not connected", "err");
+        setBootHeadline("Couldn’t start — try reloading.", true);
+        bootLog("contract mismatch: the game contract is not linked to this registry deployment.", "err");
         return;
     }
 
@@ -1978,7 +2110,7 @@ function renderQuickPlayStatus(): void {
         return;
     }
 
-    $instantPlayStatus.textContent = "Instant actions are on for this account. Ending them revokes the current session, including on any other device.";
+    $instantPlayStatus.textContent = "Instant actions are on — game moves don’t need approvals. Turning them off applies everywhere you play with this account.";
     $btnTurnOffInstantPlay.disabled = busy;
 
     const inLobby = visibleScreen === "lobby";
@@ -1988,7 +2120,7 @@ function renderQuickPlayStatus(): void {
 
     $lobbyInstantPlayStatus.textContent = settingUp
         ? quickPlayMessage || "Setting up instant actions…"
-        : quickPlayMessage || "Playing with normal wallet approvals.";
+        : quickPlayMessage || "You’ll approve each move.";
     $lobbyInstantPlayError.textContent = instantPlayFailureDetail;
     const canRetry = !settingUp && (instantPlayFallback || pending);
     $btnRetryInstantPlay.style.display = canRetry ? "" : "none";
@@ -2018,7 +2150,7 @@ $btnTurnOffInstantPlay.addEventListener("click", async () => {
     try {
         await endQuickPlay();
     } catch (cause) {
-        $instantPlayError.textContent = txError(cause);
+        $instantPlayError.textContent = friendlyError(cause);
     } finally {
         busy = false;
         setLoading("btn-turn-off-instant-play", false);
@@ -2041,12 +2173,25 @@ getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", asyn
         myDisplayName = name;
         $displayNameStatus.textContent = name ? "Name saved for your next lobby refresh." : "Name cleared.";
     } catch (error) {
-        $displayNameStatus.textContent = txError(error);
+        $displayNameStatus.textContent = friendlyError(error);
     } finally {
         busy = false;
         setLoading("btn-save-display-name", false);
     }
 });
+
+// The configure screen shares one status line for progress and failures.
+// Progress must never wear error styling — a freshly created lobby reading
+// as a failure is worse than no message at all.
+function showConfigProgress(message: string): void {
+    $configError.classList.add("is-progress");
+    $configError.textContent = message;
+}
+
+function showConfigError(message: string): void {
+    $configError.classList.remove("is-progress");
+    $configError.textContent = message;
+}
 
 function renderResumeCard(): void {
     const shouldShow = savedGameId !== null && gameId === null;
@@ -2535,19 +2680,24 @@ for (const id of ["btn-config-back", "btn-config-back-bottom"]) {
 }
 
 // Keep the browse list fresh while the player compares packs — packs
-// published by others should show up without a reload.
-setInterval(() => {
-    if (registry && getEl("screen-pack-select").classList.contains("active") && !busy) {
-        // Featured packs remain fresh frequently; the much larger community
-        // window only needs a gentle refresh while someone is comparing.
-        void refreshPacks({ includeCommunity: Date.now() - lastCommunityRequestAt > 60_000 });
-    }
-}, 5_000);
+// published by others should show up without a reload. Driven by the shared
+// best-block subscription (see onBlockSignal) so refreshes follow real chain
+// movement instead of a wall-clock poll, with a throttle for phones.
+let lastCatalogAutoRefreshAt = 0;
+function maybeRefreshOpenCatalog(): void {
+    if (!registry || busy || !getEl("screen-pack-select").classList.contains("active")) return;
+    const now = Date.now();
+    if (now - lastCatalogAutoRefreshAt < 10_000) return;
+    lastCatalogAutoRefreshAt = now;
+    // Featured packs remain fresh frequently; the much larger community
+    // window only needs a gentle refresh while someone is comparing.
+    void refreshPacks({ includeCommunity: now - lastCommunityRequestAt > 60_000 });
+}
 
 function readCreatedGameConfig(showErrors = false): CreatedGameConfig | null {
     if (selectedPackId === null || selectedPack === null) return null;
     const fail = (message: string): null => {
-        if (showErrors) $configError.textContent = message;
+        if (showErrors) showConfigError(message);
         return null;
     };
     const maxQuestions = Math.min(selectedPack.regular_count, MAX_GAME_QUESTIONS);
@@ -2609,13 +2759,19 @@ function scheduleCreateGamePreflight(): void {
 
 /** Resolve a creation nonce instead of racing another tab's latest-game pointer. */
 async function resolveCreatedGame(nonce: bigint): Promise<bigint | null> {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    // Submission resolves at best-block, but contract reads can lag until the
+    // next finalized view (~9s on Paseo, same budget as the session-state
+    // waits). A too-short window here strands creators on "could not locate
+    // the created game" even though the recovery marker would save them.
+    for (let attempt = 0; attempt < SESSION_STATE_CONFIRM_ATTEMPTS; attempt += 1) {
         const res = await game.getGameForCreation.query(myAddress, nonce);
         if (res.success) {
-            const id = BigInt(res.value);
+            const id = BigInt(res.value ?? 0);
             if (id !== 0n) return id;
         }
-        await new Promise((resolve) => setTimeout(resolve, 350));
+        if (attempt + 1 < SESSION_STATE_CONFIRM_ATTEMPTS) {
+            await new Promise((resolve) => setTimeout(resolve, SESSION_STATE_CONFIRM_DELAY_MS));
+        }
     }
     return null;
 }
@@ -2758,11 +2914,7 @@ async function joinGameById(id: bigint, error: HTMLElement): Promise<boolean> {
             enterGame(id);
             return true;
         }
-        error.textContent = msg.includes("GameAlreadyStarted")
-            ? "This game has already started."
-            : msg.includes("GameFull")
-                ? "This lobby is full."
-            : msg;
+        error.textContent = friendlyError(e);
         return false;
     } finally {
         busy = false;
@@ -2779,7 +2931,7 @@ getEl("btn-create-game").addEventListener("click", async () => {
     const pendingCreation = await resumePendingGameCreation();
     if (pendingCreation === "resumed") return;
     if (pendingCreation === "unavailable") {
-        $configError.textContent = "Your new lobby is still being confirmed. Try again in a moment.";
+        showConfigError("Your new lobby is still being confirmed. Try again in a moment.");
         return;
     }
     if (!canStartAnotherQuiz($configError)) return;
@@ -2790,14 +2942,16 @@ getEl("btn-create-game").addEventListener("click", async () => {
     try {
         const call = gameCreateCall(config);
         await sendWarmedTx(game, call.method, call.args);
-        $configError.textContent = "Game created — opening your lobby…";
+        showConfigProgress("Game created — opening your lobby…");
         rememberPendingGameCreationMarker(call.nonce, config);
         const id = await resolveCreatedGame(call.nonce);
-        if (id === null) throw new Error("could not locate the created game");
+        if (id === null) {
+            throw new Error("Your lobby is still being confirmed — it will reopen automatically in a moment.");
+        }
         clearPendingGameCreationMarker();
         enterGame(id, createdLobbySnapshot(config));
     } catch (e) {
-        $configError.textContent = txError(e);
+        showConfigError(friendlyError(e));
     } finally {
         preparedGameCreationNonce = null;
         busy = false;
@@ -2981,7 +3135,7 @@ function renderPackDraftPreview(): void {
     if (canResumePackPublish(draft, validation)) {
         $builderPublishStatus.textContent = "A previous publish is ready to resume.";
     } else {
-        $builderPublishStatus.textContent = "Ready to publish in bounded batches.";
+        $builderPublishStatus.textContent = "Ready to publish.";
     }
 }
 
@@ -3175,14 +3329,19 @@ function creationNonce(): bigint {
     }
 }
 
-async function resolveCreatedPack(nonce: bigint): Promise<number | null> {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+async function resolveCreatedPack(nonce: bigint, attempts = SESSION_STATE_CONFIRM_ATTEMPTS): Promise<number | null> {
+    // Same finalized-view read lag budget as resolveCreatedGame. A fresh
+    // nonce that has never been submitted passes `attempts: 1` — waiting the
+    // full window for a pack that cannot exist would stall every publish.
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
         const result = await registry.getPackForCreation.query(myAddress, nonce);
         if (result.success) {
-            const id = Number(result.value);
+            const id = Number(result.value ?? NO_PACK);
             if (id !== NO_PACK) return id;
         }
-        await new Promise((resolve) => setTimeout(resolve, 350));
+        if (attempt + 1 < attempts) {
+            await new Promise((resolve) => setTimeout(resolve, SESSION_STATE_CONFIRM_DELAY_MS));
+        }
     }
     return null;
 }
@@ -3204,7 +3363,7 @@ async function reconcilePublishResume(
     const pack = packResult.value as PackView;
     if (pack.creator.toLowerCase() !== myAddress) throw new Error("The saved pack belongs to another account.");
     if (pack.regular_count > validation.pack.questions.length) {
-        throw new Error("The on-chain pack has more questions than this draft, so it cannot be resumed safely.");
+        throw new Error("The published pack has more questions than this draft, so it cannot be resumed safely.");
     }
     let completedFinals = resume.completedFinals;
     if (pack.finals_set_count === 3) {
@@ -3255,12 +3414,15 @@ async function publishPackDraft(): Promise<void> {
                 resume = nextPublishResume(resume, { creationNonce: nonce.toString() });
                 await persistPublishResume(draftId, resume);
             }
-            let packId = await resolveCreatedPack(nonce);
+            // One quick probe covers "the create landed but the resume marker
+            // didn't record it"; a nonce that was never submitted must not
+            // wait out the full read-lag window before creating.
+            let packId = await resolveCreatedPack(nonce, 1);
             if (packId === null) {
                 await sendTx(registry, "createPackWithNonce", validation.pack.title, validation.emoji, nonce);
                 packId = await resolveCreatedPack(nonce);
             }
-            if (packId === null) throw new Error("Couldn’t locate the created pack. Your draft is saved; try Publish again to resume.");
+            if (packId === null) throw new Error("Your pack is still being confirmed. Your draft is saved — tap Publish again to resume.");
             resume = nextPublishResume(resume, { packId, phase: "questions" });
             await persistPublishResume(draftId, resume);
         }
@@ -3275,7 +3437,7 @@ async function publishPackDraft(): Promise<void> {
             $builderPublishStatus.textContent = `Publishing questions ${start + 1}–${start + batch.length} of ${validation.pack.questions.length}…`;
             await sendTx(registry, "addQuestions", packId, batch);
             resume = await reconcilePublishResume(resume, validation);
-            if (resume.nextRegularQuestion <= start) throw new Error("The question batch is not visible on-chain yet. Try Publish again to resume safely.");
+            if (resume.nextRegularQuestion <= start) throw new Error("Still saving your questions. Tap Publish again in a moment to pick up where you left off.");
             await persistPublishResume(draftId, resume);
         }
 
@@ -3287,7 +3449,7 @@ async function publishPackDraft(): Promise<void> {
             );
             await sendTx(registry, "addQuestions", packId, finals);
             resume = await reconcilePublishResume(resume, validation);
-            if (resume.completedFinals.length < 3) throw new Error("The final-question batch is not visible on-chain yet. Try Publish again to resume safely.");
+            if (resume.completedFinals.length < 3) throw new Error("Still saving your final questions. Tap Publish again in a moment to pick up where you left off.");
             await persistPublishResume(draftId, resume);
         }
 
@@ -3315,7 +3477,7 @@ async function publishPackDraft(): Promise<void> {
         showScreen("configure");
         scheduleCreateGamePreflight();
     } catch (error) {
-        $builderError.textContent = txError(error);
+        $builderError.textContent = friendlyError(error);
         $builderPublishStatus.textContent = "Publish paused. Your saved draft can resume from its last confirmed step.";
     } finally {
         publishingDraftId = null;
@@ -3507,7 +3669,7 @@ getEl("btn-leave-lobby").addEventListener("click", async () => {
         await sendTx(game, "leaveLobby", gameId);
         leaveGame();
     } catch (e) {
-        getEl("lobby-error").textContent = txError(e);
+        getEl("lobby-error").textContent = friendlyError(e);
     } finally {
         busy = false;
         setLoading("btn-leave-lobby", false);
@@ -3545,7 +3707,7 @@ getEl("btn-confirm-forfeit").addEventListener("click", async () => {
             $homeError.textContent = "You forfeited this quiz. Your score remains on its scorecard.";
         }
     } catch (e) {
-        getEl("forfeit-error").textContent = txError(e);
+        getEl("forfeit-error").textContent = friendlyError(e);
     } finally {
         busy = false;
         setLoading("btn-confirm-forfeit", false);
@@ -3782,7 +3944,7 @@ async function poll(): Promise<void> {
     } catch (e) {
         consecutivePollFailures += 1;
         if (consecutivePollFailures >= 2) {
-            setTransactionStatus("Reconnecting to chain state…");
+            setTransactionStatus("Reconnecting…");
         }
         console.warn("poll failed", e);
     } finally {
@@ -3831,6 +3993,8 @@ function render(snap: Snapshot): void {
 
 // ── Lobby ────────────────────────────────────────────────────────────
 
+let lastStartGameWarmPlayers = -1;
+
 function renderLobby(snap: Snapshot): void {
     const lobbyGameId = gameId;
     const lobbySession = gameSession;
@@ -3839,7 +4003,7 @@ function renderLobby(snap: Snapshot): void {
     // Never make the room wait on a cosmetic title lookup. Hosts normally
     // have it cached from the pack picker; joiners see a stable fallback for
     // one RPC round-trip and then the real title replaces it.
-    getEl("lobby-title").textContent = packTitleCache.get(registryPackCacheKey(snap.game.pack_id)) ?? `pack #${snap.game.pack_id}`;
+    getEl("lobby-title").textContent = packTitleCache.get(registryPackCacheKey(snap.game.pack_id)) ?? "Quiz night";
     const starter = snap.players[0] ?? "";
     renderList(
         getEl("lobby-players"),
@@ -3861,7 +4025,16 @@ function renderLobby(snap: Snapshot): void {
     setGameActions("lobby");
     showScreen("lobby");
 
-    if (isStarter) void warmTx(game, "startGame", [lobbyGameId]);
+    if (isStarter) {
+        // A startGame estimate scales with the roster. Joining players would
+        // otherwise reuse a stale small-lobby estimate for up to the warm
+        // TTL, which under-sizes the padded limit.
+        if (lastStartGameWarmPlayers !== snap.phase.player_count) {
+            lastStartGameWarmPlayers = snap.phase.player_count;
+            txPreflights.delete(preflightKey(transactionActor(game, "startGame"), "startGame", [lobbyGameId]));
+        }
+        void warmTx(game, "startGame", [lobbyGameId]);
+    }
 
     void packTitle(snap.game.pack_id).then((title) => {
         // A title fetch can finish after the game advances or the player
@@ -3971,7 +4144,7 @@ getEl("btn-start-game").addEventListener("click", async () => {
         showStartedGame();
         void poll();
     } catch (e) {
-        getEl("lobby-error").textContent = txError(e);
+        getEl("lobby-error").textContent = friendlyError(e);
     } finally {
         busy = false;
         setLoading("btn-start-game", false);
@@ -3981,15 +4154,11 @@ getEl("btn-start-game").addEventListener("click", async () => {
 // ── Countdown (ticks between polls off the latest snapshot) ─────────
 
 function countdownText(snap: Snapshot): string {
-    if (snap.phase.deadline >= 2n ** 63n) return "";
-    // `current_block` is a snapshot, not a live clock. Estimate intervening
-    // blocks locally so the countdown feels continuous between RPC updates.
-    const elapsedBlocks = latestObservedAt > 0
-        ? Math.floor((Date.now() - latestObservedAt) / (BLOCK_SECONDS_ESTIMATE * 1_000))
-        : 0;
-    const blocksLeft = Number(snap.phase.deadline - snap.phase.current_block) - elapsedBlocks;
-    if (blocksLeft <= 0) return "time's up";
-    return `~${blocksLeft * BLOCK_SECONDS_ESTIMATE}s`;
+    return countdownLabel(
+        snap.phase.deadline,
+        snap.phase.current_block,
+        latestObservedAt > 0 ? Date.now() - latestObservedAt : 0,
+    );
 }
 
 setInterval(() => {
@@ -3998,7 +4167,7 @@ setInterval(() => {
     for (const id of ["question-countdown", "review-countdown", "vote-countdown", "final-wager-countdown"]) {
         const el = getEl(id);
         el.textContent = text;
-        el.classList.toggle("urgent", text !== "" && text !== "time's up" && Number.parseInt(text.slice(1)) <= 15);
+        el.classList.toggle("urgent", text.startsWith("~") && Number.parseInt(text.slice(1)) <= 15);
     }
 }, 1_000);
 
@@ -4061,7 +4230,11 @@ function renderQuestion(snap: Snapshot): void {
     getEl("question-number").textContent = isFinal
         ? `Final question · ${DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? ""}`
         : `${snap.phase.cursor + 1} of ${snap.game.num_questions}`;
-    getEl("question-text").textContent = questionReady ? snap.questionText : "Loading question…";
+    // A shape-matching skeleton, not placeholder prose — the question arrives
+    // within a poll or two and the swap should read as a reveal.
+    const $questionText = getEl("question-text");
+    $questionText.textContent = questionReady ? snap.questionText : "";
+    $questionText.classList.toggle("skeleton", !questionReady);
     getEl("question-countdown").textContent = countdownText(snap);
 
     const mine = mySubmission(snap);
@@ -4153,7 +4326,7 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
     } catch (e) {
         clearActionSent("submit");
         optimisticAnswer = null;
-        $err.textContent = txError(e);
+        $err.textContent = friendlyError(e);
         if (latest) render(latest);
     } finally {
         busy = false;
@@ -4255,7 +4428,7 @@ getEl("btn-confirm-final-wager").addEventListener("click", async () => {
         void poll();
     } catch (e) {
         clearActionSent("final-wager");
-        $error.textContent = txError(e);
+        $error.textContent = friendlyError(e);
         if (latest) render(latest);
     } finally {
         busy = false;
@@ -4295,7 +4468,7 @@ function renderReview(snap: Snapshot): void {
             row.className = "answer-row";
             if (!s.submitted) {
                 row.append(
-                    span("player-answer wrong grow", "NO ANSWER GIVEN"),
+                    span("player-answer wrong grow", "No answer"),
                     span("wager-badge wrong", "0"),
                 );
                 return row;
@@ -4353,7 +4526,7 @@ async function voteCorrect(target: string): Promise<void> {
             getEl("review-error").textContent = "Your vote is already recorded.";
         } else {
             clearActionSent(key);
-            getEl("review-error").textContent = message;
+            getEl("review-error").textContent = friendlyError(e);
         }
         if (latest) render(latest);
     } finally {
@@ -4373,7 +4546,7 @@ getEl("btn-continue").addEventListener("click", async () => {
         void poll();
     } catch (e) {
         clearActionSent("continue");
-        getEl("review-error").textContent = txError(e);
+        getEl("review-error").textContent = friendlyError(e);
         if (latest) render(latest);
     } finally {
         busy = false;
@@ -4449,7 +4622,7 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
             } else {
                 clearActionSent("difficulty");
                 selectedDifficulty = null;
-                getEl("vote-error").textContent = message;
+                getEl("vote-error").textContent = friendlyError(e);
             }
             if (latest) render(latest);
         } finally {
@@ -4481,49 +4654,6 @@ function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
             ),
         ),
     );
-}
-
-const PLACEMENT_TROPHIES: Record<number, { emoji: string; label: string }> = {
-    1: { emoji: "🥇", label: "First place" },
-    2: { emoji: "🥈", label: "Second place" },
-    3: { emoji: "🥉", label: "Third place" },
-};
-
-function ordinal(value: number): string {
-    const mod100 = value % 100;
-    if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
-    switch (value % 10) {
-        case 1: return `${value}st`;
-        case 2: return `${value}nd`;
-        case 3: return `${value}rd`;
-        default: return `${value}th`;
-    }
-}
-
-function placementText(standing: FinalStanding): string {
-    if (standing.placement === null) return "Left quiz";
-    const trophy = PLACEMENT_TROPHIES[standing.placement];
-    return `${trophy ? `${trophy.emoji} ` : ""}${ordinal(standing.placement)} place`;
-}
-
-function finalOutcomeText(standing: FinalStanding): string {
-    if (!standing.finalSubmitted) {
-        return standing.finalWager > 0
-            ? `No final answer · ${standing.finalWager} locked, not applied`
-            : "No final answer";
-    }
-    if (standing.finalWager === 0) {
-        return standing.finalCorrect ? "Correct · no points wagered" : "Incorrect · no points wagered";
-    }
-    return standing.finalOutcome === "won" ? "Wager won" : "Wager lost";
-}
-
-function finalWagerValue(standing: FinalStanding): string {
-    if (!standing.finalSubmitted) {
-        return standing.finalWager > 0 ? `${standing.finalWager} locked` : "0";
-    }
-    if (standing.finalWager === 0) return "0";
-    return standing.finalDelta > 0 ? `+${standing.finalDelta}` : `−${Math.abs(standing.finalDelta)}`;
 }
 
 function applyFinalOutcomeStyle(element: HTMLElement, standing: FinalStanding): void {
@@ -4637,6 +4767,7 @@ function renderAbandoned(snap: Snapshot): void {
 // ── Go ───────────────────────────────────────────────────────────────
 
 init().catch((e) => {
-    setConnectionStatus("error", "err");
+    setConnectionStatus("not connected", "err");
+    setBootHeadline("Couldn’t start — try reloading.", true);
     bootLog(`Unhandled init error: ${txError(e)}`, "err");
 });
