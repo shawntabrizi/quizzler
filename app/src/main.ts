@@ -556,7 +556,7 @@ function showScreen(name: Screen): void {
     for (const s of SCREENS) {
         getEl(`screen-${s}`).classList.toggle("active", s === name);
     }
-    const isPackPicker = name === "pack-select";
+    const isSetupFlow = name === "pack-select" || name === "configure";
     const isGameStage = name === "question" || name === "review" || name === "vote" || name === "final-wager";
     // The header gear only opens a current game's settings. Make route changes
     // authoritative so it can never remain as a dead control on setup, home,
@@ -567,9 +567,9 @@ function showScreen(name: Screen): void {
           ? "active"
           : "hidden";
     setGameControls(gameControlMode);
-    document.body.classList.toggle("pack-picker-open", isPackPicker);
+    document.body.classList.toggle("setup-flow-open", isSetupFlow);
     document.body.classList.toggle("game-stage-open", isGameStage);
-    $appShell?.classList.toggle("pack-picker-open", isPackPicker);
+    $appShell?.classList.toggle("setup-flow-open", isSetupFlow);
     $appShell?.classList.toggle("game-stage-open", isGameStage);
     const changed = visibleScreen !== name;
     visibleScreen = name;
@@ -701,8 +701,7 @@ function forgetKnownGame(id: bigint): void {
 
 const $bootLog = getEl("boot-log");
 const $connPill = getEl("conn-pill");
-const $chainStatus = getEl("chain-status");
-const $chainAccount = getEl("chain-account");
+const $appHeader = getEl<HTMLElement>("app-header");
 const $gameStageTimer = getEl("game-stage-timer");
 const $btnGameSettings = getEl<HTMLButtonElement>("btn-game-settings");
 const $forfeitDialog = getEl<HTMLDialogElement>("forfeit-dialog");
@@ -717,6 +716,12 @@ function setGameControls(mode: "hidden" | "lobby" | "active"): void {
         $gameStageTimer.textContent = "";
         $gameStageTimer.classList.remove("urgent");
     }
+    syncAppHeader();
+}
+
+/** Only reserve top-bar space when a player can act there or needs feedback. */
+function syncAppHeader(): void {
+    $appHeader.hidden = $btnGameSettings.hidden && $gameStageTimer.hidden && $transactionStatus.hidden;
 }
 
 function bootLog(msg: string, level: "info" | "ok" | "err" = "info"): void {
@@ -736,21 +741,13 @@ function setBootHeadline(message: string, failed = false): void {
 
 function setConnectionStatus(label: string, state: "pending" | "ok" | "err"): void {
     $connPill.textContent = label;
-    $connPill.className = state === "ok" ? "ok" : state === "err" ? "err" : "";
-    $chainStatus.classList.toggle("is-live", state === "ok");
-    $chainStatus.classList.toggle("has-error", state === "err");
+    $connPill.dataset.state = state;
 }
 
 function setTransactionStatus(message: string | null): void {
     $transactionStatus.hidden = !message;
     $transactionStatus.textContent = message ?? "";
-}
-
-function showActivePlayerName(): void {
-    const name = playerName(myAddress, myDisplayName);
-    $chainAccount.textContent = name;
-    $chainAccount.title = `Your player name: ${name}`;
-    $chainAccount.setAttribute("aria-label", `Your player name: ${name}`);
+    syncAppHeader();
 }
 
 // Chain plumbing (block numbers) stays out of the header; the shared block
@@ -2143,7 +2140,6 @@ async function init(): Promise<void> {
     // Begin restoring the durable recovery list in parallel with the chain
     // setup. The host-backed read is small and must never delay signing.
     const knownGamesReady = hydrateKnownGames();
-    showActivePlayerName();
     bootLog("Player account ready", "ok");
 
     bootLog("Opening chain client…");
@@ -2198,8 +2194,8 @@ async function init(): Promise<void> {
     await knownGamesReady;
 
     // A profile read is independent of resuming a game. Start it now so the
-    // home form and compact header show the saved on-chain name as soon as it
-    // arrives, without delaying a returning player's game recovery.
+    // home form reflects the saved on-chain name without delaying a returning
+    // player's game recovery.
     syncDisplayNameProfile();
     void hydrateDisplayName();
 
@@ -2299,7 +2295,6 @@ function syncDisplayNameProfile(status?: string): void {
         ?? (myDisplayName
             ? `You’ll appear as ${myDisplayName}.`
             : `You’ll appear as ${fallback}.`);
-    showActivePlayerName();
 }
 
 function applyOnChainDisplayName(name: string, observedRevision: number): void {
@@ -3151,7 +3146,7 @@ getEl("btn-pack-continue").addEventListener("click", () => {
     scheduleCreateGamePreflight();
 });
 
-for (const id of ["btn-config-back", "btn-config-back-bottom"]) {
+for (const id of ["btn-config-back-bottom"]) {
     getEl(id).addEventListener("click", () => {
         $configError.textContent = "";
         showScreen("pack-select");
@@ -3665,7 +3660,7 @@ async function openPackBuilder(): Promise<void> {
     await ensurePackStudio();
 }
 
-for (const id of ["btn-new-pack", "btn-new-pack-from-picker"]) {
+for (const id of ["btn-new-pack"]) {
     getEl(id).addEventListener("click", () => void openPackBuilder());
 }
 

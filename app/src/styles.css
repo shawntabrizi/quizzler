@@ -59,10 +59,10 @@ main {
         max(20px, env(safe-area-inset-left));
 }
 
-/* The pack picker behaves like a small, focused app: only the
-   catalog moves, while its decision controls remain in reach. */
-body.pack-picker-open { overflow: hidden; }
-main.pack-picker-open {
+/* The normal host flow behaves like a focused app: content scrolls in its
+   own region while the next decision stays in reach at the bottom. */
+body.setup-flow-open { overflow: hidden; }
+main.setup-flow-open {
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -70,12 +70,26 @@ main.pack-picker-open {
     min-height: 0;
     padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
-main.pack-picker-open > header { flex: 0 0 auto; }
-main.pack-picker-open > #screen-pack-select.active {
+main.setup-flow-open > header { flex: 0 0 auto; }
+main.setup-flow-open > #screen-pack-select.active {
     display: grid;
     flex: 1 1 auto;
     grid-template-rows: auto minmax(0, 1fr);
     min-height: 0;
+}
+main.setup-flow-open > #screen-configure.active {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+#screen-configure .setup-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 2px 18px 0;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Setup benefits from a wider catalog, while the moment-to-moment game
@@ -100,47 +114,7 @@ main.pack-picker-open > #screen-pack-select.active {
 }
 
 header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-#chain-status {
-    margin-left: auto;
-    display: inline-flex;
-    min-width: 0;
-    align-items: center;
-    gap: 7px;
-    font-size: 0.75rem;
-    color: var(--fg-secondary);
-    background: var(--bg-surface-container);
-    border-radius: var(--radius-full);
-    padding: 5px 10px;
-    white-space: nowrap;
-}
-.chain-status-dot {
-    width: 7px;
-    height: 7px;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    background: var(--fg-secondary);
-}
-#chain-status.is-live .chain-status-dot {
-    background: var(--fg-success);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg-success) 16%, transparent);
-}
-#chain-status.has-error .chain-status-dot { background: var(--fg-error); }
-.chain-status-divider {
-    width: 1px;
-    height: 14px;
-    flex: 0 0 auto;
-    background: var(--border-divider);
-}
-#conn-pill { color: var(--fg-secondary); }
-#conn-pill.ok { color: var(--fg-success); }
-#conn-pill.err { color: var(--fg-error); }
-#chain-account {
-    min-width: 0;
-    max-width: 26ch;
-    overflow: hidden;
-    color: var(--fg-primary);
-    text-overflow: ellipsis;
-}
+header[hidden] { display: none; }
 .transaction-status {
     color: var(--fg-secondary);
     font-size: 0.76rem;
@@ -171,7 +145,6 @@ header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-
 }
 .game-settings-trigger[hidden] { display: none !important; }
 .game-settings-trigger:hover { background: var(--bg-selection-container-hover); }
-main.game-stage-open #chain-status { display: none; }
 main.game-stage-open #game-stage-timer { margin-right: auto; }
 main.game-stage-open #btn-game-settings { margin-left: auto; }
 /* Transaction feedback sits on its own header line during a round so it
@@ -766,6 +739,16 @@ ul.pack-grid li { position: relative; min-width: 0; }
     margin-top: 16px;
 }
 .setup-actions .primary { margin-left: auto; }
+.setup-bottom-nav { flex: 0 0 auto; }
+.config-bottom-nav {
+    margin-top: 12px;
+    padding: 14px 0 max(14px, env(safe-area-inset-bottom));
+    background: var(--bg-surface-main);
+    border-top: 1px solid var(--border-divider);
+    box-shadow: 0 -16px 24px -24px rgba(0, 0, 0, 0.95);
+}
+.config-bottom-nav .error-text { margin-top: 0; }
+.config-bottom-nav .setup-actions { margin-top: 8px; }
 .config-layout {
     display: grid;
     grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
@@ -904,6 +887,22 @@ ul.pack-grid li { position: relative; min-width: 0; }
     line-height: 1.4;
 }
 .field-hint { margin-top: 6px; }
+.home-secondary-action {
+    margin: 4px 0 18px;
+    text-align: center;
+}
+.text-link {
+    min-height: 40px;
+    padding: 5px 8px;
+    color: var(--fg-secondary);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-small);
+    font-size: 0.82rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.text-link:hover { color: var(--fg-primary); background: var(--bg-selection-container-hover); }
 .pack-emoji-field { width: 106px; }
 #pack-emoji { text-align: center; }
 
@@ -1443,24 +1442,6 @@ ul.pack-grid li { position: relative; min-width: 0; }
         align-items: center;
         margin-bottom: 14px;
     }
-    #chain-status {
-        gap: 4px;
-        margin-left: 0;
-        padding: 4px 7px;
-        justify-self: end;
-    }
-    #chain-account { max-width: 17ch; }
-    #conn-pill.ok {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        clip-path: inset(50%);
-        white-space: nowrap;
-    }
-    #chain-status .chain-status-divider { display: none; }
     .game-stage-timer { min-height: 40px; font-size: 0.9rem; }
     .game-settings-trigger { width: 40px; min-height: 40px; }
     .transaction-status { width: 100%; }
@@ -1530,25 +1511,22 @@ ul.pack-grid li { position: relative; min-width: 0; }
         font-size: 3.25rem;
     }
     .config-pack-copy { min-width: 0; padding: 14px; }
-    .config-pack-copy .quiet { margin-top: 10px; }
     .builder-drafts { position: static; }
     .builder-draft-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; gap: 6px; }
     .builder-draft-list li { margin-bottom: 0; }
     .builder-editor-header { flex-direction: column; gap: 4px; }
     .builder-cover-controls { grid-template-columns: 84px 1fr; }
     #pack-json { min-height: 42vh; }
-    .setup-actions { align-items: stretch; }
-    .setup-actions button { flex: 1 1 140px; }
-    .setup-actions .primary { margin-left: 0; }
-    .pack-picker-actions {
+    .setup-bottom-nav .setup-actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
     }
-    .pack-picker-actions button { width: 100%; }
-    .pack-picker-actions .primary {
-        grid-column: 1 / -1;
+    .setup-bottom-nav .setup-actions button {
+        width: 100%;
         min-height: 48px;
     }
+    .setup-bottom-nav .setup-actions .primary { margin-left: 0; }
     ul.list li { align-items: flex-start; }
     /* On narrow screens a review row has a dedicated score column. The name
        and answer share the remaining width, while an optional vote action
