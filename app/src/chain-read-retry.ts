@@ -66,3 +66,28 @@ export async function retryChainRead<T>(
         }
     }
 }
+
+/**
+ * Bound an external read that can otherwise hang without throwing. The
+ * original operation continues in the background, but callers are released
+ * to retry or fall back instead of retaining stale UI indefinitely.
+ */
+export function withTimeout<T>(
+    operation: Promise<T>,
+    timeoutMs: number,
+    message = "Timed out reading the chain.",
+): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+        void operation.then(
+            (value) => {
+                clearTimeout(timer);
+                resolve(value);
+            },
+            (error: unknown) => {
+                clearTimeout(timer);
+                reject(error);
+            },
+        );
+    });
+}

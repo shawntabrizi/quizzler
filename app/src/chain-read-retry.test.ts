@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
     isChainHeadDisjoint,
     retryChainRead,
+    withTimeout,
 } from "./chain-read-retry";
 
 function disjointError(cause?: unknown): Error {
@@ -81,5 +82,13 @@ describe("ChainHead read retry", () => {
         )).rejects.toBe(error);
 
         expect(reads).toBe(3);
+    });
+
+    it("bounds a chain read that never settles", async () => {
+        await expect(withTimeout(
+            new Promise<never>(() => undefined),
+            1,
+            "Read timed out.",
+        )).rejects.toThrow("Read timed out.");
     });
 });
