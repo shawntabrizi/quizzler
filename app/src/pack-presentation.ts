@@ -88,32 +88,4 @@ export function packPresentation(pack: PackListItem): PackPresentation {
     };
 }
 
-export interface PackSections<T extends PackListItem> {
-    featured: T[];
-    community: T[];
-}
-
-/**
- * A casual home screen leads with the curated starter catalog. Community
- * packs remain discoverable in a secondary section, ordered newest first.
- */
-export function sectionPacks<T extends PackListItem>(
-    packs: readonly T[],
-    search: string,
-    includeE2ETestPacks: boolean,
-): PackSections<T> {
-    const needle = search.trim().toLocaleLowerCase();
-    const matching = packs.filter((pack) => {
-        if (!includeE2ETestPacks && isE2ETestPack(pack.title)) return false;
-        return needle === "" || pack.title.toLocaleLowerCase().includes(needle);
-    });
-    const featured = matching
-        .filter((pack) => featuredPack(pack) !== undefined)
-        .sort((a, b) => featuredPack(a)!.featuredOrder! - featuredPack(b)!.featuredOrder!);
-    const community = matching
-        .filter((pack) => featuredPack(pack) === undefined)
-        .sort((a, b) => b.id - a.id);
-    return { featured, community };
-}
-
 export const STARTER_PACK_COUNT = STARTER_PACKS.length;

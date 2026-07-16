@@ -95,34 +95,36 @@
 
         <!-- Host setup: pack selection -->
         <section id="screen-pack-select" class="screen" data-testid="screen-pack-select">
-            <div class="setup-heading">
-                <p class="setup-step">Step 1 of 2</p>
-                <h2>Choose a quiz pack</h2>
-                <p class="hint">Pick the theme for tonight’s game.</p>
-            </div>
-            <div class="card pack-select-card">
-                <div class="pack-picker">
-                    <label class="sr-only" for="pack-search">Find a quiz pack</label>
-                    <input type="search" id="pack-search" data-testid="pack-search" placeholder="Find a pack" autocomplete="off" />
-                    <p class="pack-catalog-status" id="pack-catalog-status" role="status" aria-live="polite"></p>
-                    <div class="pack-catalog" role="region" aria-label="Quiz packs" tabindex="0">
-                        <div id="pack-list" data-testid="pack-list"></div>
+            <div class="host-flow-scroll pack-selection-scroll">
+                <div class="setup-heading">
+                    <p class="setup-step">Step 1 of 2</p>
+                    <h2>Choose a quiz pack</h2>
+                    <p class="hint">Pick the theme for tonight’s game.</p>
+                </div>
+                <div class="card pack-select-card">
+                    <div class="pack-picker">
+                        <label class="sr-only" for="pack-search">Search loaded quiz packs</label>
+                        <input type="search" id="pack-search" data-testid="pack-search" placeholder="Search loaded packs" autocomplete="off" hidden />
+                        <p class="pack-catalog-status" id="pack-catalog-status" role="status" aria-live="polite"></p>
+                        <div class="pack-catalog" role="region" aria-label="Quiz packs" tabindex="0">
+                            <div id="pack-list" data-testid="pack-list"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="pack-selection-footer setup-bottom-nav" data-testid="pack-bottom-nav">
-                    <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to continue.</p>
-                    <div class="error-text" id="pack-selection-error" data-testid="pack-selection-error" role="alert"></div>
-                    <div class="setup-actions pack-picker-actions">
-                        <button id="btn-pack-back" class="quiet" data-testid="btn-pack-back">Back home</button>
-                        <button id="btn-pack-continue" class="primary" data-testid="btn-pack-continue" disabled>Continue</button>
-                    </div>
+            </div>
+            <div class="host-flow-bottom-nav setup-bottom-nav" data-testid="pack-bottom-nav">
+                <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to continue.</p>
+                <div class="error-text" id="pack-selection-error" data-testid="pack-selection-error" role="alert"></div>
+                <div class="setup-actions pack-picker-actions">
+                    <button id="btn-pack-back" class="quiet" data-testid="btn-pack-back">Back home</button>
+                    <button id="btn-pack-continue" class="primary" data-testid="btn-pack-continue" disabled>Continue</button>
                 </div>
             </div>
         </section>
 
         <!-- Host setup: game options -->
         <section id="screen-configure" class="screen" data-testid="screen-configure">
-            <div class="setup-scroll">
+            <div class="host-flow-scroll setup-scroll">
                 <div class="setup-heading">
                     <p class="setup-step">Step 2 of 2</p>
                     <h2>Set up your game</h2>
@@ -156,7 +158,7 @@
                     </div>
                 </div>
             </div>
-            <div class="setup-bottom-nav config-bottom-nav" data-testid="config-bottom-nav">
+            <div class="host-flow-bottom-nav setup-bottom-nav config-bottom-nav" data-testid="config-bottom-nav">
                 <div class="error-text" id="config-error" data-testid="config-error" role="alert"></div>
                 <div class="setup-actions">
                     <button id="btn-config-back-bottom" class="quiet" data-testid="btn-config-back-bottom">Back to packs</button>

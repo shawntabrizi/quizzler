@@ -1,10 +1,11 @@
 /**
  * Quizzler — social trivia on Polkadot.
  *
- * Two contracts: the pack REGISTRY (quiz content — packs, questions,
- * answers) and the GAME (lobby, phases, scoring, votes). Game state is
- * polled from the game contract; question text and the review-time
- * canonical answer are read from the registry by (pack_id, slot).
+ * Four contracts: the pack REGISTRY (quiz content — packs, questions,
+ * answers), GAME (lobby, phases, scoring, votes), SESSION REGISTRY
+ * (quick-action ownership), and PACK SIGNALS (saved packs and popularity).
+ * Game state is polled from the game contract; question text and the
+ * review-time canonical answer are read from the registry by (pack_id, slot).
  *
  * Boot follows the product-sdk contracts-demo: SignerManager → product
  * account → chain client → contract handles → account mapping. Answers and
@@ -30,6 +31,7 @@ import { encodeFunctionData, erc20Abi, hexToBytes } from "viem";
 import registryAbi from "./abi-registry.json";
 import gameAbi from "./abi-game.json";
 import sessionRegistryAbi from "./abi-session-registry.json";
+import packSignalsAbi from "./abi-pack-signals.json";
 import contractInfo from "./contract-address.json";
 import { retryChainRead, withTimeout } from "./chain-read-retry";
 import { hydrateLiveSnapshotContent } from "./live-snapshot-content";
@@ -100,11 +102,17 @@ import {
 } from "./pack-drafts";
 import { normalizeAcceptedAnswers, type PackQuestion } from "./pack-validation";
 import {
+    featuredPack,
     packPresentation,
-    sectionPacks,
     STARTER_PACK_COUNT,
     type PackListItem,
 } from "./pack-presentation";
+import {
+    appendUniquePacks,
+    buildPackLibrarySections,
+    visibleLibraryPacks,
+    type PackLibrarySectionId,
+} from "./pack-library";
 import { appendLog, getEl, li, renderList, span } from "./ui";
 
 function isContractAddress(value: unknown): value is `0x${string}` {
@@ -115,9 +123,14 @@ function sessionRegistryConfigured(): boolean {
     return isContractAddress(activeContracts.sessionRegistry);
 }
 
+function packSignalsConfigured(): boolean {
+    return isContractAddress(activeContracts.packSignals);
+}
+
 const configuredRegistry = import.meta.env.VITE_QUIZZLER_REGISTRY;
 const configuredGame = import.meta.env.VITE_QUIZZLER_GAME;
 const configuredSessionRegistry = import.meta.env.VITE_QUIZZLER_SESSION_REGISTRY;
+const configuredPackSignals = import.meta.env.VITE_QUIZZLER_PACK_SIGNALS;
 // Consume an invite once per page load so a refresh while a signer prompt is
 // open cannot prompt the player to join the same room twice.
 const sharedLobbyInvite = consumeSharedLobbyInvite(window.location.href);
@@ -129,26 +142,31 @@ if (sharedLobbyInvite.present) {
     }
 }
 
-// A test host can inject one isolated pair at build time. There is one active
-// contract pair for this unreleased app; lobby links contain only a game code.
+// A test host can inject one isolated contract set at build time. There is one
+// active four-contract deployment for this unreleased app; lobby links contain
+// only a game code.
 const hasContractOverride =
     configuredRegistry !== undefined
     || configuredGame !== undefined
-    || configuredSessionRegistry !== undefined;
+    || configuredSessionRegistry !== undefined
+    || configuredPackSignals !== undefined;
 const activeContracts: {
     registry: string | undefined;
     game: string | undefined;
     sessionRegistry: string | undefined;
+    packSignals: string | undefined;
 } = hasContractOverride
     ? {
         registry: configuredRegistry,
         game: configuredGame,
         sessionRegistry: configuredSessionRegistry,
+        packSignals: configuredPackSignals,
     }
     : {
         registry: contractInfo.registry,
         game: contractInfo.game,
         sessionRegistry: (contractInfo as { sessionRegistry?: string }).sessionRegistry,
+        packSignals: (contractInfo as { packSignals?: string }).packSignals,
     };
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -223,6 +241,12 @@ const SESSION_GAME_METHODS = new Set([
     "readyContinue",
     "voteDifficulty",
 ]);
+
+// Saving a pack is a small, player-owned interaction. The PackSignals
+// contract resolves the session key back to the same product account, so it
+// belongs on the same instant-action path as in-game moves—not on a separate
+// wallet-only preference path.
+const SESSION_SIGNAL_METHODS = new Set(["setFavorite"]);
 
 // These marks are deliberately local-only: they make startup, catalog, and
 // first-snapshot timing visible in the browser Performance panel without
@@ -388,6 +412,7 @@ let productAccount: SignerAccount | null = null;
 let registry: any = null;
 let game: any = null;
 let sessionRegistry: any = null;
+let packSignals: any = null;
 let assetHub: any = null;
 let unsafeAssetHub: any = null;
 let myAddress = ""; // lowercase H160
@@ -885,7 +910,10 @@ function sessionChainAddress(account: SessionAccount): string {
 
 /** Resolve the narrow signer allowed for this exact UI action. */
 function transactionActor(handle: any, method: string): TransactionActor {
-    const session = handle === game && SESSION_GAME_METHODS.has(method) ? activeSessionActor() : null;
+    const session = (
+        (handle === game && SESSION_GAME_METHODS.has(method))
+        || (handle === packSignals && SESSION_SIGNAL_METHODS.has(method))
+    ) ? activeSessionActor() : null;
     return session ?? productTransactionActor();
 }
 
@@ -2033,7 +2061,12 @@ function gameSettingsPack(packId: number): Promise<PackView | null> {
 // ── Boot ─────────────────────────────────────────────────────────────
 
 function createContractHandles(client: any, descriptor: any): void {
-    if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
+    if (
+        !isContractAddress(activeContracts.registry)
+        || !isContractAddress(activeContracts.game)
+        || !isContractAddress(activeContracts.sessionRegistry)
+        || !isContractAddress(activeContracts.packSignals)
+    ) {
         throw new Error("Contract addresses are not configured.");
     }
     if (!productAccount) {
@@ -2070,24 +2103,36 @@ function createContractHandles(client: any, descriptor: any): void {
             accountOptions,
         )
         : null;
+    const packSignalsAddress = activeContracts.packSignals;
+    packSignals = isContractAddress(packSignalsAddress)
+        ? createContractFromClient(
+            client.raw.assetHub,
+            descriptor,
+            packSignalsAddress,
+            packSignalsAbi as never,
+            accountOptions,
+        )
+        : null;
 }
 
-type ContractPairStatus = "linked" | "mismatch" | "unavailable";
+type ContractTopologyStatus = "linked" | "mismatch" | "unavailable";
 
-async function verifyActiveContractPair(): Promise<ContractPairStatus> {
+async function verifyActiveContractTopology(): Promise<ContractTopologyStatus> {
     try {
-        // The two linkage reads are independent; don't serialize boot on them.
-        const [linkedRegistry, linkedSessionRegistry] = await Promise.all([
+        // Linkage reads are independent; don't serialize boot on them.
+        const [linkedRegistry, linkedSessionRegistry, signalsRegistry, signalsSessionRegistry] = await Promise.all([
             retryChainRead<any>(() => game.registry.query()),
-            sessionRegistryConfigured() && sessionRegistry
-                ? retryChainRead<any>(() => game.sessionRegistry.query())
-                : Promise.resolve(null),
+            retryChainRead<any>(() => game.sessionRegistry.query()),
+            retryChainRead<any>(() => packSignals.registry.query()),
+            retryChainRead<any>(() => packSignals.sessionRegistry.query()),
         ]);
-        if (!linkedRegistry.success) return "unavailable";
+        if (!linkedRegistry.success || !linkedSessionRegistry.success || !signalsRegistry.success || !signalsSessionRegistry.success) {
+            return "unavailable";
+        }
         if (String(linkedRegistry.value).toLowerCase() !== activeContracts.registry?.toLowerCase()) return "mismatch";
-        if (!sessionRegistryConfigured()) return "linked";
-        if (!sessionRegistry || linkedSessionRegistry === null || !linkedSessionRegistry.success) return "unavailable";
-        return String(linkedSessionRegistry.value).toLowerCase() === activeContracts.sessionRegistry?.toLowerCase()
+        if (String(linkedSessionRegistry.value).toLowerCase() !== activeContracts.sessionRegistry?.toLowerCase()) return "mismatch";
+        if (String(signalsRegistry.value).toLowerCase() !== activeContracts.registry?.toLowerCase()) return "mismatch";
+        return String(signalsSessionRegistry.value).toLowerCase() === activeContracts.sessionRegistry?.toLowerCase()
             ? "linked"
             : "mismatch";
     } catch {
@@ -2099,7 +2144,12 @@ async function init(): Promise<void> {
     const bootStartMark = performanceMark("boot:start");
     showScreen("boot");
     setBootHeadline("Setting up your game night…");
-    if (!isContractAddress(activeContracts.registry) || !isContractAddress(activeContracts.game)) {
+    if (
+        !isContractAddress(activeContracts.registry)
+        || !isContractAddress(activeContracts.game)
+        || !sessionRegistryConfigured()
+        || !packSignalsConfigured()
+    ) {
         setConnectionStatus("not connected", "err");
         setBootHeadline("This build isn’t set up yet.", true);
         bootLog("Contract addresses not configured.", "err");
@@ -2176,14 +2226,14 @@ async function init(): Promise<void> {
     }
 
     createContractHandles(client, paseo_asset_hub);
-    bootLog(sessionRegistry ? "Contract handles ready (registry + game + sessions)" : "Contract handles ready (registry + game)", "ok");
+    bootLog("Contract handles ready (registry + signals + game + sessions)", "ok");
 
-    const contractPairStatus = await verifyActiveContractPair();
-    if (contractPairStatus !== "linked") {
+    const contractTopologyStatus = await verifyActiveContractTopology();
+    if (contractTopologyStatus !== "linked") {
         setConnectionStatus("not connected", "err");
-        if (contractPairStatus === "mismatch") {
+        if (contractTopologyStatus === "mismatch") {
             setBootHeadline("Couldn’t start — try reloading.", true);
-            bootLog("contract mismatch: the game contract is not linked to this registry deployment.", "err");
+            bootLog("contract mismatch: the deployed contracts are not linked to the same catalog.", "err");
         } else {
             setBootHeadline("Couldn’t reach the game — try reloading.", true);
             bootLog("Couldn’t verify the game connection. Try reloading.", "err");
@@ -2200,8 +2250,8 @@ async function init(): Promise<void> {
     void hydrateDisplayName();
 
     // Sealed packs are immutable. Restore their last known metadata for an
-    // instant picker on a return visit, then reconcile the current registry
-    // window in the background below.
+    // instant picker on a return visit, then reconcile the editorial picks in
+    // the background. Full decentralized discovery starts only on demand.
     hydratePackCatalogCache();
     void refreshPacks();
 
@@ -2722,26 +2772,74 @@ configureGameControls();
 
 type CatalogPack = PackView & PackListItem;
 
+interface SealedCatalogPage {
+    packs: CatalogPack[];
+    nextCursor: number;
+}
+
+interface FavoriteCatalogPage {
+    packIds: number[];
+    nextCursor: bigint;
+    total: number;
+}
+
+interface PackSignalState {
+    favoriteCount: number;
+    favorited: boolean;
+}
+
+interface PopularEntry {
+    packId: number;
+    favoriteCount: number;
+}
+
+interface PopularCatalogPage {
+    entries: PopularEntry[];
+    nextScore: number;
+    nextCursor: bigint;
+    total: number;
+}
+
+type CatalogView = "library" | "browse" | "favorites" | "popular";
+
+const SEALED_PACK_CURSOR_LATEST = 0xffff_ffff;
+const NEW_PACK_PAGE_SIZE = 12;
+const BROWSE_PACK_PAGE_SIZE = 24;
+const SIGNAL_VIEW_BATCH_SIZE = 32;
+const PACK_CATALOG_CACHE_VERSION = 2;
+const PACK_CATALOG_CACHE_LIMIT = 96;
+
 let refreshingPacks: Promise<void> | null = null;
-let communityRefresh: Promise<void> | null = null;
+let newPacksRefresh: Promise<void> | null = null;
+let popularPacksRefresh: Promise<void> | null = null;
+let favoritePacksRefresh: Promise<void> | null = null;
+let browsePacksRefresh: Promise<void> | null = null;
 let lastPackListSignature: string | null = null;
 let catalogPacks: CatalogPack[] = [];
+let newPackIds: number[] = [];
+let browsePackIds: number[] = [];
+let browseNextCursor = SEALED_PACK_CURSOR_LATEST;
+let browseExhausted = false;
+let favoritePackIds: number[] = [];
+let favoriteNextCursor = 0n;
+let favoriteTotal = 0;
+let favoritesExhausted = false;
+let popularEntries: PopularEntry[] = [];
+let popularNextScore = 0;
+let popularNextCursor = 0n;
+let popularTotal = 0;
+let popularExhausted = false;
+const packSignalsById = new Map<number, PackSignalState>();
+const favoriteActionsInFlight = new Set<number>();
 let packSearch = "";
-let knownPackCount = 0;
+let catalogView: CatalogView = "library";
 let starterPacksLoading = false;
-let communityPacksLoading = false;
-let communityPacksRequested = false;
-let lastCommunityRequestAt = 0;
+let discoveryPacksLoading = false;
+let discoveryRefreshRequested = false;
 // E2E runs can opt in to their disposable packs without exposing them to
 // players on the normal home screen.
 const showE2ETestPacks = import.meta.env.VITE_SHOW_E2E_PACKS === "1"
     || new URLSearchParams(window.location.search).get("show-test-packs") === "1";
-// Fetch the stable starter IDs as well as recent community packs. This keeps
-// the curated catalog available even after a long-lived registry accumulates
-// lots of new packs, without making home-screen refreshes unbounded.
-const PACK_RECENT_LIST_LIMIT = 100;
-const PACK_CATALOG_CACHE_VERSION = 1;
-const PACK_CATALOG_CACHE_LIMIT = STARTER_PACK_COUNT + PACK_RECENT_LIST_LIMIT;
 
 function packCatalogCacheKey(): string | null {
     return isContractAddress(activeContracts.registry)
@@ -2756,7 +2854,7 @@ function isCachedCatalogPack(value: unknown): value is CatalogPack {
         && (pack.id as number) >= 0
         && typeof pack.creator === "string"
         && typeof pack.title === "string"
-        && (pack.emoji === undefined || typeof pack.emoji === "string")
+        && typeof pack.emoji === "string"
         && Number.isSafeInteger(pack.regular_count)
         && (pack.regular_count as number) >= 0
         && Number.isSafeInteger(pack.finals_set_count)
@@ -2764,7 +2862,7 @@ function isCachedCatalogPack(value: unknown): value is CatalogPack {
         && pack.sealed === true;
 }
 
-/** A sealed pack is immutable, so a validated local metadata cache is safe. */
+/** A sealed pack is immutable, so metadata—not social state—can be cached. */
 function hydratePackCatalogCache(): void {
     const key = packCatalogCacheKey();
     if (key === null) return;
@@ -2780,15 +2878,14 @@ function hydratePackCatalogCache(): void {
         if (byId.size === 0) return;
         catalogPacks = [...byId.values()].slice(0, PACK_CATALOG_CACHE_LIMIT);
         for (const pack of catalogPacks) {
-            const key = registryPackCacheKey(pack.id);
-            sealedPackCache.set(key, pack);
-            packTitleCache.set(key, pack.title);
+            const cacheKey = registryPackCacheKey(pack.id);
+            sealedPackCache.set(cacheKey, pack);
+            packTitleCache.set(cacheKey, pack.title);
         }
         renderPackList();
         performanceMark("catalog:cache-restored");
     } catch {
-        // Storage can be blocked or stale/corrupt. The registry remains the
-        // source of truth, so simply continue without the cache.
+        // Storage is only a cache. Direct registry reads remain authoritative.
     }
 }
 
@@ -2798,7 +2895,7 @@ function persistPackCatalog(): void {
     try {
         window.localStorage.setItem(key, JSON.stringify({
             version: PACK_CATALOG_CACHE_VERSION,
-            packs: catalogPacks.filter((pack) => pack.sealed).slice(0, PACK_CATALOG_CACHE_LIMIT),
+            packs: catalogPacks.filter((pack) => pack.sealed).slice(-PACK_CATALOG_CACHE_LIMIT),
         }));
     } catch {
         // Private mode and quota limits should not affect normal browsing.
@@ -2807,35 +2904,6 @@ function persistPackCatalog(): void {
 
 function starterPackIds(count: number): number[] {
     return Array.from({ length: Math.min(count, STARTER_PACK_COUNT) }, (_, id) => id);
-}
-
-function communityPackIds(count: number): number[] {
-    return Array.from(
-        { length: Math.min(count, PACK_RECENT_LIST_LIMIT) },
-        (_, offset) => count - 1 - offset,
-    ).filter((id) => id >= STARTER_PACK_COUNT);
-}
-
-function retainCatalogWindow(count: number): void {
-    const allowed = new Set([...starterPackIds(count), ...communityPackIds(count)]);
-    const next = catalogPacks.filter((pack) => allowed.has(pack.id));
-    if (next.length === catalogPacks.length) return;
-    catalogPacks = next;
-    persistPackCatalog();
-    renderPackList();
-}
-
-function mergeCatalogPacks(packs: readonly CatalogPack[]): void {
-    const byId = new Map(catalogPacks.map((pack) => [pack.id, pack]));
-    let changed = false;
-    for (const pack of packs) {
-        if (byId.get(pack.id) !== pack) changed = true;
-        byId.set(pack.id, pack);
-    }
-    if (!changed) return;
-    catalogPacks = [...byId.values()];
-    persistPackCatalog();
-    renderPackList();
 }
 
 async function mapWithConcurrency<T, U>(
@@ -2856,86 +2924,358 @@ async function mapWithConcurrency<T, U>(
     return results;
 }
 
-function refreshPacks({ includeCommunity = getEl("screen-pack-select").classList.contains("active") }: {
-    includeCommunity?: boolean;
-} = {}): Promise<void> {
-    if (includeCommunity) communityPacksRequested = true;
-    if (refreshingPacks) return refreshingPacks;
-    starterPacksLoading = true;
-    renderPackList();
-    const error = getEl("screen-pack-select").classList.contains("active")
-        ? $packSelectionError
-        : $homeError;
-    let request: Promise<void>;
-    request = refreshStarterPacks()
-        .then(() => {
-            error.textContent = "";
-        })
-        .catch(() => {
-            error.textContent = "Couldn’t refresh quiz packs. Retrying…";
-        })
-        .finally(() => {
-            if (refreshingPacks !== request) return;
-            starterPacksLoading = false;
-            refreshingPacks = null;
-            renderPackList();
-            if (communityPacksRequested) {
-                communityPacksRequested = false;
-                requestCommunityPacks(knownPackCount);
-            }
+function numericField(record: Record<string, unknown>, snake: string, camel = snake): number | null {
+    const raw = record[snake] ?? record[camel];
+    const value = Number(raw);
+    return Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function catalogPackFromView(id: number, raw: unknown): CatalogPack | null {
+    if (raw === null || typeof raw !== "object") return null;
+    const value = raw as Record<string, unknown>;
+    const regularCount = numericField(value, "regular_count", "regularCount");
+    const finalsSetCount = numericField(value, "finals_set_count", "finalsSetCount");
+    if (
+        regularCount === null
+        || finalsSetCount === null
+        || typeof value.creator !== "string"
+        || typeof value.title !== "string"
+        || typeof value.emoji !== "string"
+        || value.sealed !== true
+    ) {
+        return null;
+    }
+    return {
+        id,
+        creator: value.creator,
+        title: value.title,
+        emoji: value.emoji,
+        regular_count: regularCount,
+        finals_set_count: finalsSetCount,
+        sealed: true,
+    };
+}
+
+function sealedCatalogPage(raw: unknown): SealedCatalogPage | null {
+    if (raw === null || typeof raw !== "object") return null;
+    const value = raw as Record<string, unknown>;
+    const entries = value.packs;
+    const nextCursor = numericField(value, "next_cursor", "nextCursor");
+    if (!Array.isArray(entries) || nextCursor === null) return null;
+    const packs = entries.flatMap((entry) => {
+        if (entry === null || typeof entry !== "object") return [];
+        const id = numericField(entry as Record<string, unknown>, "pack_id", "packId");
+        const pack = id === null ? null : catalogPackFromView(id, entry);
+        return pack === null ? [] : [pack];
+    });
+    return { packs, nextCursor };
+}
+
+function favoriteCatalogPage(raw: unknown): FavoriteCatalogPage | null {
+    if (raw === null || typeof raw !== "object") return null;
+    const value = raw as Record<string, unknown>;
+    const rawIds = value.pack_ids ?? value.packIds;
+    if (!Array.isArray(rawIds)) return null;
+    const ids = rawIds.flatMap((id) => {
+        const number = Number(id);
+        return Number.isSafeInteger(number) && number >= 0 ? [number] : [];
+    });
+    const nextRaw = value.next_cursor ?? value.nextCursor;
+    const total = Number(value.total);
+    try {
+        const nextCursor = typeof nextRaw === "bigint" ? nextRaw : BigInt(nextRaw as string | number);
+        if (!Number.isSafeInteger(total) || total < 0 || nextCursor < 0n) return null;
+        return { packIds: ids, nextCursor, total };
+    } catch {
+        return null;
+    }
+}
+
+function popularCatalogPage(raw: unknown): PopularCatalogPage | null {
+    if (raw === null || typeof raw !== "object") return null;
+    const value = raw as Record<string, unknown>;
+    const rawEntries = value.packs;
+    const nextScore = numericField(value, "next_score", "nextScore");
+    const nextRaw = value.next_cursor ?? value.nextCursor;
+    const total = Number(value.total);
+    if (!Array.isArray(rawEntries) || nextScore === null || !Number.isSafeInteger(total) || total < 0) {
+        return null;
+    }
+    try {
+        const nextCursor = typeof nextRaw === "bigint" ? nextRaw : BigInt(nextRaw as string | number);
+        if (nextCursor < 0n || (nextScore === 0) !== (nextCursor === 0n)) return null;
+        const entries = rawEntries.flatMap((rawEntry) => {
+            if (rawEntry === null || typeof rawEntry !== "object") return [];
+            const entry = rawEntry as Record<string, unknown>;
+            const packId = numericField(entry, "pack_id", "packId");
+            const favoriteCount = numericField(entry, "favorite_count", "favoriteCount");
+            return packId === null || favoriteCount === null || favoriteCount === 0
+                ? []
+                : [{ packId, favoriteCount }];
         });
-    refreshingPacks = request;
-    return request;
+        return { entries, nextScore, nextCursor, total };
+    } catch {
+        return null;
+    }
+}
+
+function mergeCatalogPacks(packs: readonly CatalogPack[]): void {
+    if (packs.length === 0) return;
+    const byId = new Map(catalogPacks.map((pack) => [pack.id, pack]));
+    for (const pack of packs) {
+        byId.set(pack.id, pack);
+        const cacheKey = registryPackCacheKey(pack.id);
+        sealedPackCache.set(cacheKey, pack);
+        packTitleCache.set(cacheKey, pack.title);
+    }
+    catalogPacks = [...byId.values()];
+    persistPackCatalog();
+}
+
+function catalogPacksFor(ids: readonly number[]): CatalogPack[] {
+    const byId = new Map(catalogPacks.map((pack) => [pack.id, pack]));
+    return ids.flatMap((id) => {
+        const pack = byId.get(id);
+        return pack ? [pack] : [];
+    });
+}
+
+function curatedPacks(): CatalogPack[] {
+    return catalogPacks
+        .filter((pack) => featuredPack(pack) !== undefined)
+        .sort((left, right) => featuredPack(left)!.featuredOrder! - featuredPack(right)!.featuredOrder!);
+}
+
+async function hydrateCatalogPackIds(ids: readonly number[]): Promise<void> {
+    const missing = ids.filter((id) => !catalogPacks.some((pack) => pack.id === id));
+    if (missing.length === 0) return;
+    const packs = await sealedPacks(missing);
+    mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: missing[index], ...pack }]));
 }
 
 async function refreshStarterPacks(): Promise<void> {
     const startMark = performanceMark("catalog:starters:start");
     const registryAtRequest = registry;
-    const scope = registryCacheScope();
     const countRes = await registryAtRequest.packCount.query();
     if (!countRes.success) throw new Error("pack count query failed");
-    const count = Number(countRes.value);
-    knownPackCount = count;
-    retainCatalogWindow(count);
-    const ids = starterPackIds(count);
-    const packs = await sealedPacks(ids, registryAtRequest, scope);
+    const ids = starterPackIds(Number(countRes.value));
+    const packs = await sealedPacks(ids, registryAtRequest, registryCacheScope());
     mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
-    const readyMark = performanceMark("catalog:starters:ready");
-    performanceMeasure("catalog:starters", startMark, readyMark);
+    performanceMeasure("catalog:starters", startMark, performanceMark("catalog:starters:ready"));
 }
 
-/** Load the larger community window only after someone opens the picker. */
-function requestCommunityPacks(count: number): void {
-    if (count <= STARTER_PACK_COUNT || communityRefresh) return;
+async function refreshNewPacks(): Promise<void> {
     const registryAtRequest = registry;
-    const scope = registryCacheScope();
-    const ids = communityPackIds(count);
-    if (ids.length === 0) return;
-    lastCommunityRequestAt = Date.now();
-    communityPacksLoading = true;
+    const result = await retryChainRead<any>(() => registryAtRequest.getSealedPacks.query(
+        SEALED_PACK_CURSOR_LATEST,
+        NEW_PACK_PAGE_SIZE,
+    ));
+    if (!result.success) throw new Error("new packs query failed");
+    const page = sealedCatalogPage(result.value);
+    if (page === null) throw new Error("new packs response was invalid");
+    mergeCatalogPacks(page.packs);
+    newPackIds = page.packs.map((pack) => pack.id);
+}
+
+async function loadBrowsePacks(reset = false): Promise<void> {
+    if (browsePacksRefresh) return browsePacksRefresh;
+    if (reset) {
+        browsePackIds = [];
+        browseNextCursor = SEALED_PACK_CURSOR_LATEST;
+        browseExhausted = false;
+    }
+    if (browseExhausted) return;
+    const cursor = browseNextCursor;
+    let request: Promise<void>;
+    request = (async () => {
+        const result = await retryChainRead<any>(() => registry.getSealedPacks.query(cursor, BROWSE_PACK_PAGE_SIZE));
+        if (!result.success) throw new Error("browse packs query failed");
+        const page = sealedCatalogPage(result.value);
+        if (page === null) throw new Error("browse packs response was invalid");
+        mergeCatalogPacks(page.packs);
+        const byId = new Map(catalogPacks.map((pack) => [pack.id, pack]));
+        browsePackIds = appendUniquePacks(
+            browsePackIds.flatMap((id) => byId.get(id) ?? []),
+            page.packs,
+        ).map((pack) => pack.id);
+        browseNextCursor = page.nextCursor;
+        browseExhausted = page.nextCursor === 0;
+    })().finally(() => {
+        if (browsePacksRefresh === request) browsePacksRefresh = null;
+        renderPackList();
+    });
+    browsePacksRefresh = request;
+    renderPackList();
+    return request;
+}
+
+async function refreshFavoritePacks(reset = false): Promise<void> {
+    if (favoritePacksRefresh) return favoritePacksRefresh;
+    if (reset) {
+        favoritePackIds = [];
+        favoriteNextCursor = 0n;
+        favoriteTotal = 0;
+        favoritesExhausted = false;
+    }
+    if (favoritesExhausted || !packSignals || !myAddress) return;
+    const cursor = favoriteNextCursor;
+    let request: Promise<void>;
+    request = (async () => {
+        const result = await retryChainRead<any>(() => packSignals.getFavorites.query(
+            myAddress,
+            cursor,
+            BROWSE_PACK_PAGE_SIZE,
+        ));
+        if (!result.success) throw new Error("favorites query failed");
+        const page = favoriteCatalogPage(result.value);
+        if (page === null) throw new Error("favorites response was invalid");
+        await hydrateCatalogPackIds(page.packIds);
+        favoritePackIds = appendUniquePacks(catalogPacksFor(favoritePackIds), catalogPacksFor(page.packIds))
+            .map((pack) => pack.id);
+        favoriteNextCursor = page.nextCursor;
+        favoriteTotal = page.total;
+        favoritesExhausted = page.nextCursor === 0n;
+    })().finally(() => {
+        if (favoritePacksRefresh === request) favoritePacksRefresh = null;
+        renderPackList();
+    });
+    favoritePacksRefresh = request;
+    renderPackList();
+    return request;
+}
+
+async function loadPopularPacks(reset = false): Promise<void> {
+    if (popularPacksRefresh) return popularPacksRefresh;
+    if (reset) {
+        popularEntries = [];
+        popularNextScore = 0;
+        popularNextCursor = 0n;
+        popularTotal = 0;
+        popularExhausted = false;
+    }
+    if (popularExhausted || !packSignals) return;
+    const cursorScore = popularNextScore;
+    const cursor = popularNextCursor;
+    let request: Promise<void>;
+    request = (async () => {
+        const result = await retryChainRead<any>(() => packSignals.getPopularPage.query(
+            cursorScore,
+            cursor,
+            BROWSE_PACK_PAGE_SIZE,
+        ));
+        if (!result.success) throw new Error("popular packs query failed");
+        const page = popularCatalogPage(result.value);
+        if (page === null) throw new Error("popular packs response was invalid");
+        await hydrateCatalogPackIds(page.entries.map((entry) => entry.packId));
+        const available = new Set(catalogPacks.map((pack) => pack.id));
+        const seen = new Set(popularEntries.map((entry) => entry.packId));
+        popularEntries = [
+            ...popularEntries,
+            ...page.entries.filter((entry) => available.has(entry.packId) && !seen.has(entry.packId)),
+        ];
+        popularNextScore = page.nextScore;
+        popularNextCursor = page.nextCursor;
+        popularTotal = page.total;
+        popularExhausted = page.nextScore === 0 && page.nextCursor === 0n;
+    })().finally(() => {
+        if (popularPacksRefresh === request) popularPacksRefresh = null;
+        renderPackList();
+    });
+    popularPacksRefresh = request;
+    renderPackList();
+    return request;
+}
+
+async function refreshPopularPacks(): Promise<void> {
+    await loadPopularPacks(true);
+}
+
+async function refreshSignalStates(ids: readonly number[]): Promise<void> {
+    if (!packSignals || !myAddress) return;
+    const unique = [...new Set(ids)];
+    const batches = Array.from(
+        { length: Math.ceil(unique.length / SIGNAL_VIEW_BATCH_SIZE) },
+        (_, index) => unique.slice(index * SIGNAL_VIEW_BATCH_SIZE, (index + 1) * SIGNAL_VIEW_BATCH_SIZE),
+    );
+    await mapWithConcurrency(batches, 2, async (batch) => {
+        const result = await retryChainRead<any>(() => packSignals.getPackSignals.query(myAddress, batch));
+        if (!result.success || !Array.isArray(result.value)) return;
+        for (const raw of result.value) {
+            if (raw === null || typeof raw !== "object") continue;
+            const record = raw as Record<string, unknown>;
+            const packId = numericField(record, "pack_id", "packId");
+            const favoriteCount = numericField(record, "favorite_count", "favoriteCount");
+            const favorited = record.favorited;
+            if (
+                packId === null
+                || favoriteCount === null
+                || typeof favorited !== "boolean"
+                || favoriteActionsInFlight.has(packId)
+            ) continue;
+            packSignalsById.set(packId, { favoriteCount, favorited });
+        }
+    });
+}
+
+function visibleCatalogPackIds(): number[] {
+    if (catalogView === "browse") return browsePackIds;
+    if (catalogView === "favorites") return favoritePackIds;
+    if (catalogView === "popular") return popularEntries.map((entry) => entry.packId);
+    return [
+        ...curatedPacks().map((pack) => pack.id),
+        ...favoritePackIds,
+        ...popularEntries.map((entry) => entry.packId),
+        ...newPackIds,
+    ];
+}
+
+async function refreshSocialPacks(): Promise<void> {
+    await Promise.all([
+        refreshFavoritePacks(true).catch(() => undefined),
+        refreshPopularPacks().catch(() => undefined),
+    ]);
+    await refreshSignalStates(visibleCatalogPackIds());
+}
+
+function refreshPacks({ includeDiscovery = getEl("screen-pack-select").classList.contains("active") }: {
+    includeDiscovery?: boolean;
+} = {}): Promise<void> {
+    if (includeDiscovery) discoveryRefreshRequested = true;
+    if (refreshingPacks) return refreshingPacks;
+    const refreshDiscovery = discoveryRefreshRequested;
+    discoveryRefreshRequested = false;
+    starterPacksLoading = true;
+    if (refreshDiscovery) discoveryPacksLoading = true;
     renderPackList();
     let request: Promise<void>;
     request = (async () => {
-        const startMark = performanceMark("catalog:community:start");
-        const packs = await sealedPacks(ids, registryAtRequest, scope);
-        mergeCatalogPacks(packs.flatMap((pack, index) => pack === null ? [] : [{ id: ids[index], ...pack }]));
-        const readyMark = performanceMark("catalog:community:ready");
-        performanceMeasure("catalog:community", startMark, readyMark);
-    })().catch(() => {
-        // Keep the starter packs usable if a larger background refresh fails.
-        if (getEl("screen-pack-select").classList.contains("active")) {
-            $packSelectionError.textContent = "Couldn’t load more community packs yet.";
+        await refreshStarterPacks();
+        if (refreshDiscovery) {
+            await Promise.all([
+                refreshNewPacks(),
+                refreshSocialPacks(),
+            ]);
+            await refreshSignalStates(visibleCatalogPackIds());
         }
+    })().catch(() => {
+        const error = getEl("screen-pack-select").classList.contains("active")
+            ? $packSelectionError
+            : $homeError;
+        error.textContent = "Couldn’t refresh quiz packs. Try again in a moment.";
     }).finally(() => {
-        if (communityRefresh !== request) return;
-        communityPacksLoading = false;
-        communityRefresh = null;
+        if (refreshingPacks !== request) return;
+        starterPacksLoading = false;
+        discoveryPacksLoading = false;
+        refreshingPacks = null;
         renderPackList();
-        // If a newer count landed during this batch, fetch just its current
-        // recent window next rather than waiting for another picker visit.
-        if (knownPackCount > count) requestCommunityPacks(knownPackCount);
+        // Boot intentionally loads only the small editorial set. If a player
+        // opens the picker before that request completes, honor their later
+        // request for decentralized discovery instead of leaving the rails
+        // half-loaded until the next poll.
+        if (discoveryRefreshRequested) void refreshPacks({ includeDiscovery: true });
     });
-    communityRefresh = request;
+    refreshingPacks = request;
+    return request;
 }
 
 function questionCountLabel(pack: Pick<PackView, "regular_count">): string {
@@ -2976,7 +3316,7 @@ function selectPack(id: number, pack: CatalogPack): void {
         input.checked = Number(input.value) === id;
     }
     for (const card of $packList.querySelectorAll<HTMLLabelElement>(".pack-card")) {
-        card.classList.toggle("selected", card.htmlFor === `pack-${id}-choice`);
+        card.classList.toggle("selected", Number(card.dataset.packId) === id);
     }
     updateSelectedPackSummary();
     $packSelectionError.textContent = "";
@@ -2984,14 +3324,18 @@ function selectPack(id: number, pack: CatalogPack): void {
     scheduleCreateGamePreflight();
 }
 
-function packCard(pack: CatalogPack): HTMLLIElement {
+function favoriteCountLabel(count: number): string {
+    return `${count} ${count === 1 ? "favorite" : "favorites"}`;
+}
+
+function packCard(pack: CatalogPack, occurrence: string): HTMLLIElement {
     const presentation = packPresentation(pack);
     const item = document.createElement("li");
     const choice = document.createElement("input");
     choice.className = "pack-card-input";
     choice.type = "radio";
     choice.name = "pack-choice";
-    choice.id = `pack-${pack.id}-choice`;
+    choice.id = `pack-${pack.id}-choice-${occurrence}`;
     choice.value = String(pack.id);
     choice.checked = selectedPackId === pack.id;
     choice.setAttribute(
@@ -3004,6 +3348,7 @@ function packCard(pack: CatalogPack): HTMLLIElement {
     card.className = `pack-card tone-${presentation.tone}`;
     card.htmlFor = choice.id;
     card.dataset.testid = `pack-${pack.id}`;
+    card.dataset.packId = String(pack.id);
     card.classList.toggle("selected", choice.checked);
 
     const art = span("pack-art", presentation.emoji);
@@ -3016,51 +3361,128 @@ function packCard(pack: CatalogPack): HTMLLIElement {
         span("pack-card-category", presentation.category),
         span("pack-card-check", "✓"),
     );
+    const signal = packSignalsById.get(pack.id);
+    const signalMeta = signal
+        ? span("pack-card-favorite-count", favoriteCountLabel(signal.favoriteCount))
+        : span("pack-card-favorite-count muted", "Loading saves…");
+    const meta = span("pack-card-meta", `${questionCountLabel(pack)}${finalCountLabel(pack)} · `);
+    meta.append(signalMeta);
     copy.append(
         heading,
         span("pack-card-title", pack.title),
         span("pack-card-description", presentation.description),
-        span("pack-card-meta", `${questionCountLabel(pack)}${finalCountLabel(pack)}`),
+        meta,
     );
     card.append(art, copy);
-    item.append(choice, card);
+    const favorite = document.createElement("button");
+    favorite.type = "button";
+    favorite.className = "pack-card-favorite";
+    favorite.dataset.testid = `btn-favorite-pack-${pack.id}`;
+    favorite.disabled = signal === undefined || favoriteActionsInFlight.has(pack.id);
+    favorite.setAttribute("aria-pressed", String(signal?.favorited ?? false));
+    favorite.setAttribute("aria-label", signal === undefined
+        ? `Loading saved state for ${pack.title}`
+        : signal.favorited ? `Remove ${pack.title} from favorites` : `Save ${pack.title} to favorites`);
+    favorite.title = favorite.getAttribute("aria-label") ?? "";
+    favorite.textContent = signal?.favorited ? "★" : "☆";
+    favorite.addEventListener("click", () => void setPackFavorite(pack, !(signal?.favorited ?? false)));
+    item.append(choice, card, favorite);
     return item;
 }
 
-function packGrid(packs: readonly CatalogPack[]): HTMLUListElement {
+function packGrid(packs: readonly CatalogPack[], occurrence: string): HTMLUListElement {
     const grid = document.createElement("ul");
     grid.className = "pack-grid";
-    grid.append(...packs.map(packCard));
+    grid.append(...packs.map((pack, index) => packCard(pack, `${occurrence}-${index}`)));
     return grid;
 }
 
-function packSection(title: string, packs: readonly CatalogPack[]): HTMLElement {
+function openCatalogView(view: CatalogView): void {
+    catalogView = view;
+    packSearch = "";
+    $packSearch.value = "";
+    if (view === "browse" && browsePackIds.length === 0) {
+        void loadBrowsePacks(true).then(() => refreshSignalStates(visibleCatalogPackIds())).catch(() => {
+            $packSelectionError.textContent = "Couldn’t load more packs yet.";
+        });
+    }
+    if (view === "popular" && popularEntries.length === 0 && !popularExhausted) {
+        void loadPopularPacks(true).then(() => refreshSignalStates(visibleCatalogPackIds())).catch(() => {
+            $packSelectionError.textContent = "Couldn’t load popular packs yet.";
+        });
+    }
+    renderPackList();
+}
+
+function packSection(
+    title: string,
+    packs: readonly CatalogPack[],
+    occurrence: string,
+    view: CatalogView | null,
+): HTMLElement {
     const section = document.createElement("section");
-    section.className = "pack-section";
+    section.className = "pack-section pack-rail";
+    const headingRow = document.createElement("div");
+    headingRow.className = "pack-section-heading";
     const heading = document.createElement("h3");
     heading.textContent = title;
-    section.append(heading, packGrid(packs));
+    headingRow.append(heading);
+    if (view !== null) {
+        const seeAll = document.createElement("button");
+        seeAll.type = "button";
+        seeAll.className = "text-link pack-section-see-all";
+        seeAll.textContent = "See all";
+        seeAll.addEventListener("click", () => openCatalogView(view));
+        headingRow.append(seeAll);
+    }
+    section.append(headingRow, packGrid(packs, occurrence));
     return section;
 }
 
-function updatePackCatalogStatus(featured: readonly CatalogPack[], community: readonly CatalogPack[]): void {
-    const total = featured.length + community.length;
-    if (total === 0) {
-        $packCatalogStatus.textContent = starterPacksLoading || communityPacksLoading
-            ? "Loading quiz packs…"
-            : "";
+function detailPacks(): readonly CatalogPack[] {
+    if (catalogView === "favorites") return catalogPacksFor(favoritePackIds);
+    if (catalogView === "popular") return catalogPacksFor(popularEntries.map((entry) => entry.packId));
+    if (catalogView === "browse") return catalogPacksFor(browsePackIds);
+    return [];
+}
+
+function detailTitle(): string {
+    if (catalogView === "favorites") return "Your favorites";
+    if (catalogView === "popular") return "Popular";
+    return "Browse all packs";
+}
+
+function updatePackCatalogStatus(): void {
+    if (starterPacksLoading || discoveryPacksLoading || browsePacksRefresh || favoritePacksRefresh || popularPacksRefresh) {
+        $packCatalogStatus.textContent = "Loading quiz packs…";
         return;
     }
-    const parts: string[] = [];
-    if (featured.length > 0) parts.push(`${featured.length} featured`);
-    if (community.length > 0) parts.push(`${community.length} community`);
-    const status = `${parts.join(" · ")} ${total === 1 ? "pack" : "packs"}`;
-    $packCatalogStatus.textContent = communityPacksLoading ? `${status} · loading more…` : status;
+    if (catalogView === "browse") {
+        const loaded = visibleLibraryPacks(detailPacks(), packSearch, showE2ETestPacks).length;
+        $packCatalogStatus.textContent = `Showing ${loaded} loaded ${loaded === 1 ? "pack" : "packs"}.`;
+        return;
+    }
+    if (catalogView === "favorites") {
+        const loaded = visibleLibraryPacks(detailPacks(), "", showE2ETestPacks).length;
+        $packCatalogStatus.textContent = `Showing ${loaded} of ${favoriteTotal} saved ${favoriteTotal === 1 ? "pack" : "packs"}.`;
+        return;
+    }
+    if (catalogView === "popular") {
+        const loaded = visibleLibraryPacks(detailPacks(), "", showE2ETestPacks).length;
+        $packCatalogStatus.textContent = `Showing ${loaded} of ${popularTotal} popular ${popularTotal === 1 ? "pack" : "packs"}.`;
+        return;
+    }
+    $packCatalogStatus.textContent = "";
 }
 
 function renderPackList(): void {
-    const { featured, community } = sectionPacks(catalogPacks, packSearch, showE2ETestPacks);
-    const total = featured.length + community.length;
+    const librarySections = buildPackLibrarySections({
+        picks: curatedPacks(),
+        favorites: catalogPacksFor(favoritePackIds),
+        popular: catalogPacksFor(popularEntries.map((entry) => entry.packId)),
+        newest: catalogPacksFor(newPackIds).filter((pack) => featuredPack(pack) === undefined),
+        includeE2ETestPacks: showE2ETestPacks,
+    });
     const signature = JSON.stringify(
         {
             packs: catalogPacks.map((pack) => [
@@ -3070,6 +3492,13 @@ function renderPackList(): void {
                 pack.regular_count,
                 pack.finals_set_count,
             ]),
+            newPackIds,
+            browsePackIds,
+            favoritePackIds,
+            popularEntries,
+            signals: [...packSignalsById.entries()],
+            actions: [...favoriteActionsInFlight],
+            view: catalogView,
             search: packSearch,
             showE2ETestPacks,
         },
@@ -3077,38 +3506,98 @@ function renderPackList(): void {
     // Avoid replacing identical DOM nodes every five seconds: it preserves
     // keyboard focus and prevents needless layout work on a static catalog.
     if (signature === lastPackListSignature) {
-        updatePackCatalogStatus(featured, community);
+        updatePackCatalogStatus();
         return;
     }
-    const communityWasOpen = $packList.querySelector<HTMLDetailsElement>(".community-packs")?.open ?? false;
     lastPackListSignature = signature;
-    if (total === 0) {
-        const empty = document.createElement("p");
-        empty.className = "pack-empty";
-        empty.textContent = packSearch.trim()
-            ? `No packs match “${packSearch.trim()}”.`
-            : "No sealed packs yet — create one!";
-        $packList.replaceChildren(empty);
-        updatePackCatalogStatus(featured, community);
-        return;
-    }
-
+    $packSearch.hidden = catalogView !== "browse";
     const content = document.createDocumentFragment();
-    if (featured.length > 0) content.append(packSection("Featured packs", featured));
-    if (community.length > 0) {
-        const details = document.createElement("details");
-        details.className = "community-packs";
-        // Test hosts opt into a disposable namespace and need its newly
-        // created pack immediately visible; players still see community
-        // content as an intentional secondary section.
-        details.open = communityWasOpen || packSearch.trim() !== "" || showE2ETestPacks;
-        const summary = document.createElement("summary");
-        summary.textContent = `Community packs (${community.length})`;
-        details.append(summary, packGrid(community));
-        content.append(details);
+    if (catalogView === "library") {
+        const destination: Record<PackLibrarySectionId, CatalogView | null> = {
+            picks: null,
+            favorites: "favorites",
+            popular: "popular",
+            new: "browse",
+        };
+        for (const section of librarySections) {
+            content.append(packSection(section.title, section.packs, section.id, destination[section.id]));
+        }
+        const browse = document.createElement("button");
+        browse.type = "button";
+        browse.className = "pack-browse-all";
+        browse.dataset.testid = "btn-browse-all-packs";
+        browse.textContent = "Browse all community packs";
+        browse.addEventListener("click", () => openCatalogView("browse"));
+        content.append(browse);
+    } else {
+        const heading = document.createElement("div");
+        heading.className = "pack-detail-heading";
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "text-link";
+        back.dataset.testid = "btn-pack-library-back";
+        back.textContent = "Back to picks";
+        back.addEventListener("click", () => openCatalogView("library"));
+        const title = document.createElement("h3");
+        title.textContent = detailTitle();
+        heading.append(back, title);
+        content.append(heading);
+
+        const packs = visibleLibraryPacks(detailPacks(), packSearch, showE2ETestPacks);
+        if (packs.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "pack-empty";
+            empty.textContent = packSearch.trim()
+                ? `No loaded packs match “${packSearch.trim()}”.`
+                : "No packs to show yet.";
+            content.append(empty);
+        } else {
+            content.append(packGrid(packs, catalogView));
+        }
+        if (catalogView === "browse" && !browseExhausted) {
+            const loadMore = document.createElement("button");
+            loadMore.type = "button";
+            loadMore.className = "quiet pack-load-more";
+            loadMore.dataset.testid = "btn-load-more-packs";
+            loadMore.textContent = browsePacksRefresh ? "Loading packs…" : "Load more packs";
+            loadMore.disabled = browsePacksRefresh !== null;
+            loadMore.addEventListener("click", () => void loadBrowsePacks().then(
+                () => refreshSignalStates(visibleCatalogPackIds()),
+            ).catch(() => {
+                $packSelectionError.textContent = "Couldn’t load more packs yet.";
+            }));
+            content.append(loadMore);
+        }
+        if (catalogView === "favorites" && !favoritesExhausted) {
+            const loadMore = document.createElement("button");
+            loadMore.type = "button";
+            loadMore.className = "quiet pack-load-more";
+            loadMore.textContent = favoritePacksRefresh ? "Loading favorites…" : "Load more favorites";
+            loadMore.disabled = favoritePacksRefresh !== null;
+            loadMore.addEventListener("click", () => void refreshFavoritePacks().then(
+                () => refreshSignalStates(visibleCatalogPackIds()),
+            ).catch(() => {
+                $packSelectionError.textContent = "Couldn’t load more favorites yet.";
+            }));
+            content.append(loadMore);
+        }
+        if (catalogView === "popular" && !popularExhausted) {
+            const loadMore = document.createElement("button");
+            loadMore.type = "button";
+            loadMore.className = "quiet pack-load-more";
+            loadMore.dataset.testid = "btn-load-more-popular-packs";
+            loadMore.textContent = popularPacksRefresh ? "Loading popular packs…" : "Load more popular packs";
+            loadMore.disabled = popularPacksRefresh !== null;
+            loadMore.addEventListener("click", () => void loadPopularPacks().then(
+                () => refreshSignalStates(visibleCatalogPackIds()),
+            ).catch(() => {
+                $packSelectionError.textContent = "Couldn’t load more popular packs yet.";
+            }));
+            content.append(loadMore);
+        }
     }
     $packList.replaceChildren(content);
-    updatePackCatalogStatus(featured, community);
+    updatePackCatalogStatus();
 }
 
 $packSearch.addEventListener("input", () => {
@@ -3116,12 +3605,48 @@ $packSearch.addEventListener("input", () => {
     renderPackList();
 });
 
+async function setPackFavorite(pack: CatalogPack, saved: boolean): Promise<void> {
+    const previous = packSignalsById.get(pack.id);
+    if (!previous || !packSignals || favoriteActionsInFlight.has(pack.id)) return;
+    favoriteActionsInFlight.add(pack.id);
+    packSignalsById.set(pack.id, {
+        favorited: saved,
+        favoriteCount: Math.max(0, previous.favoriteCount + (saved ? 1 : -1)),
+    });
+    renderPackList();
+    try {
+        await sendTx(packSignals, "setFavorite", pack.id, saved);
+        $packSelectionError.textContent = "";
+    } catch (error) {
+        packSignalsById.set(pack.id, previous);
+        $packSelectionError.textContent = friendlyError(error);
+        favoriteActionsInFlight.delete(pack.id);
+        renderPackList();
+        return;
+    }
+    favoriteActionsInFlight.delete(pack.id);
+    renderPackList();
+    // The write is final at this point. Re-read the affected rails so their
+    // order and exact count come from the contract rather than the optimistic
+    // approximation above. A transient read failure must not undo a confirmed
+    // save/remove action.
+    try {
+        await refreshSocialPacks();
+        await refreshSignalStates(visibleCatalogPackIds());
+    } catch {
+        // The next normal catalog poll reconciles a confirmed chain write.
+    }
+}
+
 function showPackSelection(): void {
     $homeError.textContent = "";
     $packSelectionError.textContent = "";
+    catalogView = "library";
+    packSearch = "";
+    $packSearch.value = "";
     showScreen("pack-select");
     window.scrollTo(0, 0);
-    void refreshPacks({ includeCommunity: true });
+    void refreshPacks({ includeDiscovery: true });
 }
 
 getEl("btn-host-game").addEventListener("click", showPackSelection);
@@ -3153,19 +3678,15 @@ for (const id of ["btn-config-back-bottom"]) {
     });
 }
 
-// Keep the browse list fresh while the player compares packs — packs
-// published by others should show up without a reload. Driven by the shared
-// best-block subscription (see onBlockSignal) so refreshes follow real chain
-// movement instead of a wall-clock poll, with a throttle for phones.
+// Keep direct contract rails fresh while someone compares packs. The static
+// client never polls a catalog service; this is driven by best-chain blocks.
 let lastCatalogAutoRefreshAt = 0;
 function maybeRefreshOpenCatalog(): void {
     if (!registry || busy || !getEl("screen-pack-select").classList.contains("active")) return;
     const now = Date.now();
     if (now - lastCatalogAutoRefreshAt < 10_000) return;
     lastCatalogAutoRefreshAt = now;
-    // Featured packs remain fresh frequently; the much larger community
-    // window only needs a gentle refresh while someone is comparing.
-    void refreshPacks({ includeCommunity: now - lastCommunityRequestAt > 60_000 });
+    void refreshPacks({ includeDiscovery: true });
 }
 
 function readCreatedGameConfig(showErrors = false): CreatedGameConfig | null {
