@@ -1,7 +1,8 @@
 {
-    "registry": "0x3cba0d0bcdaa0b73a61d0a06969454d7c71e686a",
-    "sessionRegistry": "0x6d4118ce0d7de45301bfca5243c838780930f18b",
-    "game": "0x017aa0ae3a13c15f0d9a6e32f32309d984a1e738",
+    "registry": "0xe4f75f3049111969b04086afd8ed212faa819d43",
+    "sessionRegistry": "0x264bc423d1adce1fc49e553d620de31b160bfbaa",
+    "packSignals": "0x004aa07af849fdbc9dce0b1e4b8438d9920be470",
+    "game": "0xc1377971dab54bc478d16d560a22a5dcef44991e",
     "chain": "paseo-asset-hub",
-    "deployedAt": "2026-07-15T18:48:05.087Z"
+    "deployedAt": "2026-07-16T12:22:42.127Z"
 }
