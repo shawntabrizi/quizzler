@@ -890,12 +890,10 @@
    ]
   },
   {
-   "text": "What is the name of the browser extension wallet originally built for the Polkadot ecosystem by Parity?",
+   "text": "What is the name for a program that translates source code into machine code?",
    "answers": [
-    "Polkadot.js",
-    "Polkadot-js",
-    "Polkadot JS",
-    "polkadot{.js}"
+    "compiler",
+    "a compiler"
    ]
   },
   {
@@ -1041,11 +1039,10 @@
    ]
   },
   {
-   "text": "What is the name of the Polkadot system parachain used for issuing and managing tokens, formerly called Statemint?",
+   "text": "What kind of crypto asset is designed to track the value of a reference asset, often a currency?",
    "answers": [
-    "Asset Hub",
-    "AssetHub",
-    "Statemint"
+    "stablecoin",
+    "a stablecoin"
    ]
   },
   {
@@ -1134,17 +1131,17 @@
    ]
   },
   {
-   "text": "In Gavin Wood's 2024 'JAM' proposal for Polkadot, what does JAM stand for?",
+   "text": "Which system translates a domain name into an IP address?",
    "answers": [
-    "Join-Accumulate Machine",
-    "Join Accumulate Machine"
+    "DNS",
+    "Domain Name System"
    ]
   },
   {
-   "text": "Which 2024 Polkadot upgrade replaced parachain slot auctions with flexible blockspace purchasing?",
+   "text": "Which data structure follows the 'last in, first out' rule?",
    "answers": [
-    "Agile Coretime",
-    "Coretime"
+    "stack",
+    "a stack"
    ]
   },
   {

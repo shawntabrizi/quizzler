@@ -67,7 +67,7 @@
     { "text": "In which famous Roman arena did gladiators fight?", "answers": ["Colosseum", "The Colosseum", "Coliseum"] },
     { "text": "Which ancient Greek city-state was famed for its strict warrior society?", "answers": ["Sparta"] },
     { "text": "According to legend, what giant wooden gift did the Greeks use to enter Troy?", "answers": ["Trojan Horse", "Wooden Horse"] },
-    { "text": "Which explorer led the first expedition to circumnavigate the globe?", "answers": ["Ferdinand Magellan", "Magellan"] },
+    { "text": "Which navigator completed the first circumnavigation after Ferdinand Magellan's death?", "answers": ["Juan Sebastian Elcano", "Juan Sebastián Elcano", "Elcano"] },
     { "text": "Which English king famously had six wives?", "answers": ["Henry VIII", "Henry the Eighth"] },
     { "text": "What is the name of the picture-based writing system of ancient Egypt?", "answers": ["Hieroglyphics", "Hieroglyphs"] },
     { "text": "In which year did the September 11 attacks on the United States occur?", "answers": ["2001"] },

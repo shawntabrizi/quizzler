@@ -642,7 +642,7 @@
       ]
     },
     {
-      "text": "What scientist first proposed that the Sun is the center of the solar system?",
+      "text": "Which Polish astronomer published De revolutionibus orbium coelestium in 1543?",
       "answers": [
         "Copernicus",
         "Nicolaus Copernicus"
@@ -734,7 +734,7 @@
       ]
     },
     {
-      "text": "What is the powerhouse pigment in red blood cells that carries oxygen?",
+      "text": "Which protein in red blood cells transports oxygen?",
       "answers": [
         "hemoglobin"
       ]
@@ -754,9 +754,10 @@
       ]
     },
     {
-      "text": "What planet has the most moons in our solar system?",
+      "text": "What telescope, launched in 1990, is named after an astronomer?",
       "answers": [
-        "Saturn"
+        "Hubble Space Telescope",
+        "Hubble"
       ]
     },
     {
@@ -930,10 +931,10 @@
       ]
     },
     {
-      "text": "What is the most common blood type in humans?",
+      "text": "Which blood type has both A and B antigens on its red blood cells?",
       "answers": [
-        "O positive",
-        "O+"
+        "AB",
+        "type AB"
       ]
     },
     {

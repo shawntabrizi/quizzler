@@ -1,12 +1,12 @@
 {
   "title": "Music",
   "questions": [
-    { "text": "Which artist is known as the 'King of Pop'?", "answers": ["Michael Jackson", "MJ"] },
+    { "text": "Which composer wrote the opera The Magic Flute?", "answers": ["Wolfgang Amadeus Mozart", "Mozart"] },
     { "text": "The Beatles formed in which English city?", "answers": ["Liverpool"] },
-    { "text": "How many strings does a standard guitar have?", "answers": ["6"] },
+    { "text": "Which Italian musical direction tells a performer to play softly?", "answers": ["piano"] },
     { "text": "Who sang the 2014 hit 'Shake It Off'?", "answers": ["Taylor Swift"] },
-    { "text": "Which instrument has 88 keys?", "answers": ["Piano"] },
-    { "text": "Which artist is often called the 'Queen of Pop'?", "answers": ["Madonna"] },
+    { "text": "Which ensemble normally contains two violins, a viola, and a cello?", "answers": ["string quartet", "a string quartet"] },
+    { "text": "Which artist released the album Blue in 1971?", "answers": ["Joni Mitchell", "Mitchell"] },
     { "text": "Which band recorded 'Bohemian Rhapsody'?", "answers": ["Queen"] },
     { "text": "What is the name of Elvis Presley's famous Memphis mansion?", "answers": ["Graceland"] },
     { "text": "Who sang the 2010 hit 'Rolling in the Deep'?", "answers": ["Adele"] },
