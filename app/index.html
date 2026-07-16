@@ -68,15 +68,26 @@
                 <div class="home-action-card-copy">
                     <span class="home-action-eyebrow">Play together</span>
                     <h2 id="home-join-title" class="home-action-title">Join a game</h2>
-                    <span class="home-action-description">Enter the game code your host shared with you.</span>
+                    <span class="home-action-description">Paste or type the game code your host shared with you.</span>
                 </div>
-                <div class="home-join-control">
-                    <label class="sr-only" for="join-game-id">Game code</label>
-                    <!-- Not type="number": codes are digit strings, and the
-                         numeric type strips leading zeros and accepts e/-. -->
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" id="join-game-id" data-testid="join-game-id" placeholder="6-digit code" />
-                    <button id="btn-join-game" class="primary home-join-submit" data-testid="btn-join-game" type="button">Join</button>
-                </div>
+                <form id="join-game-form" class="home-join-control" novalidate>
+                    <label class="sr-only" for="join-game-id">Six-digit game code</label>
+                    <div id="join-code-entry" class="join-code-entry">
+                        <span id="join-code-help" class="sr-only">Type the six digits or paste the full code.</span>
+                        <!-- One native input keeps paste, mobile autofill, selection, and
+                             deletion reliable; the six cells mirror its value visually. -->
+                        <input id="join-game-id" class="join-code-input" data-testid="join-game-id" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" enterkeyhint="go" autocapitalize="off" spellcheck="false" aria-describedby="join-code-help" />
+                        <div class="join-code-cells" aria-hidden="true">
+                            <span class="join-code-cell" data-join-code-cell data-testid="join-code-cell-1"></span>
+                            <span class="join-code-cell" data-join-code-cell data-testid="join-code-cell-2"></span>
+                            <span class="join-code-cell" data-join-code-cell data-testid="join-code-cell-3"></span>
+                            <span class="join-code-cell" data-join-code-cell data-testid="join-code-cell-4"></span>
+                            <span class="join-code-cell" data-join-code-cell data-testid="join-code-cell-5"></span>
+                            <span class="join-code-cell" data-join-code-cell data-testid="join-code-cell-6"></span>
+                        </div>
+                    </div>
+                    <button id="btn-join-game" class="primary home-join-submit" data-testid="btn-join-game" type="submit" disabled>Join game</button>
+                </form>
             </section>
 
             <button id="btn-host-game" class="home-action-card home-host-card" data-testid="btn-host-game" type="button">

@@ -36,8 +36,15 @@ test("boots inside the host and reaches the home screen", async ({ testHost }) =
     await expect(frame.getByTestId("home-name-editor")).toBeHidden();
     await expect(greeting).toHaveText(/^Welcome, /);
     await expect(frame.getByTestId("screen-home")).toBeVisible();
-    await expect(frame.getByTestId("btn-join-game")).toBeVisible();
-    await expect(frame.getByTestId("join-game-id")).toBeVisible();
+    const join = frame.getByTestId("btn-join-game");
+    const joinCode = frame.getByTestId("join-game-id");
+    await expect(join).toBeVisible();
+    await expect(join).toBeDisabled();
+    await expect(joinCode).toBeVisible();
+    await joinCode.fill("123456");
+    await expect(frame.getByTestId("join-code-cell-1")).toHaveText("1");
+    await expect(frame.getByTestId("join-code-cell-6")).toHaveText("6");
+    await expect(join).toBeEnabled();
     const createPack = frame.getByTestId("btn-new-pack");
     await expect(createPack).toBeVisible();
     await expect(createPack).toHaveText("Create a pack");

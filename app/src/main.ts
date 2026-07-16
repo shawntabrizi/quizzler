@@ -2284,7 +2284,7 @@ async function init(): Promise<void> {
         if (sharedLobbyInvite.gameId === null) {
             inviteError = "This invite link doesn’t contain a valid six-digit game code.";
         } else if (knownGames.length === 0) {
-            $joinGameId.value = sharedLobbyInvite.gameId.toString();
+            setJoinCode(sharedLobbyInvite.gameId.toString());
             bootLog(`Joining shared lobby ${sharedLobbyInvite.gameId}…`);
             if (await joinGameById(sharedLobbyInvite.gameId, $homeError)) return;
             // Catalog refreshes run in parallel and may clear the home error.
@@ -2312,6 +2312,9 @@ const $packCatalogStatus = getEl("pack-catalog-status");
 const $selectedPackSummary = getEl("selected-pack-summary");
 const $homeError = getEl("home-error");
 const $joinGameId = getEl<HTMLInputElement>("join-game-id");
+const $joinCodeEntry = getEl("join-code-entry");
+const $joinCodeCells = Array.from(document.querySelectorAll<HTMLElement>("[data-join-code-cell]"));
+const $btnJoinGame = getEl<HTMLButtonElement>("btn-join-game");
 const $packSelectionError = getEl("pack-selection-error");
 const $configError = getEl("config-error");
 const $btnCreateGame = getEl<HTMLButtonElement>("btn-create-game");
@@ -2350,6 +2353,33 @@ const $btnSettingsTurnOffInstantPlay = getEl<HTMLButtonElement>("btn-settings-tu
 const displayNameDraftInputs = new Set<HTMLInputElement>();
 let displayNameFeedback: { message: string; error: boolean } | null = null;
 let homeDisplayNameEditorOpen = false;
+
+function normaliseJoinCode(value: string): string {
+    return value.replace(/\D/g, "").slice(0, $joinCodeCells.length);
+}
+
+function readJoinCode(): string {
+    return $joinGameId.value;
+}
+
+function renderJoinCode(): void {
+    const code = readJoinCode();
+    const cursor = Math.min($joinGameId.selectionStart ?? code.length, $joinCodeCells.length - 1);
+    for (const [index, cell] of $joinCodeCells.entries()) {
+        const digit = code[index] ?? "";
+        cell.textContent = digit;
+        cell.classList.toggle("is-filled", digit !== "");
+        cell.classList.toggle("is-active", index === cursor);
+    }
+    const complete = code.length === $joinCodeCells.length;
+    $joinCodeEntry.classList.toggle("is-complete", complete);
+    $btnJoinGame.disabled = !complete || busy;
+}
+
+function setJoinCode(value: string): void {
+    $joinGameId.value = normaliseJoinCode(value);
+    renderJoinCode();
+}
 
 function displayNameDefaultStatus(_fallback: string): string {
     // The welcome card already shows the generated or saved name. Reserve the
@@ -4083,7 +4113,7 @@ getEl("btn-create-game").addEventListener("click", async () => {
 async function submitJoinGame(): Promise<void> {
     if (busy || !productAccount) return;
     $homeError.textContent = "";
-    const raw = $joinGameId.value;
+    const raw = readJoinCode();
     if (raw === "") {
         $homeError.textContent = "Enter a game code.";
         return;
@@ -4098,17 +4128,30 @@ async function submitJoinGame(): Promise<void> {
         await joinGameById(id, $homeError);
     } finally {
         setLoading("btn-join-game", false);
+        renderJoinCode();
     }
 }
 
-getEl("btn-join-game").addEventListener("click", () => void submitJoinGame());
-
-$joinGameId.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        void submitJoinGame();
-    }
+getEl<HTMLFormElement>("join-game-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    void submitJoinGame();
 });
+
+$joinGameId.addEventListener("input", () => {
+    const code = normaliseJoinCode($joinGameId.value);
+    if ($joinGameId.value !== code) $joinGameId.value = code;
+    renderJoinCode();
+});
+$joinGameId.addEventListener("focus", () => {
+    // A previously typed code is easiest to replace in one go. Native text
+    // selection still handles keyboard deletion and paste correctly.
+    if ($joinGameId.value !== "") $joinGameId.select();
+    renderJoinCode();
+});
+for (const eventName of ["click", "keyup", "select"] as const) {
+    $joinGameId.addEventListener(eventName, renderJoinCode);
+}
+renderJoinCode();
 
 // ── Pack studio ──────────────────────────────────────────────────────
 

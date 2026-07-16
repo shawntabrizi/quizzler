@@ -431,22 +431,68 @@ main.game-stage-open > section.game-stage.active {
 .home-join-control {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
     align-items: stretch;
 }
-.home-join-control input {
+.join-code-entry {
+    position: relative;
     min-width: 0;
+    min-height: 56px;
+}
+.join-code-input {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    min-height: 56px;
+    height: 100%;
+    padding: 0;
+    opacity: 0;
+    cursor: text;
+}
+.join-code-cells {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+    height: 100%;
+    pointer-events: none;
+}
+.join-code-cell {
+    position: relative;
+    display: grid;
+    min-height: 56px;
+    min-width: 0;
+    place-items: center;
     color: #fff;
     background: rgba(8, 47, 73, 0.55);
-    border-color: rgba(165, 243, 252, 0.45);
-    border-radius: var(--radius-nested) 0 0 var(--radius-nested);
-    border-right: 0;
+    border: 1px solid rgba(165, 243, 252, 0.45);
+    border-radius: 14px;
+    font-size: clamp(1.2rem, 3vw, 1.55rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
-.home-join-control input::placeholder { color: #a5f3fc; }
+.join-code-entry:hover .join-code-cell { background: rgba(8, 47, 73, 0.72); }
+.join-code-entry:focus-within .join-code-cell.is-active {
+    background: rgba(14, 116, 144, 0.42);
+    border-color: #a5f3fc;
+    transform: translateY(-1px);
+}
+.join-code-entry:focus-within .join-code-cell.is-active:empty::after {
+    position: absolute;
+    width: 2px;
+    height: 23px;
+    background: #a5f3fc;
+    border-radius: var(--radius-full);
+    content: "";
+    animation: join-code-caret 1s step-end infinite;
+}
+@keyframes join-code-caret { 50% { opacity: 0; } }
 button.home-join-submit {
-    min-width: 112px;
+    min-width: 124px;
     color: #082f49;
     background: #a5f3fc;
-    border-radius: 0 var(--radius-nested) var(--radius-nested) 0;
+    border-radius: var(--radius-nested);
 }
 button.home-join-submit:hover { background: #cffafe; }
 .home-error { min-height: 0; margin: 0; }
@@ -1816,6 +1862,13 @@ ul.pack-grid li { position: relative; min-width: 0; }
     .player-name-editor-actions button { width: 100%; }
     .home-action-card { min-height: 124px; margin-bottom: 16px; padding: 20px 18px; gap: 12px; }
     .home-action-arrow { width: 42px; height: 42px; font-size: 1.3rem; }
+    .home-join-control { grid-template-columns: minmax(0, 1fr); }
+    .join-code-entry,
+    .join-code-input,
+    .join-code-cell { min-height: 54px; }
+    .join-code-cells { gap: 6px; }
+    .join-code-cell { border-radius: 12px; }
+    button.home-join-submit { width: 100%; min-height: 48px; }
     .lobby-card { padding: 20px 18px; }
     .lobby-code-panel { margin: 16px 0 20px; padding: 22px 12px 18px; }
     #lobby-game-id { font-size: clamp(3.15rem, 16vw, 4.5rem); }
