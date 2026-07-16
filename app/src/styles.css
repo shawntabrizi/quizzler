@@ -1861,6 +1861,16 @@ ul.pack-grid li { position: relative; min-width: 0; }
     .player-name-editor-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .player-name-editor-actions button { width: 100%; }
     .home-action-card { min-height: 124px; margin-bottom: 16px; padding: 20px 18px; gap: 12px; }
+    /* Keep the host action beside its heading rather than vertically
+       centering it against wrapped copy. The entire card remains tappable. */
+    .home-action-card.home-host-card {
+        align-items: start;
+    }
+    .home-action-card.home-host-card .home-action-arrow {
+        align-self: start;
+        margin-top: 20px;
+        line-height: 1;
+    }
     .home-action-arrow { width: 42px; height: 42px; font-size: 1.3rem; }
     .home-join-control { grid-template-columns: minmax(0, 1fr); }
     .join-code-entry,
