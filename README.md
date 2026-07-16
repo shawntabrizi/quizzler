@@ -113,7 +113,9 @@ Current deployment: see `app/src/contract-address.json`.
 ## Publishing
 
 `pnpm deploy:dot` builds the app and publishes `dist/` through the Polkadot
-Bulletin Chain, then points the `quizzler.dot` DotNS name at the new CID.
+Bulletin Chain, then points the `quizzler.dot` DotNS name at the new CID. It
+uses the direct `bulletin-deploy` publisher; it does not list the app in
+Playground or require a Playground competition enrollment.
 Propagation takes a minute or two (IPFS pin + DotNS confirmation + gateway
 cache). Bulletin storage has a **~2-week retention window** — the content
 stays addressable only while a provider serves it, so re-run `pnpm deploy:dot`
