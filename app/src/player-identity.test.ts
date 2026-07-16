@@ -10,9 +10,10 @@ describe("friendly player identities", () => {
         const name = generatedPlayerName(ALICE);
 
         expect(generatedPlayerName(ALICE.toUpperCase())).toBe(name);
-        expect(name).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+ · [A-Z0-9]{13}$/);
+        expect(name).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
         expect(name).not.toContain("0x");
         expect(name).not.toContain("001122");
+        expect(name).not.toMatch(/[·\d]/u);
     });
 
     it("uses an on-chain alias when one exists", () => {
@@ -20,14 +21,10 @@ describe("friendly player identities", () => {
         expect(playerName(ALICE, "   ")).toBe(generatedPlayerName(ALICE));
     });
 
-    it("keeps duplicate chosen aliases understandable without addresses", () => {
+    it("keeps duplicate chosen names exactly as players chose them", () => {
         const labels = playerLabels([ALICE, BOB], ["Alex", "Alex"]);
 
-        expect(labels).toHaveLength(2);
-        expect(labels[0]).toMatch(/^Alex · [A-Z0-9]{13}$/);
-        expect(labels[1]).toMatch(/^Alex · [A-Z0-9]{13}$/);
-        expect(labels[0]).not.toBe(labels[1]);
-        expect(labels.join(" ")).not.toContain("0x");
+        expect(labels).toEqual(["Alex", "Alex"]);
     });
 
     it("keeps unnamed players distinct and stable", () => {

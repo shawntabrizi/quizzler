@@ -319,7 +319,7 @@ interface Snapshot {
     players: string[];
     /** Optional on-chain names, parallel to `players`. */
     playerNames: string[];
-    /** Friendly labels derived from on-chain aliases and stable fallbacks. */
+    /** Friendly labels derived from on-chain names and stable fallbacks. */
     playerLabels: string[];
     scores: number[];
     /** Per-roster-player difficulty choice and whether it is locked. */
@@ -2188,7 +2188,7 @@ async function init(): Promise<void> {
     await knownGamesReady;
 
     // A profile read is independent of resuming a game. Start it now so the
-    // home form and compact header show the saved on-chain alias as soon as it
+    // home form and compact header show the saved on-chain name as soon as it
     // arrives, without delaying a returning player's game recovery.
     syncDisplayNameProfile();
     void hydrateDisplayName();
@@ -2282,13 +2282,13 @@ function syncDisplayNameProfile(status?: string): void {
     if (!myAddress) return;
     const fallback = generatedPlayerName(myAddress);
     $displayName.placeholder = fallback;
-    // A live snapshot may arrive while the player is editing their alias. Do
+    // A live snapshot may arrive while the player is editing their name. Do
     // not overwrite their unsaved text just because a polling read completes.
     if (document.activeElement !== $displayName) $displayName.value = myDisplayName;
     $displayNameStatus.textContent = status
         ?? (myDisplayName
-            ? `Saved alias: ${myDisplayName}.`
-            : `No custom alias yet — you’ll appear as ${fallback}.`);
+            ? `You’ll appear as ${myDisplayName}.`
+            : `You’ll appear as ${fallback}.`);
     showActivePlayerName();
 }
 
@@ -2437,7 +2437,7 @@ getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", asyn
     if (busy || !productAccount) return;
     const name = $displayName.value;
     if (name !== "" && (name !== name.trim() || /[\u0000-\u001f\u007f-\u009f]/u.test(name) || utf8ByteLength(name) > 24)) {
-        $displayNameStatus.textContent = "Use a trimmed one-line name of up to 24 bytes.";
+        $displayNameStatus.textContent = "Use a short, one-line name.";
         return;
     }
     busy = true;
@@ -2452,7 +2452,7 @@ getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", asyn
         displayNameRevision += 1;
         syncDisplayNameProfile(name
             ? `Saved as ${name}. Everyone in your games will see it.`
-            : `Alias cleared. You’ll appear as ${generatedPlayerName(myAddress)}.`);
+            : `Name cleared. You’ll appear as ${generatedPlayerName(myAddress)}.`);
         applyMyDisplayNameToLatest();
     } catch (error) {
         $displayNameStatus.textContent = friendlyError(error);
@@ -4391,7 +4391,7 @@ async function poll(): Promise<void> {
         if (myPlayerIndex >= 0 && normalizedPlayerNames[myPlayerIndex] !== undefined) {
             applyOnChainDisplayName(normalizedPlayerNames[myPlayerIndex], polledDisplayNameRevision);
         }
-        // A read from just before a successful alias save must not make the
+        // A read from just before a successful name save must not make the
         // table briefly revert to a generated name while the next block
         // catches up. Other players always retain their chain values.
         const visiblePlayerNames = [...normalizedPlayerNames];
