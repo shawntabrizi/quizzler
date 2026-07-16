@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Quizzler starter-pack editorial manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "status", "pack", "questions", "finals"],
+  "properties": {
+    "version": { "const": 1 },
+    "status": { "enum": ["draft", "release-ready"] },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "title"],
+      "properties": {
+        "file": { "type": "string", "pattern": "^[0-9]{2}-.+\\.json$" },
+        "title": { "type": "string", "minLength": 1 }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/draftEntry" }
+    },
+    "finals": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "easy": { "$ref": "#/$defs/draftEntry" },
+        "medium": { "$ref": "#/$defs/draftEntry" },
+        "hard": { "$ref": "#/$defs/draftEntry" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "release-ready" } } },
+      "then": {
+        "properties": {
+          "questions": {
+            "items": { "$ref": "#/$defs/releaseEntry" }
+          },
+          "finals": {
+            "required": ["easy", "medium", "hard"],
+            "properties": {
+              "easy": { "$ref": "#/$defs/releaseEntry" },
+              "medium": { "$ref": "#/$defs/releaseEntry" },
+              "hard": { "$ref": "#/$defs/releaseEntry" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "draftEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "answers"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$"
+        },
+        "question": { "type": "string", "minLength": 1 },
+        "answers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "sources": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/source" }
+        },
+        "verified_on": { "type": "string", "format": "date" },
+        "stability": { "enum": ["stable", "dynamic"] },
+        "scope": { "type": "string", "minLength": 1 },
+        "dynamic_review": { "$ref": "#/$defs/dynamicReview" },
+        "difficulty": { "enum": ["easy", "medium", "hard"] },
+        "reviewers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reviewer" }
+        }
+      }
+    },
+    "releaseEntry": {
+      "allOf": [
+        { "$ref": "#/$defs/draftEntry" },
+        {
+          "required": [
+            "sources",
+            "verified_on",
+            "stability",
+            "difficulty",
+            "reviewers"
+          ],
+          "properties": {
+            "sources": { "minItems": 1 },
+            "reviewers": { "minItems": 2 }
+          }
+        },
+        {
+          "if": { "properties": { "stability": { "const": "dynamic" } } },
+          "then": { "required": ["dynamic_review"] }
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "rights", "use"],
+      "properties": {
+        "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "rights": {
+          "enum": [
+            "CC0-1.0",
+            "CC-BY-4.0",
+            "CC-BY-SA-4.0",
+            "public-domain",
+            "US-government-work",
+            "Open-Government-Licence-3.0"
+          ]
+        },
+        "use": { "const": "fact-verification" },
+        "attribution": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["handle", "role", "status", "reviewed_on"],
+      "properties": {
+        "handle": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$"
+        },
+        "role": { "enum": ["fact-check", "editorial"] },
+        "status": { "enum": ["approved", "pending", "needs-changes"] },
+        "reviewed_on": { "type": "string", "format": "date" }
+      }
+    },
+    "dynamicReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewed_on", "review_due", "reason"],
+      "properties": {
+        "reviewed_on": { "type": "string", "format": "date" },
+        "review_due": { "type": "string", "format": "date" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

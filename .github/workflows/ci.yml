@@ -51,6 +51,12 @@ jobs:
       - name: Validate starter packs
         run: pnpm validate:packs
 
+      - name: Lint starter-pack editorial records
+        run: pnpm validate:editorial
+
+      - name: Strictly audit release-ready starter packs
+        run: pnpm audit:editorial
+
   rust-logic:
     name: Rust logic tests
     runs-on: ubuntu-latest

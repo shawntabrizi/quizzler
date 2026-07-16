@@ -1,0 +1,1032 @@
+{
+  "version": 1,
+  "status": "draft",
+  "pack": {
+    "file": "01-general-knowledge.json",
+    "title": "General Knowledge"
+  },
+  "questions": [
+    {
+      "id": "qz-general-knowledge-q001",
+      "question": "What is the imaginary line at 0 degrees latitude called?",
+      "answers": ["Equator", "the Equator"]
+    },
+    {
+      "id": "qz-general-knowledge-q002",
+      "question": "What is the term for a word formed from the initial letters of a phrase, such as UNESCO?",
+      "answers": ["Acronym", "an acronym"]
+    },
+    {
+      "id": "qz-general-knowledge-q003",
+      "question": "In a standard deck of playing cards, which suit is marked by a black three-leaf symbol?",
+      "answers": ["Clubs", "club"]
+    },
+    {
+      "id": "qz-general-knowledge-q004",
+      "question": "Which chess piece moves in an L-shaped pattern?",
+      "answers": ["Knight", "a knight"]
+    },
+    {
+      "id": "qz-general-knowledge-q005",
+      "question": "What do you call a word that is spelled the same as another word but has a different meaning?",
+      "answers": ["Homograph", "a homograph"]
+    },
+    {
+      "id": "qz-general-knowledge-q006",
+      "question": "What is the name of the trade network that linked East Asia with the Mediterranean in antiquity?",
+      "answers": ["Silk Road", "the Silk Road"]
+    },
+    {
+      "id": "qz-general-knowledge-q007",
+      "question": "What is the study of flags called?",
+      "answers": ["Vexillology"]
+    },
+    {
+      "id": "qz-general-knowledge-q008",
+      "question": "Which author created the detective Hercule Poirot?",
+      "answers": ["Agatha Christie", "Christie"]
+    },
+    {
+      "id": "qz-general-knowledge-q009",
+      "question": "Which layer of Earth's atmosphere contains most weather?",
+      "answers": ["Troposphere", "the troposphere"]
+    },
+    {
+      "id": "qz-general-knowledge-q010",
+      "question": "Which musical term tells a performer to gradually get louder?",
+      "answers": ["Crescendo", "a crescendo"]
+    },
+    {
+      "id": "qz-general-knowledge-q011",
+      "question": "What do you call a word with the opposite meaning of another word?",
+      "answers": ["Antonym", "an antonym"]
+    },
+    {
+      "id": "qz-general-knowledge-q012",
+      "question": "What is the name for the list of chapters usually found near the beginning of a book?",
+      "answers": ["Table of contents", "contents"]
+    },
+    {
+      "id": "qz-general-knowledge-q013",
+      "question": "Which big cat is known as the king of the jungle?",
+      "answers": ["Lion"]
+    },
+    {
+      "id": "qz-general-knowledge-q014",
+      "question": "How many minutes are in one hour?",
+      "answers": ["60", "sixty"]
+    },
+    {
+      "id": "qz-general-knowledge-q015",
+      "question": "What is the currency of the United States?",
+      "answers": ["Dollar", "US dollar", "United States dollar", "USD"]
+    },
+    {
+      "id": "qz-general-knowledge-q016",
+      "question": "What is a word derived from a person's name, such as 'sandwich,' called?",
+      "answers": ["Eponym", "an eponym"]
+    },
+    {
+      "id": "qz-general-knowledge-q017",
+      "question": "Which continent is crossed by both the Equator and the Prime Meridian?",
+      "answers": ["Africa"]
+    },
+    {
+      "id": "qz-general-knowledge-q018",
+      "question": "According to the saying, which fruit a day keeps the doctor away?",
+      "answers": ["Apple", "an apple"]
+    },
+    {
+      "id": "qz-general-knowledge-q019",
+      "question": "What sweet substance do bees make?",
+      "answers": ["Honey"]
+    },
+    {
+      "id": "qz-general-knowledge-q020",
+      "question": "What is the name of the star at the center of our solar system?",
+      "answers": ["Sun", "the Sun"]
+    },
+    {
+      "id": "qz-general-knowledge-q021",
+      "question": "What common substance has the chemical formula H2O?",
+      "answers": ["Water"]
+    },
+    {
+      "id": "qz-general-knowledge-q022",
+      "question": "How many colors are in a rainbow, traditionally?",
+      "answers": ["7", "seven"]
+    },
+    {
+      "id": "qz-general-knowledge-q023",
+      "question": "What is the fastest land animal?",
+      "answers": ["Cheetah"]
+    },
+    {
+      "id": "qz-general-knowledge-q024",
+      "question": "What do you call a baby dog?",
+      "answers": ["Puppy", "pup"]
+    },
+    {
+      "id": "qz-general-knowledge-q025",
+      "question": "What medieval trading alliance connected cities around the Baltic and North Seas?",
+      "answers": ["Hanseatic League", "the Hanseatic League", "Hanse"]
+    },
+    {
+      "id": "qz-general-knowledge-q026",
+      "question": "How many hours are in a day?",
+      "answers": ["24", "twenty four"]
+    },
+    {
+      "id": "qz-general-knowledge-q027",
+      "question": "Which season comes right after winter?",
+      "answers": ["Spring"]
+    },
+    {
+      "id": "qz-general-knowledge-q028",
+      "question": "What famous \"unsinkable\" ship sank on its maiden voyage after hitting an iceberg?",
+      "answers": ["Titanic", "the Titanic", "RMS Titanic"]
+    },
+    {
+      "id": "qz-general-knowledge-q029",
+      "question": "Which German school of art and design was founded in Weimar in 1919?",
+      "answers": ["Bauhaus", "the Bauhaus"]
+    },
+    {
+      "id": "qz-general-knowledge-q030",
+      "question": "Mixing red and yellow paint makes which color?",
+      "answers": ["Orange"]
+    },
+    {
+      "id": "qz-general-knowledge-q031",
+      "question": "Who wrote the Harry Potter books?",
+      "answers": ["JK Rowling", "J.K. Rowling", "Rowling", "Joanne Rowling"]
+    },
+    {
+      "id": "qz-general-knowledge-q032",
+      "question": "The Eiffel Tower is a famous landmark in which country?",
+      "answers": ["France"]
+    },
+    {
+      "id": "qz-general-knowledge-q033",
+      "question": "How many players from one soccer team are on the field at a time?",
+      "answers": ["11", "eleven"]
+    },
+    {
+      "id": "qz-general-knowledge-q034",
+      "question": "What figure of speech uses a part to refer to the whole, as in 'all hands on deck'?",
+      "answers": ["Synecdoche"]
+    },
+    {
+      "id": "qz-general-knowledge-q035",
+      "question": "At what temperature in degrees Celsius does water boil at sea level?",
+      "answers": ["100", "100 degrees"]
+    },
+    {
+      "id": "qz-general-knowledge-q036",
+      "question": "What flying insect does a monarch caterpillar turn into?",
+      "answers": ["Butterfly", "monarch butterfly"]
+    },
+    {
+      "id": "qz-general-knowledge-q037",
+      "question": "Mixing blue and yellow paint makes which color?",
+      "answers": ["Green"]
+    },
+    {
+      "id": "qz-general-knowledge-q038",
+      "question": "What is the largest mammal on Earth?",
+      "answers": ["Blue whale", "whale"]
+    },
+    {
+      "id": "qz-general-knowledge-q039",
+      "question": "Kangaroos are native to which country?",
+      "answers": ["Australia"]
+    },
+    {
+      "id": "qz-general-knowledge-q040",
+      "question": "How many days are in the month of September?",
+      "answers": ["30", "thirty"]
+    },
+    {
+      "id": "qz-general-knowledge-q041",
+      "question": "Christmas Day falls in which month?",
+      "answers": ["December"]
+    },
+    {
+      "id": "qz-general-knowledge-q042",
+      "question": "What is the name of Mickey Mouse's pet dog?",
+      "answers": ["Pluto"]
+    },
+    {
+      "id": "qz-general-knowledge-q043",
+      "question": "How many zeros are in the number one thousand?",
+      "answers": ["3", "three"]
+    },
+    {
+      "id": "qz-general-knowledge-q044",
+      "question": "What is the opposite of day?",
+      "answers": ["Night"]
+    },
+    {
+      "id": "qz-general-knowledge-q045",
+      "question": "Which superhero is known as the Man of Steel?",
+      "answers": ["Superman"]
+    },
+    {
+      "id": "qz-general-knowledge-q046",
+      "question": "Which sport is played at the Wimbledon championships?",
+      "answers": ["Tennis"]
+    },
+    {
+      "id": "qz-general-knowledge-q047",
+      "question": "Which planet is known as the Red Planet?",
+      "answers": ["Mars"]
+    },
+    {
+      "id": "qz-general-knowledge-q048",
+      "question": "How many wheels does a tricycle have?",
+      "answers": ["3", "three"]
+    },
+    {
+      "id": "qz-general-knowledge-q049",
+      "question": "In the movie Finding Nemo, what kind of fish is Nemo?",
+      "answers": ["Clownfish", "clown fish"]
+    },
+    {
+      "id": "qz-general-knowledge-q050",
+      "question": "What is the capital of Italy?",
+      "answers": ["Rome", "Roma"]
+    },
+    {
+      "id": "qz-general-knowledge-q051",
+      "question": "Which organ pumps blood around the human body?",
+      "answers": ["Heart", "the heart"]
+    },
+    {
+      "id": "qz-general-knowledge-q052",
+      "question": "What is the name of Santa's reindeer with the red nose?",
+      "answers": ["Rudolph", "Rudolf"]
+    },
+    {
+      "id": "qz-general-knowledge-q053",
+      "question": "How many sides does a square have?",
+      "answers": ["4", "four"]
+    },
+    {
+      "id": "qz-general-knowledge-q054",
+      "question": "Which ancient West African city became a major center of scholarship and trade under the Mali Empire?",
+      "answers": ["Timbuktu"]
+    },
+    {
+      "id": "qz-general-knowledge-q055",
+      "question": "Which meal of the day is traditionally eaten in the morning?",
+      "answers": ["Breakfast"]
+    },
+    {
+      "id": "qz-general-knowledge-q056",
+      "question": "What Japanese art uses folding paper to create decorative forms?",
+      "answers": ["Origami"]
+    },
+    {
+      "id": "qz-general-knowledge-q057",
+      "question": "What color is an emerald?",
+      "answers": ["Green"]
+    },
+    {
+      "id": "qz-general-knowledge-q058",
+      "question": "Which white bird is a traditional symbol of peace?",
+      "answers": ["Dove"]
+    },
+    {
+      "id": "qz-general-knowledge-q059",
+      "question": "What do you call a baby cat?",
+      "answers": ["Kitten", "kitty"]
+    },
+    {
+      "id": "qz-general-knowledge-q060",
+      "question": "How many strings does a standard guitar have?",
+      "answers": ["6", "six"]
+    },
+    {
+      "id": "qz-general-knowledge-q061",
+      "question": "Which fairy tale character left a glass slipper behind at the ball?",
+      "answers": ["Cinderella"]
+    },
+    {
+      "id": "qz-general-knowledge-q062",
+      "question": "At what temperature in degrees Celsius does water freeze?",
+      "answers": ["0", "zero", "0 degrees"]
+    },
+    {
+      "id": "qz-general-knowledge-q063",
+      "question": "Which ocean lies between the United States and Europe?",
+      "answers": ["Atlantic", "Atlantic Ocean", "the Atlantic"]
+    },
+    {
+      "id": "qz-general-knowledge-q064",
+      "question": "What is the name of the pirate flag showing a skull and crossbones?",
+      "answers": ["Jolly Roger", "the Jolly Roger"]
+    },
+    {
+      "id": "qz-general-knowledge-q065",
+      "question": "Which month of the year has the fewest days?",
+      "answers": ["February"]
+    },
+    {
+      "id": "qz-general-knowledge-q066",
+      "question": "Which large orange vegetable is carved into a jack-o'-lantern at Halloween?",
+      "answers": ["Pumpkin"]
+    },
+    {
+      "id": "qz-general-knowledge-q067",
+      "question": "What is the plural of the word \"mouse\" when talking about the animal?",
+      "answers": ["Mice"]
+    },
+    {
+      "id": "qz-general-knowledge-q068",
+      "question": "Which racquet sport is played with a shuttlecock?",
+      "answers": ["Badminton"]
+    },
+    {
+      "id": "qz-general-knowledge-q069",
+      "question": "What is the name of Disney's famous cartoon mouse mascot?",
+      "answers": ["Mickey Mouse", "Mickey"]
+    },
+    {
+      "id": "qz-general-knowledge-q070",
+      "question": "What three-line Japanese verse form is traditionally arranged in a 5–7–5 pattern?",
+      "answers": ["Haiku", "a haiku"]
+    },
+    {
+      "id": "qz-general-knowledge-q071",
+      "question": "What is the capital of Japan?",
+      "answers": ["Tokyo"]
+    },
+    {
+      "id": "qz-general-knowledge-q072",
+      "question": "Who painted the Mona Lisa?",
+      "answers": ["Leonardo da Vinci", "da Vinci", "Leonardo"]
+    },
+    {
+      "id": "qz-general-knowledge-q073",
+      "question": "What Japanese art repairs broken pottery with lacquer dusted with gold?",
+      "answers": ["Kintsugi"]
+    },
+    {
+      "id": "qz-general-knowledge-q074",
+      "question": "In what year did World War II end?",
+      "answers": ["1945"]
+    },
+    {
+      "id": "qz-general-knowledge-q075",
+      "question": "What is the name for a narrow land bridge connecting two larger land areas, such as Panama?",
+      "answers": ["Isthmus", "an isthmus"]
+    },
+    {
+      "id": "qz-general-knowledge-q076",
+      "question": "Who wrote the play Romeo and Juliet?",
+      "answers": ["Shakespeare", "William Shakespeare"]
+    },
+    {
+      "id": "qz-general-knowledge-q077",
+      "question": "What type of landscape is formed when water dissolves limestone?",
+      "answers": ["Karst", "karst landscape"]
+    },
+    {
+      "id": "qz-general-knowledge-q078",
+      "question": "What is the capital of Canada?",
+      "answers": ["Ottawa"]
+    },
+    {
+      "id": "qz-general-knowledge-q079",
+      "question": "How many bones are in the adult human body?",
+      "answers": ["206"]
+    },
+    {
+      "id": "qz-general-knowledge-q080",
+      "question": "Which famous Dutch painter cut off part of his own ear?",
+      "answers": ["Van Gogh", "Vincent van Gogh"]
+    },
+    {
+      "id": "qz-general-knowledge-q081",
+      "question": "What is the currency of Japan?",
+      "answers": ["Yen", "Japanese yen"]
+    },
+    {
+      "id": "qz-general-knowledge-q082",
+      "question": "Which chemical element has the symbol O?",
+      "answers": ["Oxygen"]
+    },
+    {
+      "id": "qz-general-knowledge-q083",
+      "question": "What Inca device used knotted cords to record information?",
+      "answers": ["Quipu", "khipu"]
+    },
+    {
+      "id": "qz-general-knowledge-q084",
+      "question": "What is the name for a group or chain of islands?",
+      "answers": ["Archipelago", "an archipelago"]
+    },
+    {
+      "id": "qz-general-knowledge-q085",
+      "question": "Which musical instrument has 88 keys?",
+      "answers": ["Piano"]
+    },
+    {
+      "id": "qz-general-knowledge-q086",
+      "question": "In Greek mythology, who is the king of the gods?",
+      "answers": ["Zeus"]
+    },
+    {
+      "id": "qz-general-knowledge-q087",
+      "question": "What is the tallest mountain above sea level?",
+      "answers": ["Mount Everest", "Everest", "Mt Everest"]
+    },
+    {
+      "id": "qz-general-knowledge-q088",
+      "question": "Which ancient wonder is the only one of the Seven Wonders of the Ancient World still standing?",
+      "answers": ["Great Pyramid of Giza", "Great Pyramid", "Pyramid of Giza"]
+    },
+    {
+      "id": "qz-general-knowledge-q089",
+      "question": "Which writing system used wedge-shaped marks pressed into clay tablets in ancient Mesopotamia?",
+      "answers": ["Cuneiform"]
+    },
+    {
+      "id": "qz-general-knowledge-q090",
+      "question": "Which physicist developed the theory of general relativity?",
+      "answers": ["Einstein", "Albert Einstein"]
+    },
+    {
+      "id": "qz-general-knowledge-q091",
+      "question": "What is the capital of Australia?",
+      "answers": ["Canberra"]
+    },
+    {
+      "id": "qz-general-knowledge-q092",
+      "question": "Which planet in our solar system is famous for its prominent rings?",
+      "answers": ["Saturn"]
+    },
+    {
+      "id": "qz-general-knowledge-q093",
+      "question": "What musical term describes the quality that lets us distinguish a violin from a flute playing the same note?",
+      "answers": ["Timbre"]
+    },
+    {
+      "id": "qz-general-knowledge-q094",
+      "question": "Who wrote the novel Pride and Prejudice?",
+      "answers": ["Jane Austen", "Austen"]
+    },
+    {
+      "id": "qz-general-knowledge-q095",
+      "question": "What word describes a story with a second, often moral or political, meaning?",
+      "answers": ["Allegory", "an allegory"]
+    },
+    {
+      "id": "qz-general-knowledge-q096",
+      "question": "Which blossom is the famous national flower of Japan?",
+      "answers": ["Cherry blossom", "sakura", "cherry"]
+    },
+    {
+      "id": "qz-general-knowledge-q097",
+      "question": "Which gas do plants absorb from the air for photosynthesis?",
+      "answers": ["Carbon dioxide", "CO2"]
+    },
+    {
+      "id": "qz-general-knowledge-q098",
+      "question": "Which inventor received a U.S. patent for the telephone in 1876?",
+      "answers": ["Alexander Graham Bell", "Bell", "Graham Bell"]
+    },
+    {
+      "id": "qz-general-knowledge-q099",
+      "question": "What is the capital of Spain?",
+      "answers": ["Madrid"]
+    },
+    {
+      "id": "qz-general-knowledge-q100",
+      "question": "Which vitamin does your body produce when exposed to sunlight?",
+      "answers": ["Vitamin D", "D"]
+    },
+    {
+      "id": "qz-general-knowledge-q101",
+      "question": "Which philosopher wrote the political work The Republic?",
+      "answers": ["Plato"]
+    },
+    {
+      "id": "qz-general-knowledge-q102",
+      "question": "In what year did humans first land on the Moon?",
+      "answers": ["1969"]
+    },
+    {
+      "id": "qz-general-knowledge-q103",
+      "question": "What is the smallest country in the world by area?",
+      "answers": ["Vatican City", "Vatican", "the Vatican"]
+    },
+    {
+      "id": "qz-general-knowledge-q104",
+      "question": "Which blood type is the universal donor for red-cell transfusions?",
+      "answers": ["O negative", "O-", "type O negative"]
+    },
+    {
+      "id": "qz-general-knowledge-q105",
+      "question": "What type of mixture is made by combining a metal with one or more other elements?",
+      "answers": ["Alloy", "an alloy"]
+    },
+    {
+      "id": "qz-general-knowledge-q106",
+      "question": "Pizza originated in which country?",
+      "answers": ["Italy"]
+    },
+    {
+      "id": "qz-general-knowledge-q107",
+      "question": "How many hearts does an octopus have?",
+      "answers": ["3", "three"]
+    },
+    {
+      "id": "qz-general-knowledge-q108",
+      "question": "Who wrote the dystopian novel 1984?",
+      "answers": ["George Orwell", "Orwell"]
+    },
+    {
+      "id": "qz-general-knowledge-q109",
+      "question": "What is the capital of Germany?",
+      "answers": ["Berlin"]
+    },
+    {
+      "id": "qz-general-knowledge-q110",
+      "question": "What physical property describes a material's resistance to being scratched?",
+      "answers": ["Hardness"]
+    },
+    {
+      "id": "qz-general-knowledge-q111",
+      "question": "What is the currency of the United Kingdom?",
+      "answers": ["Pound", "pound sterling", "British pound", "GBP"]
+    },
+    {
+      "id": "qz-general-knowledge-q112",
+      "question": "Which naturalist proposed the theory of evolution by natural selection?",
+      "answers": ["Darwin", "Charles Darwin"]
+    },
+    {
+      "id": "qz-general-knowledge-q113",
+      "question": "What is the capital of Russia?",
+      "answers": ["Moscow"]
+    },
+    {
+      "id": "qz-general-knowledge-q114",
+      "question": "What do you call a word or design that can be read when turned upside down?",
+      "answers": ["Ambigram", "an ambigram"]
+    },
+    {
+      "id": "qz-general-knowledge-q115",
+      "question": "Which planet is often called both the Morning Star and the Evening Star?",
+      "answers": ["Venus"]
+    },
+    {
+      "id": "qz-general-knowledge-q116",
+      "question": "Who painted the ceiling of the Sistine Chapel?",
+      "answers": ["Michelangelo"]
+    },
+    {
+      "id": "qz-general-knowledge-q117",
+      "question": "Which bird is the fastest animal in the world when diving?",
+      "answers": ["Peregrine falcon", "peregrine"]
+    },
+    {
+      "id": "qz-general-knowledge-q118",
+      "question": "In which country would you find the ancient Inca site of Machu Picchu?",
+      "answers": ["Peru"]
+    },
+    {
+      "id": "qz-general-knowledge-q119",
+      "question": "What is the main ingredient of guacamole?",
+      "answers": ["Avocado", "avocados"]
+    },
+    {
+      "id": "qz-general-knowledge-q120",
+      "question": "Which US state is the largest by area?",
+      "answers": ["Alaska"]
+    },
+    {
+      "id": "qz-general-knowledge-q121",
+      "question": "What does the abbreviation \"www\" stand for?",
+      "answers": ["World Wide Web"]
+    },
+    {
+      "id": "qz-general-knowledge-q122",
+      "question": "Who is the Greek goddess of wisdom?",
+      "answers": ["Athena"]
+    },
+    {
+      "id": "qz-general-knowledge-q123",
+      "question": "What is the square root of 144?",
+      "answers": ["12", "twelve"]
+    },
+    {
+      "id": "qz-general-knowledge-q124",
+      "question": "Which country is known as the Land of the Rising Sun?",
+      "answers": ["Japan"]
+    },
+    {
+      "id": "qz-general-knowledge-q125",
+      "question": "How many teeth does an adult human typically have, including wisdom teeth?",
+      "answers": ["32", "thirty two"]
+    },
+    {
+      "id": "qz-general-knowledge-q126",
+      "question": "What is the capital of Egypt?",
+      "answers": ["Cairo"]
+    },
+    {
+      "id": "qz-general-knowledge-q127",
+      "question": "Which metal is liquid at room temperature?",
+      "answers": ["Mercury", "quicksilver"]
+    },
+    {
+      "id": "qz-general-knowledge-q128",
+      "question": "Who wrote The Adventures of Tom Sawyer?",
+      "answers": ["Mark Twain", "Twain", "Samuel Clemens"]
+    },
+    {
+      "id": "qz-general-knowledge-q129",
+      "question": "What term describes a deposit of rocks and soil carried and left by a glacier?",
+      "answers": ["Moraine", "a moraine"]
+    },
+    {
+      "id": "qz-general-knowledge-q130",
+      "question": "What branch of mathematics studies the properties of whole numbers?",
+      "answers": ["Number theory"]
+    },
+    {
+      "id": "qz-general-knowledge-q131",
+      "question": "What is the name of the fairy in Peter Pan?",
+      "answers": ["Tinker Bell", "Tinkerbell"]
+    },
+    {
+      "id": "qz-general-knowledge-q132",
+      "question": "Which sea separates the Arabian Peninsula from northeast Africa?",
+      "answers": ["Red Sea", "the Red Sea"]
+    },
+    {
+      "id": "qz-general-knowledge-q133",
+      "question": "How many sides does a hexagon have?",
+      "answers": ["6", "six"]
+    },
+    {
+      "id": "qz-general-knowledge-q134",
+      "question": "Which black and white bear is the national animal of China?",
+      "answers": ["Panda", "giant panda"]
+    },
+    {
+      "id": "qz-general-knowledge-q135",
+      "question": "Which composer wrote the famous Fifth Symphony that opens \"da-da-da-dum\"?",
+      "answers": ["Beethoven", "Ludwig van Beethoven"]
+    },
+    {
+      "id": "qz-general-knowledge-q136",
+      "question": "What is the capital of Brazil?",
+      "answers": ["Brasilia"]
+    },
+    {
+      "id": "qz-general-knowledge-q137",
+      "question": "Which common fruit has its seeds on the outside?",
+      "answers": ["Strawberry", "strawberries"]
+    },
+    {
+      "id": "qz-general-knowledge-q138",
+      "question": "What is the shared currency used by most countries of the European Union?",
+      "answers": ["Euro", "the euro"]
+    },
+    {
+      "id": "qz-general-knowledge-q139",
+      "question": "Which scientist discovered penicillin?",
+      "answers": ["Alexander Fleming", "Fleming"]
+    },
+    {
+      "id": "qz-general-knowledge-q140",
+      "question": "What is the tallest building in the world?",
+      "answers": ["Burj Khalifa", "the Burj Khalifa"]
+    },
+    {
+      "id": "qz-general-knowledge-q141",
+      "question": "Which chess piece can only move diagonally?",
+      "answers": ["Bishop", "the bishop"]
+    },
+    {
+      "id": "qz-general-knowledge-q142",
+      "question": "What is the scientific study of stars, planets, and space called?",
+      "answers": ["Astronomy"]
+    },
+    {
+      "id": "qz-general-knowledge-q143",
+      "question": "The famous running of the bulls in Pamplona takes place in which country?",
+      "answers": ["Spain"]
+    },
+    {
+      "id": "qz-general-knowledge-q144",
+      "question": "What is a baby kangaroo called?",
+      "answers": ["Joey", "a joey"]
+    },
+    {
+      "id": "qz-general-knowledge-q145",
+      "question": "Which gas makes up about 78 percent of Earth's atmosphere?",
+      "answers": ["Nitrogen"]
+    },
+    {
+      "id": "qz-general-knowledge-q146",
+      "question": "Which Egyptian queen was famously involved with both Julius Caesar and Mark Antony?",
+      "answers": ["Cleopatra"]
+    },
+    {
+      "id": "qz-general-knowledge-q147",
+      "question": "What is the longest bone in the human body?",
+      "answers": ["Femur", "thigh bone", "the femur"]
+    },
+    {
+      "id": "qz-general-knowledge-q148",
+      "question": "Which Italian city is famous for its canals and gondolas?",
+      "answers": ["Venice", "Venezia"]
+    },
+    {
+      "id": "qz-general-knowledge-q149",
+      "question": "What does a barometer measure?",
+      "answers": [
+        "Air pressure",
+        "atmospheric pressure",
+        "pressure",
+        "barometric pressure"
+      ]
+    },
+    {
+      "id": "qz-general-knowledge-q150",
+      "question": "Which author created the detective Sherlock Holmes?",
+      "answers": ["Arthur Conan Doyle", "Conan Doyle", "Doyle"]
+    },
+    {
+      "id": "qz-general-knowledge-q151",
+      "question": "What is the world's largest coral reef system, located off Australia?",
+      "answers": ["Great Barrier Reef", "the Great Barrier Reef"]
+    },
+    {
+      "id": "qz-general-knowledge-q152",
+      "question": "Which chemical element has the atomic number 1?",
+      "answers": ["Hydrogen"]
+    },
+    {
+      "id": "qz-general-knowledge-q153",
+      "question": "What is the name of the Hindu festival of lights?",
+      "answers": ["Diwali", "Deepavali"]
+    },
+    {
+      "id": "qz-general-knowledge-q154",
+      "question": "Which ancient Greek poet is traditionally credited with The Iliad and The Odyssey?",
+      "answers": ["Homer"]
+    },
+    {
+      "id": "qz-general-knowledge-q155",
+      "question": "What is the fear of spiders called?",
+      "answers": ["Arachnophobia"]
+    },
+    {
+      "id": "qz-general-knowledge-q156",
+      "question": "Which classic board game features properties like Boardwalk and Park Place?",
+      "answers": ["Monopoly"]
+    },
+    {
+      "id": "qz-general-knowledge-q157",
+      "question": "What is the capital of South Korea?",
+      "answers": ["Seoul"]
+    },
+    {
+      "id": "qz-general-knowledge-q158",
+      "question": "How many milliliters are in one liter?",
+      "answers": ["1000", "one thousand"]
+    },
+    {
+      "id": "qz-general-knowledge-q159",
+      "question": "Which tiny bird is the only bird that can fly backwards?",
+      "answers": ["Hummingbird"]
+    },
+    {
+      "id": "qz-general-knowledge-q160",
+      "question": "What is the first name of Batman's loyal butler?",
+      "answers": ["Alfred"]
+    },
+    {
+      "id": "qz-general-knowledge-q161",
+      "question": "What is the chemical symbol for tungsten?",
+      "answers": ["W"]
+    },
+    {
+      "id": "qz-general-knowledge-q162",
+      "question": "What is the name of Saturn's largest moon?",
+      "answers": ["Titan"]
+    },
+    {
+      "id": "qz-general-knowledge-q163",
+      "question": "In what year did the Berlin Wall fall?",
+      "answers": ["1989"]
+    },
+    {
+      "id": "qz-general-knowledge-q164",
+      "question": "Who wrote the novel One Hundred Years of Solitude?",
+      "answers": ["Gabriel Garcia Marquez", "Garcia Marquez", "Marquez"]
+    },
+    {
+      "id": "qz-general-knowledge-q165",
+      "question": "What is the capital of Mongolia?",
+      "answers": ["Ulaanbaatar", "Ulan Bator"]
+    },
+    {
+      "id": "qz-general-knowledge-q166",
+      "question": "Which French mathematician is famous for his \"Last Theorem\"?",
+      "answers": ["Fermat", "Pierre de Fermat"]
+    },
+    {
+      "id": "qz-general-knowledge-q167",
+      "question": "What is the rarest of the eight main human blood types?",
+      "answers": ["AB negative", "AB-", "type AB negative"]
+    },
+    {
+      "id": "qz-general-knowledge-q168",
+      "question": "What word is formed by blending parts of two words, such as 'brunch'?",
+      "answers": ["Portmanteau", "a portmanteau"]
+    },
+    {
+      "id": "qz-general-knowledge-q169",
+      "question": "Which surrealist artist painted The Persistence of Memory, featuring melting clocks?",
+      "answers": ["Salvador Dali", "Dali"]
+    },
+    {
+      "id": "qz-general-knowledge-q170",
+      "question": "What is the collective noun for a group of crows?",
+      "answers": ["Murder", "a murder"]
+    },
+    {
+      "id": "qz-general-knowledge-q171",
+      "question": "Which African country was formerly known as Abyssinia?",
+      "answers": ["Ethiopia"]
+    },
+    {
+      "id": "qz-general-knowledge-q172",
+      "question": "What is the SI unit of electrical capacitance?",
+      "answers": ["Farad", "farads", "F"]
+    },
+    {
+      "id": "qz-general-knowledge-q173",
+      "question": "Who was the first woman to win a Nobel Prize?",
+      "answers": ["Marie Curie", "Curie", "Madame Curie"]
+    },
+    {
+      "id": "qz-general-knowledge-q174",
+      "question": "What is the smallest bone in the human body?",
+      "answers": ["Stapes", "stirrup", "the stapes"]
+    },
+    {
+      "id": "qz-general-knowledge-q175",
+      "question": "In Greek mythology, who fell into the sea after flying too close to the sun with wax wings?",
+      "answers": ["Icarus"]
+    },
+    {
+      "id": "qz-general-knowledge-q176",
+      "question": "What is the capital of New Zealand?",
+      "answers": ["Wellington"]
+    },
+    {
+      "id": "qz-general-knowledge-q177",
+      "question": "Which Italian composer wrote the violin concertos known as The Four Seasons?",
+      "answers": ["Vivaldi", "Antonio Vivaldi"]
+    },
+    {
+      "id": "qz-general-knowledge-q178",
+      "question": "What is the scientific study of fungi called?",
+      "answers": ["Mycology"]
+    },
+    {
+      "id": "qz-general-knowledge-q179",
+      "question": "Which ancient Greek mathematician wrote the geometry treatise Elements?",
+      "answers": ["Euclid"]
+    },
+    {
+      "id": "qz-general-knowledge-q180",
+      "question": "What is the currency of Switzerland?",
+      "answers": ["Swiss franc", "franc", "CHF"]
+    },
+    {
+      "id": "qz-general-knowledge-q181",
+      "question": "What is the name of the deepest oceanic trench on Earth?",
+      "answers": ["Mariana Trench", "the Mariana Trench", "Marianas Trench"]
+    },
+    {
+      "id": "qz-general-knowledge-q182",
+      "question": "Which chemical element is named after the Greek word for the sun?",
+      "answers": ["Helium"]
+    },
+    {
+      "id": "qz-general-knowledge-q183",
+      "question": "Who wrote the novel Crime and Punishment?",
+      "answers": ["Dostoevsky", "Fyodor Dostoevsky", "Dostoyevsky"]
+    },
+    {
+      "id": "qz-general-knowledge-q184",
+      "question": "In what year did the French Revolution begin?",
+      "answers": ["1789"]
+    },
+    {
+      "id": "qz-general-knowledge-q185",
+      "question": "Which traditional wrestling style is the national sport of Japan?",
+      "answers": ["Sumo", "sumo wrestling"]
+    },
+    {
+      "id": "qz-general-knowledge-q186",
+      "question": "Which king of England had six wives?",
+      "answers": ["Henry VIII", "Henry the Eighth", "Henry the 8th", "Henry 8"]
+    },
+    {
+      "id": "qz-general-knowledge-q187",
+      "question": "What do you call a word that reads the same forwards and backwards, like \"level\"?",
+      "answers": ["Palindrome", "a palindrome"]
+    },
+    {
+      "id": "qz-general-knowledge-q188",
+      "question": "Which planet takes about 165 Earth years to complete one orbit of the sun?",
+      "answers": ["Neptune"]
+    },
+    {
+      "id": "qz-general-knowledge-q189",
+      "question": "Which Dutch master painted Girl with a Pearl Earring?",
+      "answers": ["Vermeer", "Johannes Vermeer", "Jan Vermeer"]
+    },
+    {
+      "id": "qz-general-knowledge-q190",
+      "question": "What is the capital of Iceland?",
+      "answers": ["Reykjavik"]
+    },
+    {
+      "id": "qz-general-knowledge-q191",
+      "question": "Which ancient Roman city was buried by the eruption of Mount Vesuvius in 79 AD?",
+      "answers": ["Pompeii"]
+    },
+    {
+      "id": "qz-general-knowledge-q192",
+      "question": "What mineral is the main component of pencil 'lead'?",
+      "answers": ["Graphite"]
+    },
+    {
+      "id": "qz-general-knowledge-q193",
+      "question": "The ancient rock-carved city of Petra is located in which modern country?",
+      "answers": ["Jordan"]
+    },
+    {
+      "id": "qz-general-knowledge-q194",
+      "question": "Who invented the printing press with movable type in 15th-century Europe?",
+      "answers": ["Gutenberg", "Johannes Gutenberg"]
+    },
+    {
+      "id": "qz-general-knowledge-q195",
+      "question": "In what year did King John of England seal the Magna Carta?",
+      "answers": ["1215"]
+    },
+    {
+      "id": "qz-general-knowledge-q196",
+      "question": "Which African country has more pyramids than Egypt?",
+      "answers": ["Sudan"]
+    },
+    {
+      "id": "qz-general-knowledge-q197",
+      "question": "What is the term for the bending of light as it passes from one medium to another?",
+      "answers": ["Refraction"]
+    },
+    {
+      "id": "qz-general-knowledge-q198",
+      "question": "What word describes animals that are active mainly at dawn and dusk?",
+      "answers": ["Crepuscular"]
+    },
+    {
+      "id": "qz-general-knowledge-q199",
+      "question": "Which country uses the forint as its currency?",
+      "answers": ["Hungary"]
+    },
+    {
+      "id": "qz-general-knowledge-q200",
+      "question": "At which 1066 battle did William the Conqueror defeat King Harold of England?",
+      "answers": ["Battle of Hastings", "Hastings"]
+    }
+  ],
+  "finals": {
+    "easy": {
+      "id": "qz-general-knowledge-final-easy",
+      "question": "How many days are there in a common (non-leap) year?",
+      "answers": ["365"]
+    },
+    "medium": {
+      "id": "qz-general-knowledge-final-medium",
+      "question": "What is the largest country in the world by area?",
+      "answers": ["Russia"]
+    },
+    "hard": {
+      "id": "qz-general-knowledge-final-hard",
+      "question": "Which element has the chemical symbol W, from the name wolfram?",
+      "answers": ["Tungsten", "Wolfram"]
+    }
+  }
+}
