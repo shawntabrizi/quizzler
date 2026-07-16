@@ -41,16 +41,14 @@ const MAX_STAGE_BLOCKS: u32 = 600;
 /// Each regular wager value 1..=num_questions is usable exactly once. The
 /// u32 mask below therefore supports this deployment's 20-question ceiling.
 const MAX_GAME_QUESTIONS: u8 = 20;
-/// The registry reserves regular slots 0..200 and final-question slots above
-/// that range. Keeping this bound here makes the per-game shuffle allocation
-/// safe even if a differently configured registry is supplied at deployment.
-const MAX_REGULAR_SLOTS: u8 = 200;
-
-/// Registry slot for a final question of the given difficulty (regular
-/// questions occupy slots 0..regular_count).
-const fn final_slot(difficulty: u8) -> u8 {
-    0xf0 + difficulty
-}
+/// A registry pack is capped at 200 ordinary question slots. Keeping this
+/// bound here lets the game validate a foreign registry response before it
+/// turns that response into durable per-game state.
+const MAX_PACK_QUESTIONS: u8 = 200;
+/// Ordinary pack slots occupy 0..200, so this sentinel is never a valid
+/// selected final question.
+const FINAL_SLOT_UNSET: u8 = 0xff;
+const DIFFICULTY_MASK_ALL: u8 = 0b111;
 
 // ── Stored types (SCALE) ─────────────────────────────────────────────
 
@@ -65,7 +63,16 @@ struct GameMeta {
     stage: u8,
     cursor: u8,
     anchor: u64,
+    /// Difficulty selected by the player vote. `DIFFICULTY_UNSET` only
+    /// exists before a multi-choice vote resolves.
     final_difficulty: u8,
+    /// Ordinary registry slot reserved for the selected final question.
+    /// Kept in game metadata so clients can still render the final answer on
+    /// the terminal score screen.
+    final_slot: u8,
+    /// Bit `d` means an unused question of difficulty `d` was reserved at
+    /// game creation and can be offered in the final-round vote.
+    viable_final_difficulties: u8,
 }
 
 #[derive(Encode, Decode, Clone)]
@@ -100,6 +107,12 @@ struct PhaseView {
     deadline: u64,
     current_block: u64,
     final_difficulty: u8,
+    /// Selected final-question slot, including after the game has finished.
+    /// `0xff` means the final difficulty has not been resolved yet.
+    final_slot: u8,
+    /// Bitmask of final-round difficulties that are actually selectable:
+    /// bit 0 easy, bit 1 medium, bit 2 hard.
+    viable_final_difficulties: u8,
     /// Registry slot of the active question (0xff when no question is live).
     /// Clients read question text — and, during review, the canonical
     /// answer — from the registry using (pack_id, slot).
@@ -152,6 +165,8 @@ struct LiveGameView {
     deadline: u64,
     current_block: u64,
     final_difficulty: u8,
+    final_slot: u8,
+    viable_final_difficulties: u8,
     slot: u8,
     submit_count: u32,
     continue_count: u32,
@@ -190,7 +205,19 @@ struct LiveGameView {
 struct PackStatus {
     exists: bool,
     sealed: bool,
-    regular_count: u8,
+    question_count: u8,
+    easy_count: u8,
+    medium_count: u8,
+    hard_count: u8,
+}
+
+/// Immutable per-game question plan. At creation the game reserves one
+/// unused final candidate for every bit in `viable_final_difficulties`, then
+/// stores the regular question order and these candidate slots separately.
+struct QuestionPlan {
+    regular_slots: alloc::vec::Vec<u8>,
+    final_slots: [u8; 3],
+    viable_final_difficulties: u8,
 }
 
 // ── Storage ──────────────────────────────────────────────────────────
@@ -212,9 +239,12 @@ struct Storage {
     // (game, question_key, player)
     submissions: pvm::storage::Mapping<(u64, u8, [u8; 20]), Submission>,
     // (game, regular-question cursor) → registry slot. Chosen once when the
-    // game is created, so every participant observes the same shuffled pack
-    // subset without changing the public game ABI.
+    // game is created, so every participant observes the same planned pack
+    // subset with no repeats.
     regular_slots: pvm::storage::Mapping<(u64, u8), u8>,
+    // (game, difficulty) → reserved ordinary registry slot for a possible
+    // final. Only difficulties flagged in GameMeta are stored.
+    final_slots: pvm::storage::Mapping<(u64, u8), u8>,
     continue_flags: pvm::storage::Mapping<(u64, u8, [u8; 20]), bool>,
     // (game, question_key, target) → votes to overturn target's wrong answer
     overturn_voted: pvm::storage::Mapping<(u64, u8, [u8; 20], [u8; 20]), bool>,
@@ -277,68 +307,279 @@ fn gen_game_code(creator: &[u8; 20], seq: u64) -> u64 {
     fail("GameCodeSpaceExhausted")
 }
 
-/// Select an ordered, non-repeating subset of a pack's regular slots.
-///
-/// This is intentionally a deterministic shuffle rather than secret
-/// randomness: quiz content and answers are public in Quizzler's casual party
-/// model. Including the unique game id, creator nonce, sequence, and creation
-/// block makes separately created games naturally vary while persisting the
-/// resulting slots ensures every player sees the exact same sequence.
-fn shuffled_regular_slots(
+/// Build a deterministic per-game seed. Quiz content and answers are public
+/// in Quizzler's casual party model, so this is deliberately varied rather
+/// than secret. Persisting the resulting plan ensures every participant sees
+/// exactly the same questions even after a refresh.
+fn question_plan_seed(
     creator: &[u8; 20],
     game_id: u64,
     sequence: u64,
     creation_nonce: u64,
     creation_block: u64,
     pack_id: u32,
-    regular_count: u8,
-    num_questions: u8,
-) -> alloc::vec::Vec<u8> {
-    let mut slots = alloc::vec::Vec::with_capacity(regular_count as usize);
-    for slot in 0..regular_count {
-        slots.push(slot);
-    }
-
+) -> [u8; 32] {
     // Domain-separate this seed from join-code generation and include every
     // stable piece of game-creation context. The hash is not a security
-    // boundary; it simply provides evenly spread shuffle choices.
-    let mut seed_input = [0u8; 64];
-    seed_input[..16].copy_from_slice(b"quizzler.shuffle");
+    // boundary; it simply provides evenly spread planner choices.
+    let mut seed_input = [0u8; 72];
+    seed_input[..16].copy_from_slice(b"quizzler.plan.v1");
     seed_input[16..36].copy_from_slice(creator);
     seed_input[36..44].copy_from_slice(&game_id.to_le_bytes());
     seed_input[44..52].copy_from_slice(&sequence.to_le_bytes());
     seed_input[52..60].copy_from_slice(&creation_nonce.to_le_bytes());
     seed_input[60..64].copy_from_slice(&pack_id.to_le_bytes());
+    seed_input[64..72].copy_from_slice(&creation_block.to_le_bytes());
     let mut seed = [0u8; 32];
     pvm::api::hash_keccak_256(&seed_input, &mut seed);
+    seed
+}
 
-    // Mix the creation block into the first shuffle round without needing a
-    // separate host randomness primitive. The game id/sequence/nonce already
-    // make this unique for concurrently created games in the same block.
-    let mut block_bytes = creation_block.to_le_bytes();
-    for (index, byte) in block_bytes.iter_mut().enumerate() {
-        *byte ^= seed[index];
+/// Take the next deterministic bounded random value from a plan seed.
+fn plan_random_index(seed: &mut [u8; 32], round: &mut u16, bound: usize) -> usize {
+    if bound == 0 {
+        fail("PlannerEmptyCandidateSet");
+    }
+    let mut input = [0u8; 34];
+    input[..32].copy_from_slice(seed);
+    input[32..34].copy_from_slice(&round.to_le_bytes());
+    let mut hash = [0u8; 32];
+    pvm::api::hash_keccak_256(&input, &mut hash);
+    *seed = hash;
+    *round = match round.checked_add(1) {
+        Some(next) => next,
+        None => fail("PlannerRoundOverflow"),
+    };
+    (u64::from_le_bytes(hash[..8].try_into().unwrap()) % bound as u64) as usize
+}
+
+fn difficulty_bit(difficulty: u8) -> u8 {
+    if difficulty > 2 {
+        fail("BadDifficulty");
+    }
+    1u8 << difficulty
+}
+
+fn mask_has_one_difficulty(mask: u8) -> bool {
+    let mask = mask & DIFFICULTY_MASK_ALL;
+    mask != 0 && (mask & (mask - 1)) == 0
+}
+
+/// Fixed regular-round target: 40% easy, 40% medium, 20% hard. This gives
+/// the supported game lengths the intentional mixes 5 = 2/2/1, 10 = 4/4/2,
+/// 15 = 6/6/3, and 20 = 8/8/4. Sparse packs fall back to nearby available
+/// tiers in `planned_difficulty_counts` rather than becoming unplayable.
+fn desired_difficulty_counts(num_questions: u8) -> [u8; 3] {
+    let hard = num_questions / 5;
+    let non_hard = num_questions - hard;
+    let medium = non_hard / 2;
+    let easy = non_hard - medium;
+    [easy, medium, hard]
+}
+
+fn fallback_order(difficulty: usize) -> [usize; 3] {
+    match difficulty {
+        // If an easy target is unavailable, medium is the gentlest fallback.
+        0 => [1, 2, 0],
+        // For a missing middle tier, prefer an easier question over a harder
+        // one so a sparse community pack does not accidentally become brutal.
+        1 => [0, 2, 1],
+        // A missing hard target falls back to medium before easy.
+        2 => [1, 0, 2],
+        _ => fail("BadDifficulty"),
+    }
+}
+
+/// Allocate the intended regular-round mix within the candidates that remain
+/// after final candidates were reserved. The explicit fallback order keeps a
+/// pack with incomplete metadata useful while still putting the first
+/// available question at the easiest tier later in the schedule builder.
+fn planned_difficulty_counts(capacity: [u8; 3], num_questions: u8) -> [u8; 3] {
+    let desired = desired_difficulty_counts(num_questions);
+    let mut planned = [0u8; 3];
+    for difficulty in 0..3 {
+        planned[difficulty] = core::cmp::min(desired[difficulty], capacity[difficulty]);
     }
 
-    // A partial Fisher-Yates shuffle gives the requested subset without
-    // repeats. Only the first `num_questions` entries are durable, but the
-    // candidate vector is bounded by the registry's 200 regular slots.
-    for cursor in 0..num_questions {
-        let mut round_input = [0u8; 41];
-        round_input[..32].copy_from_slice(&seed);
-        round_input[32..40].copy_from_slice(&block_bytes);
-        round_input[40] = cursor;
-        let mut round_hash = [0u8; 32];
-        pvm::api::hash_keccak_256(&round_input, &mut round_hash);
-        seed = round_hash;
-
-        let remaining = u64::from(regular_count - cursor);
-        let random = u64::from_le_bytes(round_hash[..8].try_into().unwrap());
-        let selected = usize::from(cursor) + (random % remaining) as usize;
-        slots.swap(cursor as usize, selected);
+    for difficulty in 0..3 {
+        let missing = desired[difficulty].saturating_sub(planned[difficulty]);
+        for _ in 0..missing {
+            let mut filled = false;
+            for fallback in fallback_order(difficulty) {
+                if planned[fallback] < capacity[fallback] {
+                    planned[fallback] += 1;
+                    filled = true;
+                    break;
+                }
+            }
+            if !filled {
+                fail("QuestionPlanImpossible");
+            }
+        }
     }
-    slots.truncate(num_questions as usize);
-    slots
+
+    let allocated: u8 = planned.iter().sum();
+    if allocated != num_questions {
+        // This indicates a malformed registry response or an arithmetic
+        // mistake in the planner. Never start a game that could later miss a
+        // promised question.
+        fail("QuestionPlanImpossible");
+    }
+    planned
+}
+
+/// Choose a difficulty sequence with the desired count of each tier. The
+/// first question is always the easiest tier available for regular play, and
+/// later picks are weighted by what remains while avoiding a third identical
+/// difficulty in a row whenever another tier is available.
+fn planned_difficulty_sequence(
+    mut remaining: [u8; 3],
+    seed: &mut [u8; 32],
+    round: &mut u16,
+) -> alloc::vec::Vec<u8> {
+    let total: usize = remaining.iter().map(|count| usize::from(*count)).sum();
+    let mut sequence = alloc::vec::Vec::with_capacity(total);
+    if total == 0 {
+        return sequence;
+    }
+
+    for difficulty in 0..3 {
+        if remaining[difficulty] > 0 {
+            sequence.push(difficulty as u8);
+            remaining[difficulty] -= 1;
+            break;
+        }
+    }
+
+    while sequence.len() < total {
+        let previous = *sequence.last().unwrap_or(&DIFFICULTY_UNSET);
+        let before_previous = if sequence.len() >= 2 {
+            sequence[sequence.len() - 2]
+        } else {
+            DIFFICULTY_UNSET
+        };
+        let prohibit_repeat = previous == before_previous
+            && remaining
+                .iter()
+                .enumerate()
+                .any(|(difficulty, count)| *count > 0 && difficulty as u8 != previous);
+
+        let eligible_total: usize = remaining
+            .iter()
+            .enumerate()
+            .filter(|(difficulty, count)| {
+                **count > 0 && (!prohibit_repeat || *difficulty as u8 != previous)
+            })
+            .map(|(_, count)| usize::from(*count))
+            .sum();
+        let mut choice = plan_random_index(seed, round, eligible_total);
+        let mut selected = None;
+        for difficulty in 0..3 {
+            if remaining[difficulty] == 0 || (prohibit_repeat && difficulty as u8 == previous) {
+                continue;
+            }
+            let weight = remaining[difficulty] as usize;
+            if choice < weight {
+                selected = Some(difficulty);
+                break;
+            }
+            choice -= weight;
+        }
+        let difficulty = match selected {
+            Some(difficulty) => difficulty,
+            None => fail("QuestionPlanImpossible"),
+        };
+        sequence.push(difficulty as u8);
+        remaining[difficulty] -= 1;
+    }
+    sequence
+}
+
+/// Build the regular order and reserve all final candidates that can coexist
+/// with it. When a sparse pack has room for fewer final choices than the
+/// number of represented tiers, the tiers with the deepest candidate pools
+/// win (ties prefer easier) so the regular plan can retain rare questions.
+fn build_question_plan(
+    creator: &[u8; 20],
+    game_id: u64,
+    sequence: u64,
+    creation_nonce: u64,
+    creation_block: u64,
+    pack_id: u32,
+    num_questions: u8,
+    mut slots_by_difficulty: [alloc::vec::Vec<u8>; 3],
+) -> QuestionPlan {
+    let total_candidates: usize = slots_by_difficulty.iter().map(|slots| slots.len()).sum();
+    if total_candidates <= num_questions as usize {
+        fail("NotEnoughQuestionsForFinal");
+    }
+
+    let mut seed = question_plan_seed(
+        creator,
+        game_id,
+        sequence,
+        creation_nonce,
+        creation_block,
+        pack_id,
+    );
+    let mut round = 0u16;
+
+    let mut ranked = [0usize, 1, 2];
+    // Three elements are clearer and cheaper than pulling a sort dependency
+    // into this no_std contract. More candidates rank first; equal counts
+    // retain easy → medium → hard ordering.
+    for left in 0..2 {
+        for right in (left + 1)..3 {
+            if slots_by_difficulty[ranked[right]].len() > slots_by_difficulty[ranked[left]].len() {
+                ranked.swap(left, right);
+            }
+        }
+    }
+    let represented = slots_by_difficulty
+        .iter()
+        .filter(|slots| !slots.is_empty())
+        .count();
+    let free_for_final = total_candidates - num_questions as usize;
+    let final_choice_count = core::cmp::min(represented, free_for_final);
+    if final_choice_count == 0 {
+        fail("NotEnoughQuestionsForFinal");
+    }
+
+    let mut final_slots = [FINAL_SLOT_UNSET; 3];
+    let mut viable_final_difficulties = 0u8;
+    for ranked_index in 0..final_choice_count {
+        let difficulty = ranked[ranked_index];
+        let candidates = &mut slots_by_difficulty[difficulty];
+        if candidates.is_empty() {
+            fail("QuestionPlanImpossible");
+        }
+        let index = plan_random_index(&mut seed, &mut round, candidates.len());
+        final_slots[difficulty] = candidates.swap_remove(index);
+        viable_final_difficulties |= difficulty_bit(difficulty as u8);
+    }
+
+    let capacity = [
+        slots_by_difficulty[0].len() as u8,
+        slots_by_difficulty[1].len() as u8,
+        slots_by_difficulty[2].len() as u8,
+    ];
+    let planned = planned_difficulty_counts(capacity, num_questions);
+    let sequence = planned_difficulty_sequence(planned, &mut seed, &mut round);
+    let mut regular_slots = alloc::vec::Vec::with_capacity(num_questions as usize);
+    for difficulty in sequence {
+        let candidates = &mut slots_by_difficulty[difficulty as usize];
+        let index = plan_random_index(&mut seed, &mut round, candidates.len());
+        regular_slots.push(candidates.swap_remove(index));
+    }
+    if regular_slots.len() != num_questions as usize {
+        fail("QuestionPlanImpossible");
+    }
+
+    QuestionPlan {
+        regular_slots,
+        final_slots,
+        viable_final_difficulties,
+    }
 }
 
 fn indexed_address(address: [u8; 20]) -> [u8; 32] {
@@ -467,9 +708,22 @@ fn session_registry_call<T: pvm::SolAbi>(
 }
 
 fn registry_pack_status(pack_id: u32) -> PackStatus {
-    // PackStatus is 3 static words = 96 bytes; 128 leaves headroom so a full
-    // reply is never mistaken for truncation by the out_cap guard above.
-    registry_call("getPackStatus", &["uint32"], &[abi_word_u32(pack_id)], 128)
+    // PackStatus is 6 static words = 192 bytes; 256 leaves headroom so a
+    // full reply is never mistaken for truncation by the out_cap guard above.
+    registry_call("getPackStatus", &["uint32"], &[abi_word_u32(pack_id)], 256)
+}
+
+fn registry_question_slots_for_difficulty(pack_id: u32, difficulty: u8) -> Vec<u8> {
+    // ABI encoding for the registry's bounded `uint8[]`: one offset word,
+    // one length word, and at most 200 element words = 6,464 bytes. Keep a
+    // comfortable but finite cap so a malformed registry cannot make game
+    // creation allocate an unbounded response.
+    registry_call(
+        "getQuestionSlotsForDifficulty",
+        &["uint32", "uint8"],
+        &[abi_word_u32(pack_id), abi_word_u8(difficulty)],
+        8192,
+    )
 }
 
 fn registry_answers(pack_id: u32, slot: u8) -> Vec<String> {
@@ -545,6 +799,38 @@ fn load_game(game_id: u64) -> GameMeta {
 
 fn load_players(game_id: u64) -> Vec<[u8; 20]> {
     Storage::players().get(&game_id).unwrap_or_default()
+}
+
+/// Read the registry's three immutable difficulty indexes and verify every
+/// count, range, and uniqueness invariant before storing a plan. The game is
+/// intentionally compatible only with the matching registry ABI; a bad
+/// deployment should fail at creation rather than produce a game that gets
+/// stuck at its final round.
+fn validated_question_slots(pack_id: u32, status: &PackStatus) -> [Vec<u8>; 3] {
+    let slots_by_difficulty = [
+        registry_question_slots_for_difficulty(pack_id, 0),
+        registry_question_slots_for_difficulty(pack_id, 1),
+        registry_question_slots_for_difficulty(pack_id, 2),
+    ];
+    let expected = [status.easy_count, status.medium_count, status.hard_count];
+    let total: u16 = expected.iter().map(|count| u16::from(*count)).sum();
+    if total != u16::from(status.question_count) {
+        fail("RegistryDifficultyCountsInvalid");
+    }
+
+    let mut seen = [false; MAX_PACK_QUESTIONS as usize];
+    for difficulty in 0..3 {
+        if slots_by_difficulty[difficulty].len() != expected[difficulty] as usize {
+            fail("RegistryDifficultyIndexInvalid");
+        }
+        for slot in &slots_by_difficulty[difficulty] {
+            if *slot >= status.question_count || seen[*slot as usize] {
+                fail("RegistryDifficultyIndexInvalid");
+            }
+            seen[*slot as usize] = true;
+        }
+    }
+    slots_by_difficulty
 }
 
 fn is_active_in_players(game_id: u64, who: &[u8; 20], players: &[[u8; 20]]) -> bool {
@@ -756,18 +1042,89 @@ fn reconcile_overturns_after_forfeit(game_id: u64, m: &GameMeta) {
     }
 }
 
-/// Apply timeout transitions at a known block; resolves the final difficulty
-/// if the roll crossed the end of the Vote stage. View methods pass one block
+fn resolve_final_selection(game_id: u64, m: &mut GameMeta, counts: [u32; 3]) {
+    if m.final_difficulty != DIFFICULTY_UNSET {
+        if m.final_slot == FINAL_SLOT_UNSET {
+            fail("FinalSlotMissing");
+        }
+        return;
+    }
+
+    let mask = m.viable_final_difficulties;
+    if mask == 0 || mask & !DIFFICULTY_MASK_ALL != 0 {
+        fail("NoViableFinalDifficulty");
+    }
+    let has_votes = counts.iter().any(|count| *count > 0);
+    let difficulty = if !has_votes {
+        // Preserve the old no-vote intent (medium) where it is actually a
+        // valid option. Sparse packs fall back to easy, then hard.
+        if mask & difficulty_bit(1) != 0 {
+            1
+        } else if mask & difficulty_bit(0) != 0 {
+            0
+        } else {
+            2
+        }
+    } else {
+        let mut selected = None;
+        for difficulty in 0..3u8 {
+            if mask & difficulty_bit(difficulty) == 0 {
+                continue;
+            }
+            match selected {
+                // `>=` keeps the party game's intentional harder-tier
+                // tiebreak, but only among choices the pack can honor.
+                Some(current) if counts[difficulty as usize] < counts[current as usize] => {}
+                _ => selected = Some(difficulty),
+            }
+        }
+        match selected {
+            Some(difficulty) => difficulty,
+            None => fail("NoViableFinalDifficulty"),
+        }
+    };
+    let slot = match Storage::final_slots().get(&(game_id, difficulty)) {
+        Some(slot) if slot != FINAL_SLOT_UNSET => slot,
+        _ => fail("FinalSlotMissing"),
+    };
+    m.final_difficulty = difficulty;
+    m.final_slot = slot;
+}
+
+/// Advance exactly one timed phase at a known boundary. When a pack has only
+/// one viable final tier, its last regular review routes directly into final
+/// wagering instead of presenting a meaningless one-button vote.
+fn advance_timed_stage(game_id: u64, m: &mut GameMeta, next_anchor: u64) {
+    if m.stage == STAGE_VOTE {
+        resolve_final_selection(game_id, m, active_difficulty_counts(game_id));
+    }
+    let (mut stage, cursor) = logic::next_stage(m.stage, m.cursor, m.num_questions);
+    if stage == STAGE_VOTE && mask_has_one_difficulty(m.viable_final_difficulties) {
+        resolve_final_selection(game_id, m, [0u32; 3]);
+        stage = STAGE_FINAL_WAGER;
+    }
+    m.stage = stage;
+    m.cursor = cursor;
+    m.anchor = next_anchor;
+}
+
+/// Apply timeout transitions at a known block. The loop deliberately handles
+/// the one-viable-tier shortcut during the review → final transition, rather
+/// than rolling through a hidden vote timer. View methods pass one block
 /// through their whole snapshot so deadline/current-block data cannot be
 /// internally inconsistent.
 fn settle_at(game_id: u64, m: &mut GameMeta, now: u64) {
-    let (clock, crossed_vote) = logic::roll(clock_of(m), &cfg_of(m), now);
-    if crossed_vote && m.final_difficulty == DIFFICULTY_UNSET {
-        m.final_difficulty = logic::resolve_difficulty(active_difficulty_counts(game_id));
+    loop {
+        let clock = clock_of(m);
+        let Some(duration) = logic::stage_duration(clock.stage, &cfg_of(m)) else {
+            return;
+        };
+        let deadline = clock.anchor.saturating_add(duration);
+        if now < deadline {
+            return;
+        }
+        advance_timed_stage(game_id, m, deadline);
     }
-    m.stage = clock.stage;
-    m.cursor = clock.cursor;
-    m.anchor = clock.anchor;
 }
 
 /// Apply timeout transitions to the stored clock at the current block.
@@ -861,6 +1218,8 @@ fn phase_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]]) -
         deadline: logic::stage_deadline(&clock, &cfg_of(m)),
         current_block: now,
         final_difficulty: m.final_difficulty,
+        final_slot: m.final_slot,
+        viable_final_difficulties: m.viable_final_difficulties,
         slot,
         submit_count,
         continue_count: active_continue_count_in(game_id, question_key, players),
@@ -948,6 +1307,8 @@ fn live_game_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]
         deadline: phase.deadline,
         current_block: phase.current_block,
         final_difficulty: phase.final_difficulty,
+        final_slot: phase.final_slot,
+        viable_final_difficulties: phase.viable_final_difficulties,
         slot: phase.slot,
         submit_count: phase.submit_count,
         continue_count: phase.continue_count,
@@ -976,13 +1337,7 @@ fn live_game_view_from(game_id: u64, m: &GameMeta, now: u64, players: &[[u8; 20]
 
 /// Early collapse: everyone has acted, advance one stage right now.
 fn collapse(game_id: u64, m: &mut GameMeta) {
-    if m.stage == STAGE_VOTE && m.final_difficulty == DIFFICULTY_UNSET {
-        m.final_difficulty = logic::resolve_difficulty(active_difficulty_counts(game_id));
-    }
-    let (stage, cursor) = logic::next_stage(m.stage, m.cursor, m.num_questions);
-    m.stage = stage;
-    m.cursor = cursor;
-    m.anchor = current_block();
+    advance_timed_stage(game_id, m, current_block());
 }
 
 /// A forfeit can reduce the current quorum. Re-evaluate exactly the action
@@ -1020,10 +1375,10 @@ fn active_slot(game_id: u64, m: &GameMeta) -> u8 {
             None => fail("QuestionSlotMissing"),
         },
         STAGE_FINAL_ANSWER | STAGE_FINAL_REVIEW => {
-            if m.final_difficulty == DIFFICULTY_UNSET {
-                fail("DifficultyUnresolved");
+            if m.final_difficulty == DIFFICULTY_UNSET || m.final_slot == FINAL_SLOT_UNSET {
+                fail("FinalQuestionUnresolved");
             }
-            final_slot(m.final_difficulty)
+            m.final_slot
         }
         _ => fail("NoActiveQuestion"),
     }
@@ -1052,17 +1407,18 @@ mod quizzler {
     // NOTE: no glob import — #[pvm::contract] injects its own String/Vec
     // imports into the module, which a `use super::*` would collide with.
     use super::{
-        DIFFICULTY_UNSET, GameMeta, GameView, LiveGameView, MAX_GAME_QUESTIONS, MAX_PLAYERS,
-        MAX_REGULAR_SLOTS, MAX_STAGE_BLOCKS, PhaseView, STAGE_ABANDONED, STAGE_ANSWER,
-        STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_FINAL_WAGER, STAGE_LOBBY, STAGE_REVIEW,
-        STAGE_VOTE, Storage, Submission, SubmissionView, active_continue_count,
+        DIFFICULTY_UNSET, FINAL_SLOT_UNSET, GameMeta, GameView, LiveGameView, MAX_GAME_QUESTIONS,
+        MAX_PACK_QUESTIONS, MAX_PLAYERS, MAX_STAGE_BLOCKS, PhaseView, STAGE_ABANDONED,
+        STAGE_ANSWER, STAGE_FINAL_ANSWER, STAGE_FINAL_REVIEW, STAGE_FINAL_WAGER, STAGE_LOBBY,
+        STAGE_REVIEW, STAGE_VOTE, Storage, Submission, SubmissionView, active_continue_count,
         active_difficulty_total, active_final_wager_count, active_submission_count,
-        apply_overturn_if_quorum, clock_of, collapse, collapse_if_everyone_ready, current_block,
-        emit_game_created, evaluate_answer, fail, game_view_from, gen_game_code, is_active_player,
-        is_roster_player, live_game_view_from, load_game, load_players, logic, main_caller,
-        phase_view_from, player_for_caller, player_names_from, pvm,
-        reconcile_overturns_after_forfeit, registry_pack_status, require_active_player, save_game,
-        settle, settle_at, shuffled_regular_slots, submission_views_from,
+        apply_overturn_if_quorum, build_question_plan, clock_of, collapse,
+        collapse_if_everyone_ready, current_block, difficulty_bit, emit_game_created,
+        evaluate_answer, fail, game_view_from, gen_game_code, is_active_player, is_roster_player,
+        live_game_view_from, load_game, load_players, logic, main_caller, phase_view_from,
+        player_for_caller, player_names_from, pvm, reconcile_overturns_after_forfeit,
+        registry_pack_status, require_active_player, save_game, settle, settle_at,
+        submission_views_from, validated_question_slots,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -1139,7 +1495,10 @@ mod quizzler {
         if !pack.exists || !pack.sealed {
             fail("PackNotSealed");
         }
-        if pack.regular_count > MAX_REGULAR_SLOTS || num_questions > pack.regular_count {
+        // Reserve one distinct unused question for the final. A pack with
+        // exactly `num_questions` questions is therefore not a valid game of
+        // that length; the client can offer only safe lengths from its count.
+        if pack.question_count > MAX_PACK_QUESTIONS || num_questions >= pack.question_count {
             fail("BadQuestionCount");
         }
 
@@ -1153,15 +1512,17 @@ mod quizzler {
             None => fail("GameIdExhausted"),
         };
         let id = gen_game_code(&creator, seq);
-        let selected_slots = shuffled_regular_slots(
+        let creation_block = current_block();
+        let slots_by_difficulty = validated_question_slots(pack_id, &pack);
+        let plan = build_question_plan(
             &creator,
             id,
             seq,
             creation_nonce,
-            current_block(),
+            creation_block,
             pack_id,
-            pack.regular_count,
             num_questions,
+            slots_by_difficulty,
         );
         let meta = GameMeta {
             pack_id,
@@ -1174,10 +1535,18 @@ mod quizzler {
             cursor: 0,
             anchor: 0,
             final_difficulty: DIFFICULTY_UNSET,
+            final_slot: FINAL_SLOT_UNSET,
+            viable_final_difficulties: plan.viable_final_difficulties,
         };
         save_game(id, &meta);
-        for (cursor, slot) in selected_slots.into_iter().enumerate() {
+        for (cursor, slot) in plan.regular_slots.into_iter().enumerate() {
             Storage::regular_slots().insert(&(id, cursor as u8), &slot);
+        }
+        for difficulty in 0..3u8 {
+            if plan.viable_final_difficulties & (1u8 << difficulty) != 0 {
+                Storage::final_slots()
+                    .insert(&(id, difficulty), &plan.final_slots[difficulty as usize]);
+            }
         }
         let players: Vec<[u8; 20]> = alloc::vec![creator];
         Storage::players().insert(&id, &players);
@@ -1458,8 +1827,10 @@ mod quizzler {
         save_game(game_id, &meta);
     }
 
-    /// Vote for the final question's difficulty (0 easy, 1 medium, 2 hard).
-    /// Majority wins, ties break harder, no votes at all → medium.
+    /// Vote for one of the final question difficulties this pack can actually
+    /// honor (0 easy, 1 medium, 2 hard). Majority wins, ties break harder;
+    /// no votes prefer medium when it is a viable choice. Single-choice packs
+    /// skip this stage and enter final wagering directly.
     #[pvm::method]
     pub fn vote_difficulty(game_id: u64, difficulty: u8) {
         let mut meta = load_game(game_id);
@@ -1469,6 +1840,9 @@ mod quizzler {
         }
         if difficulty > 2 {
             fail("BadDifficulty");
+        }
+        if meta.viable_final_difficulties & difficulty_bit(difficulty) == 0 {
+            fail("DifficultyUnavailable");
         }
         let who = player_for_caller();
         let active_count = require_active_player(game_id, &who);

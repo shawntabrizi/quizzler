@@ -1,10 +1,11 @@
 //! Quizzler pack registry — quiz content lives in its own contract so the
 //! game contract can be redeployed freely without re-uploading packs.
 //!
-//! Packs hold up to 200 regular questions (slots 0..) plus exactly one
-//! final question per difficulty (slots 0xf0 + difficulty). Accepted
-//! answers are stored normalized and are public: the game contract reads
-//! them cross-contract for matching, and clients read them at review time.
+//! Packs hold up to 200 questions in ordinary sequential slots. Every
+//! question declares its difficulty (easy, medium, or hard), including the
+//! question that a game later reserves for its final round. Accepted answers
+//! are stored normalized and are public: the game contract reads them
+//! cross-contract for matching, and clients read them at review time.
 
 #![no_main]
 #![no_std]
@@ -33,14 +34,9 @@ const MAX_SEALED_PACKS_PER_VIEW_PAGE: usize = 24;
 /// `get_sealed_packs` uses this cursor to request the newest page. Zero is
 /// reserved for the terminal cursor returned after the oldest page.
 const SEALED_PACK_CURSOR_LATEST: u32 = u32::MAX;
-// Regular questions occupy u8 slots 0..=0xef (finals live at 0xf0+),
-// sized for the ~200-question starter packs.
-const MAX_REGULAR_QUESTIONS: u8 = 200;
-
-/// Storage slot for a final question of the given difficulty.
-const fn final_slot(difficulty: u8) -> u8 {
-    0xf0 + difficulty
-}
+/// Questions occupy sequential u8 slots 0..200, sized for the starter
+/// packs while leaving the sentinel values used by the game contract free.
+const MAX_PACK_QUESTIONS: u8 = 200;
 
 #[derive(Encode, Decode, Clone)]
 struct PackMeta {
@@ -50,8 +46,11 @@ struct PackMeta {
     /// contract deliberately stores the original UTF-8 string rather than a
     /// client-specific emoji ID, so every client can render the same artwork.
     emoji: String,
-    regular_count: u8,
-    finals_set: [bool; 3],
+    question_count: u8,
+    /// Counts for difficulty 0 (easy), 1 (medium), and 2 (hard). Keeping
+    /// this alongside the per-difficulty slot index makes a game able to
+    /// plan a balanced, non-repeating round without scanning all questions.
+    difficulty_counts: [u8; 3],
     sealed: bool,
 }
 
@@ -59,6 +58,7 @@ struct PackMeta {
 struct Question {
     text: String,
     answer_count: u8,
+    difficulty: u8,
 }
 
 #[derive(pvm::SolAbi)]
@@ -66,23 +66,25 @@ struct PackView {
     creator: pvm::Address,
     title: String,
     emoji: String,
-    regular_count: u8,
-    finals_set_count: u8,
+    question_count: u8,
+    easy_count: u8,
+    medium_count: u8,
+    hard_count: u8,
     sealed: bool,
 }
 
-/// A sealed pack together with its immutable id. `PackView` deliberately
-/// predates catalog paging and therefore has no id field; keeping this as a
-/// separate view preserves the existing `get_pack` / `get_packs` ABI while
-/// giving a browser everything it needs to render a page in one read.
+/// A sealed pack together with its immutable id. This separate page view lets
+/// a browser render a bounded catalog rail in one read.
 #[derive(pvm::SolAbi)]
 struct SealedPackView {
     pack_id: u32,
     creator: pvm::Address,
     title: String,
     emoji: String,
-    regular_count: u8,
-    finals_set_count: u8,
+    question_count: u8,
+    easy_count: u8,
+    medium_count: u8,
+    hard_count: u8,
     sealed: bool,
 }
 
@@ -99,7 +101,10 @@ struct SealedPackPage {
 struct PackStatus {
     exists: bool,
     sealed: bool,
-    regular_count: u8,
+    question_count: u8,
+    easy_count: u8,
+    medium_count: u8,
+    hard_count: u8,
 }
 
 /// One imported question. `add_questions` accepts a small array of these so a
@@ -108,7 +113,8 @@ struct PackStatus {
 struct QuestionInput {
     text: String,
     answers: alloc::vec::Vec<String>,
-    is_final: bool,
+    /// 0 = easy, 1 = medium, 2 = hard. Every question must declare one;
+    /// games reserve normal unused questions for their final round.
     difficulty: u8,
 }
 
@@ -116,10 +122,14 @@ struct QuestionInput {
 struct Storage {
     pack_count: u32,
     pack_meta: pvm::storage::Mapping<u32, PackMeta>,
-    // (pack, slot) — regular slots 0.., finals at final_slot(d)
+    // (pack, slot) — every question occupies one ordinary sequential slot.
     questions: pvm::storage::Mapping<(u32, u8), Question>,
     // (pack, slot, i) — normalized accepted answers
     accepted: pvm::storage::Mapping<(u32, u8, u8), String>,
+    // (pack, difficulty, index) → ordinary question slot. This is a compact
+    // on-chain index, not a centralized service: the game reads the three
+    // bounded lists once when it creates a deterministic question plan.
+    question_slot_by_difficulty: pvm::storage::Mapping<(u32, u8, u8), u8>,
     // (creator, client-selected nonce) → pack id. The nonce makes a creation
     // durable and unambiguous when one account publishes from multiple tabs.
     created_pack_of: pvm::storage::Mapping<([u8; 20], u64), u32>,
@@ -144,10 +154,10 @@ fn caller20() -> [u8; 20] {
 #[pvm::contract]
 mod registry {
     use super::{
-        MAX_ANSWER_BYTES, MAX_ANSWERS, MAX_PACKS_PER_VIEW_BATCH, MAX_QUESTIONS_PER_BATCH,
-        MAX_REGULAR_QUESTIONS, MAX_SEALED_PACKS_PER_VIEW_PAGE, MAX_TEXT_BYTES, MAX_TITLE_BYTES,
+        MAX_ANSWER_BYTES, MAX_ANSWERS, MAX_PACK_QUESTIONS, MAX_PACKS_PER_VIEW_BATCH,
+        MAX_QUESTIONS_PER_BATCH, MAX_SEALED_PACKS_PER_VIEW_PAGE, MAX_TEXT_BYTES, MAX_TITLE_BYTES,
         PackMeta, PackStatus, PackView, Question, QuestionInput, SEALED_PACK_CURSOR_LATEST,
-        SealedPackPage, SealedPackView, Storage, caller20, fail, final_slot, logic, pvm,
+        SealedPackPage, SealedPackView, Storage, caller20, fail, logic, pvm,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -197,7 +207,6 @@ mod registry {
         meta: &mut PackMeta,
         text: String,
         answers: Vec<String>,
-        is_final: bool,
         difficulty: u8,
     ) {
         if !valid_display_text(&text, MAX_TEXT_BYTES) {
@@ -207,28 +216,18 @@ mod registry {
             fail("BadAnswerCount");
         }
 
-        let slot = if is_final {
-            if difficulty > 2 {
-                fail("BadDifficulty");
-            }
-            if meta.finals_set[difficulty as usize] {
-                fail("FinalAlreadySet");
-            }
-            meta.finals_set[difficulty as usize] = true;
-            final_slot(difficulty)
-        } else {
-            // The field has no meaning for a regular question. Rejecting a
-            // stray value catches malformed imports rather than silently
-            // accepting metadata that cannot later be reconstructed.
-            if difficulty != 0 {
-                fail("BadDifficulty");
-            }
-            if meta.regular_count >= MAX_REGULAR_QUESTIONS {
-                fail("PackFull");
-            }
-            let slot = meta.regular_count;
-            meta.regular_count += 1;
-            slot
+        if difficulty > 2 {
+            fail("BadDifficulty");
+        }
+        if meta.question_count >= MAX_PACK_QUESTIONS {
+            fail("PackFull");
+        }
+        let slot = meta.question_count;
+        let difficulty_index = meta.difficulty_counts[difficulty as usize];
+        meta.question_count += 1;
+        meta.difficulty_counts[difficulty as usize] = match difficulty_index.checked_add(1) {
+            Some(next) => next,
+            None => fail("DifficultyCountOverflow"),
         };
 
         // Validate and normalize the full answer set before storing any of
@@ -260,8 +259,11 @@ mod registry {
             &Question {
                 text,
                 answer_count: normalized.len() as u8,
+                difficulty,
             },
         );
+        Storage::question_slot_by_difficulty()
+            .insert(&(pack_id, difficulty, difficulty_index), &slot);
     }
 
     fn pack_view(pack_id: u32) -> PackView {
@@ -273,8 +275,10 @@ mod registry {
             creator: pvm::Address::from(m.creator),
             title: m.title,
             emoji: m.emoji,
-            regular_count: m.regular_count,
-            finals_set_count: m.finals_set.iter().filter(|&&s| s).count() as u8,
+            question_count: m.question_count,
+            easy_count: m.difficulty_counts[0],
+            medium_count: m.difficulty_counts[1],
+            hard_count: m.difficulty_counts[2],
             sealed: m.sealed,
         }
     }
@@ -295,8 +299,10 @@ mod registry {
             creator: pvm::Address::from(m.creator),
             title: m.title,
             emoji: m.emoji,
-            regular_count: m.regular_count,
-            finals_set_count: m.finals_set.iter().filter(|&&s| s).count() as u8,
+            question_count: m.question_count,
+            easy_count: m.difficulty_counts[0],
+            medium_count: m.difficulty_counts[1],
+            hard_count: m.difficulty_counts[2],
             sealed: true,
         }
     }
@@ -319,8 +325,8 @@ mod registry {
                 creator,
                 title,
                 emoji,
-                regular_count: 0,
-                finals_set: [false; 3],
+                question_count: 0,
+                difficulty_counts: [0; 3],
                 sealed: false,
             },
         );
@@ -350,7 +356,7 @@ mod registry {
     }
 
     /// Append a small, atomic import chunk. A publisher can safely resume a
-    /// long pack after any network failure by reading `get_pack.regular_count`
+    /// long pack after any network failure by reading `get_pack.question_count`
     /// and sending the next chunk; no partly-written question can escape a
     /// reverted transaction.
     #[pvm::method]
@@ -365,7 +371,6 @@ mod registry {
                 &mut meta,
                 question.text,
                 question.answers,
-                question.is_final,
                 question.difficulty,
             );
         }
@@ -384,11 +389,12 @@ mod registry {
         if meta.sealed {
             fail("PackSealed");
         }
-        if meta.regular_count == 0 {
-            fail("NoQuestions");
-        }
-        if !meta.finals_set.iter().all(|&s| s) {
-            fail("MissingFinalQuestions");
+        // A playable game needs at least one ordinary question and a
+        // distinct unused candidate for the final round. Difficulty may be
+        // sparse (an all-easy pack is valid); the game contract exposes only
+        // the final choices for which it successfully reserves a candidate.
+        if meta.question_count < 2 {
+            fail("NotEnoughQuestions");
         }
         meta.sealed = true;
         Storage::pack_meta().insert(&pack_id, &meta);
@@ -481,22 +487,38 @@ mod registry {
             Some(m) => PackStatus {
                 exists: true,
                 sealed: m.sealed,
-                regular_count: m.regular_count,
+                question_count: m.question_count,
+                easy_count: m.difficulty_counts[0],
+                medium_count: m.difficulty_counts[1],
+                hard_count: m.difficulty_counts[2],
             },
             None => PackStatus {
                 exists: false,
                 sealed: false,
-                regular_count: 0,
+                question_count: 0,
+                easy_count: 0,
+                medium_count: 0,
+                hard_count: 0,
             },
         }
     }
 
-    /// Question text by pack slot: regular questions at 0..regular_count,
-    /// final questions at 0xf0 + difficulty.
+    /// Question text by its ordinary pack slot.
     #[pvm::method]
     pub fn get_question(pack_id: u32, slot: u8) -> String {
         match Storage::questions().get(&(pack_id, slot)) {
             Some(q) => q.text,
+            None => fail("NoSuchQuestion"),
+        }
+    }
+
+    /// Difficulty for one ordinary question slot: 0 easy, 1 medium, 2 hard.
+    /// This is mainly useful for direct pack inspection; the game itself uses
+    /// the bounded per-difficulty slot index when it creates a plan.
+    #[pvm::method]
+    pub fn get_question_difficulty(pack_id: u32, slot: u8) -> u8 {
+        match Storage::questions().get(&(pack_id, slot)) {
+            Some(q) => q.difficulty,
             None => fail("NoSuchQuestion"),
         }
     }
@@ -521,6 +543,30 @@ mod registry {
             }
         }
         out
+    }
+
+    /// All ordinary slots for one difficulty (0 easy, 1 medium, 2 hard), in
+    /// immutable authoring order. The list is bounded by the pack's 200
+    /// question ceiling and lets the game reserve final candidates and plan
+    /// its regular-round distribution without a centralized indexer.
+    #[pvm::method]
+    pub fn get_question_slots_for_difficulty(pack_id: u32, difficulty: u8) -> Vec<u8> {
+        if difficulty > 2 {
+            fail("BadDifficulty");
+        }
+        let meta = match Storage::pack_meta().get(&pack_id) {
+            Some(meta) => meta,
+            None => fail("NoSuchPack"),
+        };
+        let count = meta.difficulty_counts[difficulty as usize];
+        let mut slots = Vec::with_capacity(count as usize);
+        for index in 0..count {
+            match Storage::question_slot_by_difficulty().get(&(pack_id, difficulty, index)) {
+                Some(slot) => slots.push(slot),
+                None => fail("DifficultyIndexCorrupt"),
+            }
+        }
+        slots
     }
 
     /// Resolve a pack created with `create_pack_with_nonce`; `u32::MAX` means
