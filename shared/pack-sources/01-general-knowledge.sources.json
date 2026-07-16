@@ -33,7 +33,7 @@
     {
       "id": "qz-general-knowledge-q005",
       "question": "What do you call a word that is spelled the same as another word but has a different meaning?",
-      "answers": ["Homograph", "a homograph"],
+      "answers": ["Homograph", "a homograph", "Homonym", "a homonym"],
       "difficulty": "easy"
     },
     {
@@ -86,20 +86,14 @@
     },
     {
       "id": "qz-general-knowledge-q014",
-      "question": "How many minutes are in one hour?",
-      "answers": ["60", "sixty"],
+      "question": "What is the tallest animal in the world?",
+      "answers": ["Giraffe", "giraffes"],
       "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q015",
-      "question": "What is the currency of the United States?",
-      "answers": ["Dollar", "US dollar", "United States dollar", "USD"],
-      "difficulty": "easy"
-    },
-    {
-      "id": "qz-general-knowledge-q016",
-      "question": "What is a word derived from a person's name, such as 'sandwich,' called?",
-      "answers": ["Eponym", "an eponym"],
+      "question": "Which planet is the largest in our solar system?",
+      "answers": ["Jupiter"],
       "difficulty": "easy"
     },
     {
@@ -116,20 +110,20 @@
     },
     {
       "id": "qz-general-knowledge-q019",
-      "question": "What sweet substance do bees make?",
-      "answers": ["Honey"],
+      "question": "Which honey-loving bear lives in the Hundred Acre Wood?",
+      "answers": ["Winnie the Pooh", "Pooh", "Pooh Bear"],
       "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q020",
-      "question": "What is the name of the star at the center of our solar system?",
-      "answers": ["Sun", "the Sun"],
+      "question": "Which flightless black-and-white bird is famously found in Antarctica?",
+      "answers": ["Penguin", "penguins"],
       "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q021",
-      "question": "What common substance has the chemical formula H2O?",
-      "answers": ["Water"],
+      "question": "Which famous river flows through Egypt on its way to the Mediterranean?",
+      "answers": ["Nile", "the Nile", "River Nile", "Nile River"],
       "difficulty": "easy"
     },
     {
@@ -146,26 +140,26 @@
     },
     {
       "id": "qz-general-knowledge-q024",
-      "question": "What do you call a baby dog?",
-      "answers": ["Puppy", "pup"],
+      "question": "Which striped African animal has a pattern as unique to each individual as a fingerprint?",
+      "answers": ["Zebra", "zebras"],
       "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q025",
-      "question": "What medieval trading alliance connected cities around the Baltic and North Seas?",
-      "answers": ["Hanseatic League", "the Hanseatic League", "Hanse"],
-      "difficulty": "easy"
+      "question": "What is the proper name of the '&' symbol?",
+      "answers": ["Ampersand", "an ampersand"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-general-knowledge-q026",
-      "question": "How many hours are in a day?",
-      "answers": ["24", "twenty four"],
+      "question": "In which sport can you score a hole-in-one?",
+      "answers": ["Golf"],
       "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q027",
-      "question": "Which season comes right after winter?",
-      "answers": ["Spring"],
+      "question": "Which orange vegetable is popularly said to help you see in the dark?",
+      "answers": ["Carrot", "carrots"],
       "difficulty": "easy"
     },
     {
@@ -206,9 +200,9 @@
     },
     {
       "id": "qz-general-knowledge-q034",
-      "question": "What figure of speech uses a part to refer to the whole, as in 'all hands on deck'?",
-      "answers": ["Synecdoche"],
-      "difficulty": "easy"
+      "question": "Which two-word Latin phrase translates to 'seize the day'?",
+      "answers": ["Carpe diem"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-general-knowledge-q035",
@@ -248,8 +242,8 @@
     },
     {
       "id": "qz-general-knowledge-q041",
-      "question": "Christmas Day falls in which month?",
-      "answers": ["December"],
+      "question": "What is the name of the cowboy doll in the Toy Story films?",
+      "answers": ["Woody", "Sheriff Woody"],
       "difficulty": "easy"
     },
     {
@@ -260,14 +254,14 @@
     },
     {
       "id": "qz-general-knowledge-q043",
-      "question": "How many zeros are in the number one thousand?",
-      "answers": ["3", "three"],
+      "question": "What twisting puzzle cube with six colored faces became a worldwide craze in the 1980s?",
+      "answers": ["Rubik's Cube", "Rubiks Cube", "Rubix Cube", "Rubik Cube"],
       "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q044",
-      "question": "What is the opposite of day?",
-      "answers": ["Night"],
+      "question": "Which green ogre lives in a swamp in a series of DreamWorks films?",
+      "answers": ["Shrek"],
       "difficulty": "easy"
     },
     {
@@ -290,8 +284,8 @@
     },
     {
       "id": "qz-general-knowledge-q048",
-      "question": "How many wheels does a tricycle have?",
-      "answers": ["3", "three"],
+      "question": "Which superhero got his powers from the bite of a radioactive spider?",
+      "answers": ["Spider-Man", "Spiderman", "Spider Man"],
       "difficulty": "easy"
     },
     {
@@ -320,8 +314,8 @@
     },
     {
       "id": "qz-general-knowledge-q053",
-      "question": "How many sides does a square have?",
-      "answers": ["4", "four"],
+      "question": "In the classic fairy tale, which animal huffs and puffs to blow down the three little pigs' houses?",
+      "answers": ["Wolf", "the big bad wolf", "big bad wolf", "a wolf"],
       "difficulty": "easy"
     },
     {
@@ -332,8 +326,8 @@
     },
     {
       "id": "qz-general-knowledge-q055",
-      "question": "Which meal of the day is traditionally eaten in the morning?",
-      "answers": ["Breakfast"],
+      "question": "According to Irish legend, what does a leprechaun keep at the end of a rainbow?",
+      "answers": ["Pot of gold", "gold", "a pot of gold"],
       "difficulty": "easy"
     },
     {
@@ -356,8 +350,8 @@
     },
     {
       "id": "qz-general-knowledge-q059",
-      "question": "What do you call a baby cat?",
-      "answers": ["Kitten", "kitty"],
+      "question": "Which Italian city is home to a famously leaning bell tower?",
+      "answers": ["Pisa", "Leaning Tower of Pisa"],
       "difficulty": "easy"
     },
     {
@@ -440,9 +434,9 @@
     },
     {
       "id": "qz-general-knowledge-q073",
-      "question": "What Japanese art repairs broken pottery with lacquer dusted with gold?",
-      "answers": ["Kintsugi"],
-      "difficulty": "easy"
+      "question": "Which country has the world's only national flag that is not a rectangle or a square?",
+      "answers": ["Nepal"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-general-knowledge-q074",
@@ -464,9 +458,9 @@
     },
     {
       "id": "qz-general-knowledge-q077",
-      "question": "What type of landscape is formed when water dissolves limestone?",
-      "answers": ["Karst", "karst landscape"],
-      "difficulty": "easy"
+      "question": "What do you call a sentence that uses every letter of the alphabet, like 'The quick brown fox jumps over the lazy dog'?",
+      "answers": ["Pangram", "a pangram"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-general-knowledge-q078",
@@ -500,8 +494,8 @@
     },
     {
       "id": "qz-general-knowledge-q083",
-      "question": "What Inca device used knotted cords to record information?",
-      "answers": ["Quipu", "khipu"],
+      "question": "The Mona Lisa is displayed in which famous Paris museum?",
+      "answers": ["Louvre", "the Louvre", "Louvre Museum"],
       "difficulty": "medium"
     },
     {
@@ -686,8 +680,8 @@
     },
     {
       "id": "qz-general-knowledge-q114",
-      "question": "What do you call a word or design that can be read when turned upside down?",
-      "answers": ["Ambigram", "an ambigram"],
+      "question": "What unit is used to measure the loudness of sound?",
+      "answers": ["Decibel", "decibels"],
       "difficulty": "medium"
     },
     {
@@ -998,7 +992,7 @@
     {
       "id": "qz-general-knowledge-q165",
       "question": "What is the capital of Mongolia?",
-      "answers": ["Ulaanbaatar", "Ulan Bator"],
+      "answers": ["Ulaanbaatar", "Ulan Bator", "Ulanbatar", "Ulaanbatar", "Ulanbaatar"],
       "difficulty": "hard"
     },
     {
@@ -1059,7 +1053,7 @@
       "id": "qz-general-knowledge-q175",
       "question": "In Greek mythology, who fell into the sea after flying too close to the sun with wax wings?",
       "answers": ["Icarus"],
-      "difficulty": "hard"
+      "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q176",
@@ -1089,7 +1083,7 @@
       "id": "qz-general-knowledge-q180",
       "question": "What is the currency of Switzerland?",
       "answers": ["Swiss franc", "franc", "CHF"],
-      "difficulty": "hard"
+      "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q181",
@@ -1119,7 +1113,7 @@
       "id": "qz-general-knowledge-q185",
       "question": "Which traditional wrestling style is the national sport of Japan?",
       "answers": ["Sumo", "sumo wrestling"],
-      "difficulty": "hard"
+      "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q186",
@@ -1131,7 +1125,7 @@
       "id": "qz-general-knowledge-q187",
       "question": "What do you call a word that reads the same forwards and backwards, like \"level\"?",
       "answers": ["Palindrome", "a palindrome"],
-      "difficulty": "hard"
+      "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q188",

@@ -26,8 +26,8 @@
     },
     {
       "id": "qz-sports-q004",
-      "question": "Which country hosts the Tour de France?",
-      "answers": ["France"],
+      "question": "In football, what is it called when a player scores three goals in one match?",
+      "answers": ["Hat-trick", "Hat trick", "Hattrick"],
       "difficulty": "easy"
     },
     {
@@ -105,7 +105,7 @@
     {
       "id": "qz-sports-q017",
       "question": "What is the maximum score possible with three darts?",
-      "answers": ["180"],
+      "answers": ["180", "One hundred and eighty"],
       "difficulty": "easy"
     },
     {
@@ -177,7 +177,7 @@
     {
       "id": "qz-sports-q029",
       "question": "To the nearest whole number, how many kilometers long is a marathon?",
-      "answers": ["42"],
+      "answers": ["42", "Forty two"],
       "difficulty": "easy"
     },
     {
@@ -236,7 +236,7 @@
     },
     {
       "id": "qz-sports-q039",
-      "question": "Which swimmer won eight gold medals at the 2008 Beijing Olympics?",
+      "question": "Which American swimmer retired in 2016 as the most decorated Olympian of all time?",
       "answers": ["Michael Phelps", "Phelps"],
       "difficulty": "easy"
     },
@@ -444,14 +444,14 @@
     },
     {
       "id": "qz-sports-q073",
-      "question": "What is the men's 100m world record time in seconds, set in 2009?",
-      "answers": ["9.58"],
+      "question": "Tennis champion Rafael Nadal comes from which country?",
+      "answers": ["Spain"],
       "difficulty": "easy"
     },
     {
       "id": "qz-sports-q074",
-      "question": "Which team won Formula 1's first Constructors' Championship in 1958?",
-      "answers": ["Vanwall"],
+      "question": "Which sport do the Harlem Globetrotters play?",
+      "answers": ["Basketball"],
       "difficulty": "easy"
     },
     {
@@ -504,7 +504,7 @@
     {
       "id": "qz-sports-q082",
       "question": "What is the highest possible break in snooker, without a free ball?",
-      "answers": ["147"],
+      "answers": ["147", "One hundred and forty seven"],
       "difficulty": "medium"
     },
     {
@@ -712,8 +712,8 @@
     },
     {
       "id": "qz-sports-q116",
-      "question": "What was Don Bradman's famous career Test batting average?",
-      "answers": ["99.94"],
+      "question": "What was Muhammad Ali's birth name?",
+      "answers": ["Cassius Clay", "Clay", "Cassius Marcellus Clay"],
       "difficulty": "medium"
     },
     {
@@ -791,7 +791,7 @@
     {
       "id": "qz-sports-q129",
       "question": "What shirt number did Michael Jordan famously wear for most of his career?",
-      "answers": ["23"],
+      "answers": ["23", "Twenty three"],
       "difficulty": "medium"
     },
     {
@@ -814,8 +814,8 @@
     },
     {
       "id": "qz-sports-q133",
-      "question": "In baseball, how many strikes result in a strikeout?",
-      "answers": ["3", "Three"],
+      "question": "In which sport is the 'Fosbury Flop' a famous technique?",
+      "answers": ["High jump", "The high jump"],
       "difficulty": "medium"
     },
     {
@@ -868,14 +868,14 @@
     },
     {
       "id": "qz-sports-q142",
-      "question": "Which Sri Lankan spinner reached 800 Test wickets in 2010?",
-      "answers": ["Muttiah Muralitharan", "Muralitharan", "Murali"],
+      "question": "A Zamboni machine resurfaces the playing area in which sport?",
+      "answers": ["Ice hockey", "Hockey"],
       "difficulty": "medium"
     },
     {
       "id": "qz-sports-q143",
       "question": "How many meters long is an Olympic long-course swimming pool?",
-      "answers": ["50", "50 meters", "50m"],
+      "answers": ["50", "Fifty", "50 meters", "50m"],
       "difficulty": "medium"
     },
     {
@@ -952,8 +952,8 @@
     },
     {
       "id": "qz-sports-q156",
-      "question": "Which Spanish cyclist won five consecutive Tours de France from 1991 to 1995?",
-      "answers": ["Miguel Indurain", "Indurain"],
+      "question": "Boca Juniors and River Plate are fierce football rivals in which country?",
+      "answers": ["Argentina"],
       "difficulty": "medium"
     },
     {
@@ -982,14 +982,14 @@
     },
     {
       "id": "qz-sports-q161",
-      "question": "Which Turkish striker scored against South Korea after 10.8 seconds at the 2002 World Cup?",
-      "answers": ["Hakan Sukur", "Sukur"],
+      "question": "Zinedine Zidane was sent off in the 2006 World Cup final for headbutting which Italian defender?",
+      "answers": ["Marco Materazzi", "Materazzi"],
       "difficulty": "hard"
     },
     {
       "id": "qz-sports-q162",
-      "question": "Which Japanese skateboarder won the first ever Olympic men's street skateboarding gold in 2021?",
-      "answers": ["Yuto Horigome", "Horigome"],
+      "question": "Which English club won the 2015-16 Premier League after starting the season as 5000-1 outsiders?",
+      "answers": ["Leicester City", "Leicester"],
       "difficulty": "hard"
     },
     {
@@ -1000,14 +1000,14 @@
     },
     {
       "id": "qz-sports-q164",
-      "question": "Which athlete set a men's long jump mark of 8.95m at the 1991 World Championships?",
-      "answers": ["Mike Powell", "Powell"],
+      "question": "In boxing, what is the term for a fighter who uses a left-handed stance?",
+      "answers": ["Southpaw", "A southpaw"],
       "difficulty": "hard"
     },
     {
       "id": "qz-sports-q165",
-      "question": "Which runner set a women's 800m mark of 1:53.28 in 1983?",
-      "answers": ["Jarmila Kratochvilova", "Kratochvilova"],
+      "question": "Which tennis star's on-court rants made 'You cannot be serious!' a famous catchphrase?",
+      "answers": ["John McEnroe", "McEnroe"],
       "difficulty": "hard"
     },
     {
@@ -1096,8 +1096,8 @@
     },
     {
       "id": "qz-sports-q180",
-      "question": "What is the name of the trophy awarded to the Wimbledon ladies' singles champion?",
-      "answers": ["Venus Rosewater Dish", "Rosewater Dish"],
+      "question": "Which country's team traditionally enters first in the Parade of Nations at an Olympic opening ceremony?",
+      "answers": ["Greece"],
       "difficulty": "hard"
     },
     {
@@ -1114,8 +1114,8 @@
     },
     {
       "id": "qz-sports-q183",
-      "question": "Which Cuban boxer won three consecutive Olympic heavyweight gold medals from 1972 to 1980?",
-      "answers": ["Teofilo Stevenson", "Stevenson"],
+      "question": "Which boxing legend lit the Olympic cauldron at the 1996 Atlanta Games?",
+      "answers": ["Muhammad Ali", "Ali"],
       "difficulty": "hard"
     },
     {
@@ -1150,8 +1150,8 @@
     },
     {
       "id": "qz-sports-q189",
-      "question": "Which horse won the English Triple Crown in 1970?",
-      "answers": ["Nijinsky"],
+      "question": "Which Italian Formula 1 team is famous for its prancing horse badge?",
+      "answers": ["Ferrari"],
       "difficulty": "hard"
     },
     {
@@ -1202,14 +1202,14 @@
     },
     {
       "id": "qz-sports-q197",
-      "question": "Which Moroccan runner holds the men's 1500m world record, set in 1998?",
-      "answers": ["Hicham El Guerrouj", "El Guerrouj"],
+      "question": "What is the name of the ceremonial dance the All Blacks perform before their rugby matches?",
+      "answers": ["Haka", "The haka"],
       "difficulty": "hard"
     },
     {
       "id": "qz-sports-q198",
-      "question": "Which NFL running back set the single-season rushing record of 2,105 yards in 1984?",
-      "answers": ["Eric Dickerson", "Dickerson"],
+      "question": "Which American figure skater was attacked in 1994 in a plot involving the ex-husband of rival Tonya Harding?",
+      "answers": ["Nancy Kerrigan", "Kerrigan"],
       "difficulty": "hard"
     },
     {
@@ -1220,8 +1220,8 @@
     },
     {
       "id": "qz-sports-q200",
-      "question": "Which stadium hosts the AFL Grand Final in Australia every year?",
-      "answers": ["Melbourne Cricket Ground", "MCG", "The MCG"],
+      "question": "The Ryder Cup pits the United States against a combined team from which continent?",
+      "answers": ["Europe", "Team Europe"],
       "difficulty": "hard"
     }
   ]

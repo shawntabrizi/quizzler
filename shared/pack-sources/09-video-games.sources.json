@@ -207,19 +207,19 @@
     {
       "id": "qz-video-games-q034",
       "question": "How many ghosts chase Pac-Man in the original arcade game?",
-      "answers": ["4"],
+      "answers": ["4", "four"],
       "difficulty": "easy"
     },
     {
       "id": "qz-video-games-q035",
-      "question": "What color is Mario's hat?",
-      "answers": ["Red"],
+      "question": "Along with a circle, square, and X, which shape appears on the face buttons of a PlayStation controller?",
+      "answers": ["Triangle"],
       "difficulty": "easy"
     },
     {
       "id": "qz-video-games-q036",
-      "question": "What golden items does Mario collect throughout his games?",
-      "answers": ["Coins", "Gold coins"],
+      "question": "Which classic game, preinstalled on old Nokia phones, has players steer an ever-growing line toward food?",
+      "answers": ["Snake"],
       "difficulty": "easy"
     },
     {
@@ -248,8 +248,8 @@
     },
     {
       "id": "qz-video-games-q041",
-      "question": "Complete the title of the Nintendo series: The Legend of ___.",
-      "answers": ["Zelda"],
+      "question": "In which mobile game do players swipe the screen to slice flying fruit while avoiding bombs?",
+      "answers": ["Fruit Ninja"],
       "difficulty": "easy"
     },
     {
@@ -368,14 +368,14 @@
     },
     {
       "id": "qz-video-games-q061",
-      "question": "Which 2006 Nintendo console popularized motion-controlled play with its Wii Remote?",
-      "answers": ["Wii", "Nintendo Wii"],
+      "question": "In which hit endless-runner mobile game do players dodge oncoming trains after being caught spraying graffiti?",
+      "answers": ["Subway Surfers", "Subway Surfer"],
       "difficulty": "easy"
     },
     {
       "id": "qz-video-games-q062",
-      "question": "What color is Sonic the Hedgehog?",
-      "answers": ["Blue"],
+      "question": "Which notoriously difficult 2013 mobile game had players tap to flap between green pipes?",
+      "answers": ["Flappy Bird"],
       "difficulty": "easy"
     },
     {
@@ -428,8 +428,8 @@
     },
     {
       "id": "qz-video-games-q071",
-      "question": "In what year was Super Mario Bros. first released?",
-      "answers": ["1985"],
+      "question": "In Nintendo's kart-racing games, the dreaded blue shell homes in on the racer in which position?",
+      "answers": ["First", "1st", "First place"],
       "difficulty": "easy"
     },
     {
@@ -440,8 +440,8 @@
     },
     {
       "id": "qz-video-games-q073",
-      "question": "Which Japanese company created Space Invaders?",
-      "answers": ["Taito"],
+      "question": "Which long-running simulation series puts you in charge of zoning and building an entire city?",
+      "answers": ["SimCity", "Sim City"],
       "difficulty": "easy"
     },
     {
@@ -717,7 +717,7 @@
     {
       "id": "qz-video-games-q119",
       "question": "How many different Pokemon could Eevee evolve into in Red and Blue?",
-      "answers": ["3"],
+      "answers": ["3", "three"],
       "difficulty": "medium"
     },
     {
@@ -741,7 +741,7 @@
     {
       "id": "qz-video-games-q123",
       "question": "In Majora's Mask, how many in-game days does Link have before the moon falls?",
-      "answers": ["3"],
+      "answers": ["3", "three"],
       "difficulty": "medium"
     },
     {
@@ -998,8 +998,8 @@
     },
     {
       "id": "qz-video-games-q166",
-      "question": "Which programmer hid his name in Atari's Adventure, creating the first famous Easter egg?",
-      "answers": ["Warren Robinett", "Robinett"],
+      "question": "Which console, released in 2000, is still the best-selling home console of all time?",
+      "answers": ["PlayStation 2", "PS2"],
       "difficulty": "hard"
     },
     {
@@ -1011,7 +1011,7 @@
     {
       "id": "qz-video-games-q168",
       "question": "Princess Zelda was named after the wife of which famous American author?",
-      "answers": ["Zelda Fitzgerald", "F. Scott Fitzgerald's wife"],
+      "answers": ["F. Scott Fitzgerald", "Scott Fitzgerald", "Fitzgerald", "Zelda Fitzgerald", "F. Scott Fitzgerald's wife"],
       "difficulty": "hard"
     },
     {
@@ -1040,8 +1040,8 @@
     },
     {
       "id": "qz-video-games-q173",
-      "question": "Which game designer created the Dragon Quest series?",
-      "answers": ["Yuji Horii", "Horii"],
+      "question": "In the Fallout series, what brand of soda turns up all over the post-apocalyptic wasteland?",
+      "answers": ["Nuka-Cola", "Nuka Cola", "Nukacola"],
       "difficulty": "hard"
     },
     {
@@ -1053,13 +1053,13 @@
     {
       "id": "qz-video-games-q175",
       "question": "How many colossi does the player fight in Shadow of the Colossus?",
-      "answers": ["16"],
+      "answers": ["16", "sixteen"],
       "difficulty": "hard"
     },
     {
       "id": "qz-video-games-q176",
-      "question": "Which director created Ico and Shadow of the Colossus?",
-      "answers": ["Fumito Ueda", "Ueda"],
+      "question": "Which purple dragon starred in his own PlayStation platformer series starting in 1998?",
+      "answers": ["Spyro", "Spyro the Dragon"],
       "difficulty": "hard"
     },
     {
@@ -1076,8 +1076,8 @@
     },
     {
       "id": "qz-video-games-q179",
-      "question": "Which 1981 Nintendo arcade game introduced the character later known as Mario?",
-      "answers": ["Donkey Kong"],
+      "question": "In the Metal Gear games, what everyday object does the hero famously hide under to sneak past guards?",
+      "answers": ["Cardboard box", "Box", "A cardboard box"],
       "difficulty": "hard"
     },
     {
@@ -1094,14 +1094,14 @@
     },
     {
       "id": "qz-video-games-q182",
-      "question": "What is the name of the first episode of the original Doom, released as shareware?",
-      "answers": ["Knee-Deep in the Dead"],
+      "question": "In the NES classic Duck Hunt, which animal pops up to laugh at you whenever you miss?",
+      "answers": ["Dog", "The dog", "Hunting dog"],
       "difficulty": "hard"
     },
     {
       "id": "qz-video-games-q183",
-      "question": "Which opera singer voices GLaDOS in the Portal games?",
-      "answers": ["Ellen McLain", "McLain"],
+      "question": "What gems serve as currency in The Legend of Zelda games?",
+      "answers": ["Rupees", "Rupee"],
       "difficulty": "hard"
     },
     {
@@ -1124,20 +1124,20 @@
     },
     {
       "id": "qz-video-games-q187",
-      "question": "Which Icelandic company develops the space MMO EVE Online?",
-      "answers": ["CCP Games", "CCP"],
+      "question": "Collecting all seven of what powerful gems lets Sonic transform into Super Sonic?",
+      "answers": ["Chaos Emeralds", "Chaos Emerald", "Emeralds"],
       "difficulty": "hard"
     },
     {
       "id": "qz-video-games-q188",
-      "question": "By what one-word nickname is legendary League of Legends midlaner Lee Sang-hyeok known?",
-      "answers": ["Faker"],
+      "question": "In Grand Theft Auto games, what symbols show how badly the police want you?",
+      "answers": ["Stars", "Star"],
       "difficulty": "hard"
     },
     {
       "id": "qz-video-games-q189",
-      "question": "Which Japanese engineer designed Space Invaders?",
-      "answers": ["Tomohiro Nishikado", "Nishikado"],
+      "question": "Which giant talking tree sends Link on his first quest in The Legend of Zelda: Ocarina of Time?",
+      "answers": ["Great Deku Tree", "Deku Tree", "Deku"],
       "difficulty": "hard"
     },
     {
@@ -1166,14 +1166,14 @@
     },
     {
       "id": "qz-video-games-q194",
-      "question": "The pioneering 1962 game Spacewar! ran on which DEC computer?",
-      "answers": ["PDP-1"],
+      "question": "In the Halo series, what is the alliance of alien races fighting humanity called?",
+      "answers": ["Covenant", "The Covenant"],
       "difficulty": "hard"
     },
     {
       "id": "qz-video-games-q195",
-      "question": "Who composed the soundtrack of Chrono Trigger?",
-      "answers": ["Yasunori Mitsuda", "Mitsuda"],
+      "question": "Which 1982 arcade sequel introduced a bow-wearing counterpart to Pac-Man?",
+      "answers": ["Ms. Pac-Man", "Ms Pacman", "Ms Pac Man", "Miss Pacman"],
       "difficulty": "hard"
     },
     {
@@ -1196,8 +1196,8 @@
     },
     {
       "id": "qz-video-games-q199",
-      "question": "Which programmer single-handedly created Atari's infamous E.T. game in about five weeks?",
-      "answers": ["Howard Scott Warshaw", "Warshaw"],
+      "question": "Which famously peaceful world leader is notorious among Civilization players for reaching for nuclear weapons?",
+      "answers": ["Gandhi", "Mahatma Gandhi"],
       "difficulty": "hard"
     },
     {

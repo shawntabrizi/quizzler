@@ -80,16 +80,10 @@
    "difficulty": "easy"
   },
   {
-   "text": "What does 'AI' stand for?",
+   "text": "According to crypto fans' favorite saying, a coin whose price is skyrocketing is headed 'to the' what?",
    "answers": [
-    "Artificial Intelligence"
-   ],
-   "difficulty": "easy"
-  },
-  {
-   "text": "Which cryptocurrency has the ticker symbol BTC?",
-   "answers": [
-    "Bitcoin"
+    "Moon",
+    "The moon"
    ],
    "difficulty": "easy"
   },
@@ -209,9 +203,11 @@
    "difficulty": "easy"
   },
   {
-   "text": "What does 'PC' stand for?",
+   "text": "What do you call unwanted junk email, which shares its name with a canned meat?",
    "answers": [
-    "Personal Computer"
+    "Spam",
+    "Spam email",
+    "Spam mail"
    ],
    "difficulty": "easy"
   },
@@ -337,9 +333,11 @@
    "difficulty": "easy"
   },
   {
-   "text": "What does 'IT' stand for?",
+   "text": "What Japanese-born word describes the little smiley faces and hearts you add to your text messages?",
    "answers": [
-    "Information Technology"
+    "Emoji",
+    "Emojis",
+    "An emoji"
    ],
    "difficulty": "easy"
   },
@@ -351,11 +349,11 @@
    "difficulty": "easy"
   },
   {
-   "text": "Which symbol separates the username from the domain in an email address?",
+   "text": "What do you call a '#' label, like #ThrowbackThursday, used to tag topics on social media?",
    "answers": [
-    "at sign",
-    "at symbol",
-    "at"
+    "Hashtag",
+    "A hashtag",
+    "Hash tag"
    ],
    "difficulty": "easy"
   },
@@ -448,10 +446,10 @@
    "difficulty": "easy"
   },
   {
-   "text": "What does 'LOL' stand for?",
+   "text": "How many guesses do you get to find the five-letter word in the daily puzzle game Wordle?",
    "answers": [
-    "Laughing Out Loud",
-    "Laugh Out Loud"
+    "6",
+    "Six"
    ],
    "difficulty": "easy"
   },
@@ -493,9 +491,11 @@
    "difficulty": "easy"
   },
   {
-   "text": "The word 'app' is short for what?",
+   "text": "On a computer keyboard, Ctrl+C copies text. What does Ctrl+V do?",
    "answers": [
-    "Application"
+    "Paste",
+    "Pastes",
+    "Pasting"
    ],
    "difficulty": "easy"
   },
@@ -523,9 +523,11 @@
    "difficulty": "easy"
   },
   {
-   "text": "In what year did Tim Berners-Lee propose the World Wide Web?",
+   "text": "What is the name of Apple's wireless earbuds?",
    "answers": [
-    "1989"
+    "AirPods",
+    "Air Pods",
+    "Apple AirPods"
    ],
    "difficulty": "easy"
   },
@@ -569,18 +571,16 @@
    "difficulty": "easy"
   },
   {
-   "text": "Bitcoin's block reward halves every how many blocks?",
+   "text": "Which dating app, named after material used to start a fire, made swiping right famous?",
    "answers": [
-    "210000"
+    "Tinder"
    ],
    "difficulty": "easy"
   },
   {
-   "text": "Who was the little-known third co-founder of Apple who sold his stake early?",
+   "text": "On which social platform do users 'pin' recipes, crafts, and home ideas to boards?",
    "answers": [
-    "Ronald Wayne",
-    "Wayne",
-    "Ron Wayne"
+    "Pinterest"
    ],
    "difficulty": "easy"
   },
@@ -592,13 +592,6 @@
    "difficulty": "easy"
   },
   {
-   "text": "Which organization originally created the Rust programming language?",
-   "answers": [
-    "Mozilla"
-   ],
-   "difficulty": "easy"
-  },
-  {
    "text": "What is the name of the framework built by Parity for creating custom blockchains in the Polkadot ecosystem?",
    "answers": [
     "Substrate"
@@ -606,18 +599,16 @@
    "difficulty": "medium"
   },
   {
-   "text": "In Polkadot, what does the acronym XCM stand for?",
+   "text": "Which American crypto exchange became the first major one to go public on the Nasdaq in 2021?",
    "answers": [
-    "Cross-Consensus Messaging",
-    "Cross Consensus Messaging",
-    "Cross-Consensus Message Format"
+    "Coinbase"
    ],
    "difficulty": "medium"
   },
   {
-   "text": "Which video site did Google acquire for 1.65 billion dollars in 2006?",
+   "text": "Which six-second looping video app, beloved by internet comedians, was shut down by Twitter in 2017?",
    "answers": [
-    "YouTube"
+    "Vine"
    ],
    "difficulty": "medium"
   },
@@ -1165,10 +1156,9 @@
    "difficulty": "medium"
   },
   {
-   "text": "Who created JavaScript in about ten days while at Netscape?",
+   "text": "Which app, sharing its name with a DC superhero, can tell you what song is playing when you hold up your phone?",
    "answers": [
-    "Brendan Eich",
-    "Eich"
+    "Shazam"
    ],
    "difficulty": "medium"
   },
@@ -1226,10 +1216,12 @@
    "difficulty": "hard"
   },
   {
-   "text": "What was Apple's secret internal codename for the original iPhone project?",
+   "text": "Apple's famous dystopian '1984' Super Bowl ad introduced which computer?",
    "answers": [
-    "Project Purple",
-    "Purple"
+    "Macintosh",
+    "The Macintosh",
+    "Apple Macintosh",
+    "Mac"
    ],
    "difficulty": "hard"
   },
@@ -1243,32 +1235,36 @@
    "difficulty": "hard"
   },
   {
-   "text": "Which cryptographer proposed 'b-money', a precursor cited in the Bitcoin whitepaper?",
+   "text": "Before it was called Google, Larry Page and Sergey Brin's search engine had what massage-themed name?",
    "answers": [
-    "Wei Dai",
-    "Dai"
+    "BackRub",
+    "Back Rub"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "Which computer scientist designed 'Bit Gold', an early precursor to Bitcoin?",
+   "text": "When Amazon launched in 1995, it sold only one kind of product. What?",
    "answers": [
-    "Nick Szabo",
-    "Szabo"
+    "Books",
+    "Book"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "In what year did the Mt. Gox exchange collapse after losing hundreds of thousands of bitcoins?",
+   "text": "The first item ever sold on eBay was a broken version of what small presentation gadget?",
    "answers": [
-    "2014"
+    "Laser pointer",
+    "A laser pointer",
+    "Broken laser pointer",
+    "Laser"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "In what year did The DAO hack occur, leading to the Ethereum chain split?",
+   "text": "According to the famous 1947 logbook story, the first literal computer 'bug' was what kind of insect?",
    "answers": [
-    "2016"
+    "Moth",
+    "A moth"
    ],
    "difficulty": "hard"
   },
@@ -1281,9 +1277,11 @@
    "difficulty": "hard"
   },
   {
-   "text": "What is the address format used across Polkadot ecosystem chains called?",
+   "text": "What sea creature is crypto slang for someone who holds a massive amount of a coin?",
    "answers": [
-    "SS58"
+    "Whale",
+    "A whale",
+    "Whales"
    ],
    "difficulty": "hard"
   },
@@ -1302,32 +1300,40 @@
    "difficulty": "hard"
   },
   {
-   "text": "Which system translates a domain name into an IP address?",
+   "text": "The very first YouTube video, uploaded by a co-founder in 2005, was filmed at what kind of attraction?",
    "answers": [
-    "DNS",
-    "Domain Name System"
+    "Zoo",
+    "The zoo",
+    "A zoo",
+    "San Diego Zoo"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "Which data structure follows the 'last in, first out' rule?",
+   "text": "Twitter's original 140-character limit was chosen to fit tweets inside what older kind of message?",
    "answers": [
-    "stack",
-    "a stack"
+    "Text message",
+    "SMS",
+    "Text",
+    "Texts"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "In what year did Gavin Wood publish the original Polkadot whitepaper?",
+   "text": "What buzzword for a decentralized, blockchain-powered next version of the internet was coined by Polkadot's founder?",
    "answers": [
-    "2016"
+    "Web3",
+    "Web 3",
+    "Web 3.0",
+    "Web three"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "What is the name of the compact serialization codec used throughout the Polkadot stack?",
+   "text": "Google's name is a misspelling of which word for the number 1 followed by 100 zeros?",
    "answers": [
-    "SCALE"
+    "Googol",
+    "A googol"
    ],
    "difficulty": "hard"
   },
@@ -1340,19 +1346,18 @@
    "difficulty": "hard"
   },
   {
-   "text": "Which Thiel Fellow co-founded Polkadot alongside Gavin Wood and Peter Czaban?",
+   "text": "Steve Jobs bought which animation studio from George Lucas in 1986?",
    "answers": [
-    "Robert Habermeier",
-    "Habermeier",
-    "Rob Habermeier"
+    "Pixar"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "What is Parity's Rust-based embedded domain-specific language for writing WebAssembly smart contracts called?",
+   "text": "Bluetooth technology is named after a 10th-century king of which country?",
    "answers": [
-    "ink!",
-    "ink"
+    "Denmark",
+    "Denmark and Norway",
+    "Norway"
    ],
    "difficulty": "hard"
   },
@@ -1376,15 +1381,15 @@
    "text": "Who created the C++ programming language?",
    "answers": [
     "Bjarne Stroustrup",
-    "Stroustrup"
+    "Stroustrup",
+    "Bjarne"
    ],
    "difficulty": "hard"
   },
   {
-   "text": "What was the name of the first PC virus, written in Pakistan in 1986?",
+   "text": "Which simple game about steering an ever-growing line came pre-installed on classic Nokia phones?",
    "answers": [
-    "Brain",
-    "Brain virus"
+    "Snake"
    ],
    "difficulty": "hard"
   },
@@ -1455,13 +1460,6 @@
    "difficulty": "hard"
   },
   {
-   "text": "In the acronym zk-SNARK, what does the 'S' stand for?",
-   "answers": [
-    "Succinct"
-   ],
-   "difficulty": "hard"
-  },
-  {
    "text": "Who co-invented public-key cryptography with Martin Hellman in 1976?",
    "answers": [
     "Whitfield Diffie",
@@ -1479,10 +1477,11 @@
    "difficulty": "hard"
   },
   {
-   "text": "Which German engineer built the Z3, an early programmable computer, in 1941?",
+   "text": "What was the name of Sony's iconic portable cassette player, launched in 1979?",
    "answers": [
-    "Konrad Zuse",
-    "Zuse"
+    "Walkman",
+    "Sony Walkman",
+    "The Walkman"
    ],
    "difficulty": "hard"
   },
@@ -1517,17 +1516,9 @@
    "difficulty": "hard"
   },
   {
-   "text": "What is the name of Parity's lightweight client that lets apps connect to Polkadot without full nodes?",
+   "text": "The world's first website went online in 1990 at which European physics laboratory?",
    "answers": [
-    "Smoldot"
-   ],
-   "difficulty": "hard"
-  },
-  {
-   "text": "Douglas Engelbart's famous 1968 demo of the mouse and hypertext is popularly known by what name?",
-   "answers": [
-    "The Mother of All Demos",
-    "Mother of All Demos"
+    "CERN"
    ],
    "difficulty": "hard"
   }

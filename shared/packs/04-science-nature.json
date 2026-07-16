@@ -18,13 +18,6 @@
       "difficulty": "easy"
     },
     {
-      "text": "What planet do we live on?",
-      "answers": [
-        "Earth"
-      ],
-      "difficulty": "easy"
-    },
-    {
       "text": "What is H2O more commonly known as?",
       "answers": [
         "water"
@@ -99,7 +92,9 @@
     {
       "text": "How many bones does an adult human have?",
       "answers": [
-        "206"
+        "206",
+        "two hundred six",
+        "two hundred and six"
       ],
       "difficulty": "easy"
     },
@@ -122,14 +117,6 @@
       "text": "What is the hardest natural substance on Earth?",
       "answers": [
         "diamond"
-      ],
-      "difficulty": "easy"
-    },
-    {
-      "text": "What scientific theory describes the movement of Earth's crustal plates?",
-      "answers": [
-        "plate tectonics",
-        "theory of plate tectonics"
       ],
       "difficulty": "easy"
     },
@@ -180,14 +167,17 @@
     {
       "text": "What is the freezing point of water in degrees Celsius?",
       "answers": [
-        "0"
+        "0",
+        "zero"
       ],
       "difficulty": "easy"
     },
     {
       "text": "What is the boiling point of water in degrees Celsius at sea level?",
       "answers": [
-        "100"
+        "100",
+        "one hundred",
+        "a hundred"
       ],
       "difficulty": "easy"
     },
@@ -231,20 +221,6 @@
       "difficulty": "easy"
     },
     {
-      "text": "What is a baby dog called?",
-      "answers": [
-        "puppy"
-      ],
-      "difficulty": "easy"
-    },
-    {
-      "text": "What is a baby cat called?",
-      "answers": [
-        "kitten"
-      ],
-      "difficulty": "easy"
-    },
-    {
       "text": "What gas makes up most of Earth's atmosphere?",
       "answers": [
         "nitrogen",
@@ -277,13 +253,6 @@
       "text": "What is the chemical symbol for hydrogen?",
       "answers": [
         "H"
-      ],
-      "difficulty": "easy"
-    },
-    {
-      "text": "What is frozen water called?",
-      "answers": [
-        "ice"
       ],
       "difficulty": "easy"
     },
@@ -328,13 +297,6 @@
       "text": "What is the human body's largest artery?",
       "answers": [
         "aorta"
-      ],
-      "difficulty": "easy"
-    },
-    {
-      "text": "What is the chemical symbol for sodium?",
-      "answers": [
-        "Na"
       ],
       "difficulty": "easy"
     },
@@ -408,13 +370,6 @@
       "difficulty": "easy"
     },
     {
-      "text": "What is the chemical symbol for iron?",
-      "answers": [
-        "Fe"
-      ],
-      "difficulty": "easy"
-    },
-    {
       "text": "What is the only mammal capable of true flight?",
       "answers": [
         "bat"
@@ -477,13 +432,6 @@
       "answers": [
         "kidney",
         "kidneys"
-      ],
-      "difficulty": "easy"
-    },
-    {
-      "text": "What is the chemical symbol for potassium?",
-      "answers": [
-        "K"
       ],
       "difficulty": "easy"
     },
@@ -555,14 +503,6 @@
       "difficulty": "easy"
     },
     {
-      "text": "What is the powerhouse molecule that stores energy in cells?",
-      "answers": [
-        "ATP",
-        "adenosine triphosphate"
-      ],
-      "difficulty": "easy"
-    },
-    {
       "text": "What is the term for animals that have no backbone?",
       "answers": [
         "invertebrates",
@@ -579,18 +519,34 @@
       "difficulty": "easy"
     },
     {
-      "text": "What is the chemical symbol for silver?",
-      "answers": [
-        "Ag"
-      ],
-      "difficulty": "easy"
-    },
-    {
       "text": "What is the outermost layer of the Earth called?",
       "answers": [
         "crust"
       ],
       "difficulty": "easy"
+    },
+    {
+      "text": "What do you call a group of lions?",
+      "answers": [
+        "pride"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which vitamin does your skin produce when it is exposed to sunlight?",
+      "answers": [
+        "vitamin D",
+        "D"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "text": "What scientific theory describes the movement of Earth's crustal plates?",
+      "answers": [
+        "plate tectonics",
+        "theory of plate tectonics"
+      ],
+      "difficulty": "medium"
     },
     {
       "text": "What is the study of the stars, planets, and universe called?",
@@ -619,13 +575,6 @@
       "answers": [
         "Albert Einstein",
         "Einstein"
-      ],
-      "difficulty": "medium"
-    },
-    {
-      "text": "What is the chemical symbol for lead?",
-      "answers": [
-        "Pb"
       ],
       "difficulty": "medium"
     },
@@ -758,13 +707,6 @@
       "difficulty": "medium"
     },
     {
-      "text": "What is the chemical symbol for copper?",
-      "answers": [
-        "Cu"
-      ],
-      "difficulty": "medium"
-    },
-    {
       "text": "What is the process by which plants lose water through their leaves?",
       "answers": [
         "transpiration"
@@ -827,13 +769,6 @@
       "difficulty": "medium"
     },
     {
-      "text": "What is the chemical symbol for mercury the element?",
-      "answers": [
-        "Hg"
-      ],
-      "difficulty": "medium"
-    },
-    {
       "text": "What is the term for the study of fungi?",
       "answers": [
         "mycology"
@@ -875,13 +810,6 @@
       "answers": [
         "Hubble Space Telescope",
         "Hubble"
-      ],
-      "difficulty": "medium"
-    },
-    {
-      "text": "What is the chemical symbol for tin?",
-      "answers": [
-        "Sn"
       ],
       "difficulty": "medium"
     },
@@ -931,7 +859,7 @@
       "difficulty": "medium"
     },
     {
-      "text": "What is the largest desert in the world by area?",
+      "text": "Counting freezing polar deserts, what is the largest desert on Earth?",
       "answers": [
         "Antarctic",
         "Antarctic Desert",
@@ -949,7 +877,8 @@
     {
       "text": "What is the pH value of a neutral solution?",
       "answers": [
-        "7"
+        "7",
+        "seven"
       ],
       "difficulty": "medium"
     },
@@ -1025,13 +954,6 @@
       "answers": [
         "James Watson",
         "Watson"
-      ],
-      "difficulty": "medium"
-    },
-    {
-      "text": "What is the chemical symbol for phosphorus?",
-      "answers": [
-        "P"
       ],
       "difficulty": "medium"
     },
@@ -1192,9 +1114,18 @@
       "difficulty": "medium"
     },
     {
-      "text": "What is the chemical formula for glucose?",
+      "text": "What is the powerhouse molecule that stores energy in cells?",
       "answers": [
-        "C6H12O6"
+        "ATP",
+        "adenosine triphosphate"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "text": "What small sea creature stuns its prey with a snapping claw so loud it is among the loudest animals in the ocean?",
+      "answers": [
+        "pistol shrimp",
+        "snapping shrimp"
       ],
       "difficulty": "hard"
     },
@@ -1221,13 +1152,6 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the chemical symbol for the element cobalt?",
-      "answers": [
-        "Co"
-      ],
-      "difficulty": "hard"
-    },
-    {
       "text": "What is the term for the study of the classification of living things?",
       "answers": [
         "taxonomy"
@@ -1245,13 +1169,6 @@
       "text": "What is the chemical formula for hydrogen peroxide?",
       "answers": [
         "H2O2"
-      ],
-      "difficulty": "hard"
-    },
-    {
-      "text": "What is the chemical symbol for the element tungsten?",
-      "answers": [
-        "W"
       ],
       "difficulty": "hard"
     },
@@ -1278,13 +1195,6 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the chemical formula for sulfuric acid?",
-      "answers": [
-        "H2SO4"
-      ],
-      "difficulty": "hard"
-    },
-    {
       "text": "What is the term for the study of the interactions between organisms and their environment?",
       "answers": [
         "ecology"
@@ -1307,13 +1217,6 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the chemical symbol for the element nickel?",
-      "answers": [
-        "Ni"
-      ],
-      "difficulty": "hard"
-    },
-    {
       "text": "What is the term for the average weather conditions of a region over a long period?",
       "answers": [
         "climate"
@@ -1324,13 +1227,6 @@
       "text": "What is the name of the force that opposes motion between surfaces in contact?",
       "answers": [
         "friction"
-      ],
-      "difficulty": "hard"
-    },
-    {
-      "text": "What is the chemical formula for baking soda, sodium bicarbonate?",
-      "answers": [
-        "NaHCO3"
       ],
       "difficulty": "hard"
     },
@@ -1351,13 +1247,6 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the chemical symbol for the element iodine?",
-      "answers": [
-        "I"
-      ],
-      "difficulty": "hard"
-    },
-    {
       "text": "What is the name of the phenomenon where light bends as it passes between materials?",
       "answers": [
         "refraction"
@@ -1372,24 +1261,10 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the chemical formula for nitric acid?",
-      "answers": [
-        "HNO3"
-      ],
-      "difficulty": "hard"
-    },
-    {
       "text": "What scientist proposed the Big Bang theory's expansion basis, discovering galaxies moving away?",
       "answers": [
         "Edwin Hubble",
         "Hubble"
-      ],
-      "difficulty": "hard"
-    },
-    {
-      "text": "What is the chemical symbol for the element bromine?",
-      "answers": [
-        "Br"
       ],
       "difficulty": "hard"
     },
@@ -1432,13 +1307,6 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the chemical symbol for the element argon?",
-      "answers": [
-        "Ar"
-      ],
-      "difficulty": "hard"
-    },
-    {
       "text": "What is the term for a substance that cannot be broken down into simpler substances by chemical means?",
       "answers": [
         "element"
@@ -1462,13 +1330,6 @@
       "difficulty": "hard"
     },
     {
-      "text": "What is the chemical symbol for the element krypton?",
-      "answers": [
-        "Kr"
-      ],
-      "difficulty": "hard"
-    },
-    {
       "text": "What is the term for the branch of chemistry dealing with carbon compounds?",
       "answers": [
         "organic chemistry"
@@ -1480,6 +1341,29 @@
       "answers": [
         "Doppler effect",
         "Doppler shift"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "text": "Which planet in our solar system rotates on its side, tilted so far that it rolls around the Sun?",
+      "answers": [
+        "Uranus"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "text": "What is the name of the ancient supercontinent that held all of Earth's landmasses before they drifted apart?",
+      "answers": [
+        "Pangaea",
+        "Pangea"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "text": "How many hearts does an octopus have?",
+      "answers": [
+        "3",
+        "three"
       ],
       "difficulty": "hard"
     }

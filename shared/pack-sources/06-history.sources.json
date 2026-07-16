@@ -68,14 +68,14 @@
     },
     {
       "id": "qz-history-q011",
-      "question": "The Great Wall was built to protect which country?",
-      "answers": ["China"],
+      "question": "Which explorer reached the Americas in 1492 while sailing for Spain?",
+      "answers": ["Christopher Columbus", "Columbus"],
       "difficulty": "easy"
     },
     {
       "id": "qz-history-q012",
-      "question": "Who was the dictator of Nazi Germany during World War II?",
-      "answers": ["Adolf Hitler", "Hitler"],
+      "question": "Which Italian city of canals grew rich as a medieval trading empire?",
+      "answers": ["Venice", "Venezia"],
       "difficulty": "easy"
     },
     {
@@ -157,8 +157,8 @@
     },
     {
       "id": "qz-history-q025",
-      "question": "Which city was the capital of the Roman Empire?",
-      "answers": ["Rome"],
+      "question": "Michelangelo spent four years painting the ceiling of which famous chapel?",
+      "answers": ["Sistine Chapel", "The Sistine Chapel", "Sistine"],
       "difficulty": "easy"
     },
     {
@@ -202,14 +202,14 @@
     },
     {
       "id": "qz-history-q032",
-      "question": "In which year was Pearl Harbor attacked?",
-      "answers": ["1941"],
+      "question": "The Forbidden City, home to Chinese emperors for five centuries, stands in which city?",
+      "answers": ["Beijing", "Peking"],
       "difficulty": "easy"
     },
     {
       "id": "qz-history-q033",
-      "question": "Cleopatra was the last active ruler of which ancient kingdom?",
-      "answers": ["Egypt", "Ancient Egypt"],
+      "question": "Which ancient trade route, named after a prized fabric, connected China with Europe?",
+      "answers": ["Silk Road", "The Silk Road"],
       "difficulty": "easy"
     },
     {
@@ -285,8 +285,8 @@
     },
     {
       "id": "qz-history-q045",
-      "question": "In which year did the Titanic sink?",
-      "answers": ["1912"],
+      "question": "Which Catholic nun became world-famous for her charity work in Kolkata?",
+      "answers": ["Mother Teresa", "Teresa", "Mother Theresa"],
       "difficulty": "easy"
     },
     {
@@ -417,14 +417,14 @@
     },
     {
       "id": "qz-history-q067",
-      "question": "Which navigator completed the first circumnavigation after Ferdinand Magellan's death?",
-      "answers": ["Juan Sebastian Elcano", "Juan Sebastián Elcano", "Elcano"],
+      "question": "The Great Sphinx of Giza has a human head on the body of which animal?",
+      "answers": ["Lion", "A lion"],
       "difficulty": "easy"
     },
     {
       "id": "qz-history-q068",
       "question": "Which English king famously had six wives?",
-      "answers": ["Henry VIII", "Henry the Eighth"],
+      "answers": ["Henry VIII", "Henry the Eighth", "Henry 8", "Henry the 8th"],
       "difficulty": "easy"
     },
     {
@@ -435,8 +435,8 @@
     },
     {
       "id": "qz-history-q070",
-      "question": "In which year did the September 11 attacks on the United States occur?",
-      "answers": ["2001"],
+      "question": "In 1953, Edmund Hillary and Tenzing Norgay were the first to reach the top of which mountain?",
+      "answers": ["Mount Everest", "Everest"],
       "difficulty": "easy"
     },
     {
@@ -455,7 +455,7 @@
       "id": "qz-history-q073",
       "question": "What was the capital city of the Aztec Empire?",
       "answers": ["Tenochtitlan", "Tenochtitlán"],
-      "difficulty": "easy"
+      "difficulty": "medium"
     },
     {
       "id": "qz-history-q074",
@@ -495,8 +495,8 @@
     },
     {
       "id": "qz-history-q080",
-      "question": "What was the name of Admiral Nelson's flagship at Trafalgar?",
-      "answers": ["HMS Victory", "Victory"],
+      "question": "The Hindenburg, which burst into flames in 1937, was what type of aircraft?",
+      "answers": ["Airship", "Zeppelin", "Blimp", "Dirigible"],
       "difficulty": "easy"
     },
     {
@@ -568,13 +568,13 @@
     {
       "id": "qz-history-q092",
       "question": "Which queen ruled England from 1558 to 1603?",
-      "answers": ["Elizabeth I", "Queen Elizabeth I"],
+      "answers": ["Elizabeth I", "Queen Elizabeth I", "Elizabeth 1", "Elizabeth the First"],
       "difficulty": "medium"
     },
     {
       "id": "qz-history-q093",
-      "question": "In which year did England defeat the Spanish Armada?",
-      "answers": ["1588"],
+      "question": "The legendary city of Troy stood in which modern-day country?",
+      "answers": ["Turkey", "Turkiye"],
       "difficulty": "medium"
     },
     {
@@ -585,14 +585,14 @@
     },
     {
       "id": "qz-history-q095",
-      "question": "In which year was the Gunpowder Plot foiled?",
-      "answers": ["1605"],
+      "question": "America is named after which Italian explorer?",
+      "answers": ["Amerigo Vespucci", "Vespucci", "Amerigo"],
       "difficulty": "medium"
     },
     {
       "id": "qz-history-q096",
       "question": "Which English king was executed in 1649 after the English Civil War?",
-      "answers": ["Charles I", "King Charles I"],
+      "answers": ["Charles I", "King Charles I", "Charles 1"],
       "difficulty": "medium"
     },
     {
@@ -633,9 +633,9 @@
     },
     {
       "id": "qz-history-q103",
-      "question": "Which 1823 US policy warned European powers against colonizing the Americas?",
-      "answers": ["Monroe Doctrine", "The Monroe Doctrine"],
-      "difficulty": "medium"
+      "question": "Which board game of kings, queens, and knights originated in ancient India?",
+      "answers": ["Chess"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-history-q104",
@@ -976,7 +976,7 @@
     {
       "id": "qz-history-q160",
       "question": "In which year did the Western Roman Empire fall?",
-      "answers": ["476"],
+      "answers": ["476", "AD 476", "476 AD"],
       "difficulty": "medium"
     },
     {
@@ -987,8 +987,8 @@
     },
     {
       "id": "qz-history-q162",
-      "question": "Who was the last emperor of the Western Roman Empire?",
-      "answers": ["Romulus Augustulus", "Romulus Augustus"],
+      "question": "The Great Pyramid of Giza was built as a tomb for which pharaoh?",
+      "answers": ["Khufu", "Cheops"],
       "difficulty": "hard"
     },
     {
@@ -1003,8 +1003,8 @@
     },
     {
       "id": "qz-history-q164",
-      "question": "At which battle around 1274 BC did Ramesses II fight the Hittites?",
-      "answers": ["Battle of Kadesh", "Kadesh", "Qadesh"],
+      "question": "Which American aircraft, named after the pilot's mother, dropped the first atomic bomb?",
+      "answers": ["Enola Gay", "The Enola Gay"],
       "difficulty": "hard"
     },
     {
@@ -1045,8 +1045,8 @@
     },
     {
       "id": "qz-history-q171",
-      "question": "Which general led Emperor Justinian's reconquests of Italy and North Africa?",
-      "answers": ["Belisarius"],
+      "question": "What was the Allied codename for the D-Day landings?",
+      "answers": ["Operation Overlord", "Overlord"],
       "difficulty": "hard"
     },
     {
@@ -1058,7 +1058,7 @@
     {
       "id": "qz-history-q173",
       "question": "In which year was Charlemagne crowned Emperor of the Romans by the pope?",
-      "answers": ["800"],
+      "answers": ["800", "AD 800", "800 AD", "eight hundred"],
       "difficulty": "hard"
     },
     {
@@ -1111,8 +1111,8 @@
     },
     {
       "id": "qz-history-q182",
-      "question": "In which year did the British East India Company win the Battle of Plassey?",
-      "answers": ["1757"],
+      "question": "Which infectious disease became the first ever declared eradicated worldwide, in 1980?",
+      "answers": ["Smallpox"],
       "difficulty": "hard"
     },
     {
@@ -1147,14 +1147,14 @@
     },
     {
       "id": "qz-history-q188",
-      "question": "At which 1896 battle did Ethiopia defeat an invading Italian army?",
-      "answers": ["Battle of Adwa", "Adwa", "Adowa"],
+      "question": "Which ship carried Charles Darwin on his famous five-year voyage around the world?",
+      "answers": ["HMS Beagle", "Beagle", "The Beagle"],
       "difficulty": "hard"
     },
     {
       "id": "qz-history-q189",
       "question": "Which former slave led the Haitian Revolution?",
-      "answers": ["Toussaint Louverture", "Toussaint L'Ouverture"],
+      "answers": ["Toussaint Louverture", "Toussaint L'Ouverture", "Toussaint"],
       "difficulty": "hard"
     },
     {
@@ -1183,8 +1183,8 @@
     },
     {
       "id": "qz-history-q194",
-      "question": "Which 1928 international pact renounced war as an instrument of national policy?",
-      "answers": ["Kellogg-Briand Pact", "Kellogg-Briand", "Pact of Paris"],
+      "question": "Which French king, known as the Sun King, reigned for 72 years?",
+      "answers": ["Louis XIV", "Louis 14", "Louis the 14th", "Louis the Fourteenth"],
       "difficulty": "hard"
     },
     {
@@ -1219,8 +1219,8 @@
     },
     {
       "id": "qz-history-q200",
-      "question": "Who was the first Secretary-General of the United Nations?",
-      "answers": ["Trygve Lie"],
+      "question": "Which of the Seven Wonders of the Ancient World was a giant bronze statue of the sun god Helios?",
+      "answers": ["Colossus of Rhodes", "The Colossus of Rhodes", "Colossus"],
       "difficulty": "hard"
     }
   ]

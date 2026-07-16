@@ -20,8 +20,8 @@
     },
     {
       "id": "qz-movies-tv-q003",
-      "question": "Daniel Radcliffe played which boy wizard on film?",
-      "answers": ["Harry Potter"],
+      "question": "In the classic Disney film, which princess leaves a glass slipper behind at the ball?",
+      "answers": ["Cinderella"],
       "difficulty": "easy"
     },
     {
@@ -263,8 +263,8 @@
     },
     {
       "id": "qz-movies-tv-q042",
-      "question": "Which cartoon mouse is the official mascot of Disney?",
-      "answers": ["Mickey Mouse", "Mickey"],
+      "question": "Which green frog is the star of The Muppet Show?",
+      "answers": ["Kermit", "Kermit the Frog"],
       "difficulty": "easy"
     },
     {
@@ -329,8 +329,8 @@
     },
     {
       "id": "qz-movies-tv-q053",
-      "question": "In the 1982 Spielberg film, E.T. wants to phone where?",
-      "answers": ["Home"],
+      "question": "What kind of animal is Shrek's wisecracking sidekick voiced by Eddie Murphy?",
+      "answers": ["Donkey", "A donkey"],
       "difficulty": "easy"
     },
     {
@@ -431,8 +431,8 @@
     },
     {
       "id": "qz-movies-tv-q070",
-      "question": "In the Dr. Seuss story, which holiday does the Grinch try to steal?",
-      "answers": ["Christmas"],
+      "question": "Big Bird and Elmo are residents of which famous TV street?",
+      "answers": ["Sesame Street"],
       "difficulty": "easy"
     },
     {
@@ -489,8 +489,8 @@
     },
     {
       "id": "qz-movies-tv-q079",
-      "question": "Who directed Forrest Gump and Back to the Future?",
-      "answers": ["Robert Zemeckis", "Zemeckis"],
+      "question": "In Star Wars, what is the name of Han Solo's Wookiee co-pilot?",
+      "answers": ["Chewbacca", "Chewie"],
       "difficulty": "easy"
     },
     {
@@ -986,8 +986,8 @@
     },
     {
       "id": "qz-movies-tv-q161",
-      "question": "Who directed the 1927 silent sci-fi classic Metropolis?",
-      "answers": ["Fritz Lang", "Lang"],
+      "question": "In Pulp Fiction, what do the French call a Quarter Pounder with Cheese?",
+      "answers": ["Royale with Cheese", "A Royale with Cheese", "Royale"],
       "difficulty": "hard"
     },
     {
@@ -1040,14 +1040,14 @@
     },
     {
       "id": "qz-movies-tv-q170",
-      "question": "Which 1927 silent film was the first to win the Best Picture Oscar?",
-      "answers": ["Wings"],
+      "question": "'I see dead people' is a famous line from which 1999 thriller?",
+      "answers": ["The Sixth Sense", "Sixth Sense"],
       "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q171",
-      "question": "Which 1948 Hitchcock film was shot to appear as one continuous take?",
-      "answers": ["Rope"],
+      "question": "What cocktail does the Dude sip throughout The Big Lebowski?",
+      "answers": ["White Russian", "White Russians"],
       "difficulty": "hard"
     },
     {
@@ -1088,8 +1088,8 @@
     },
     {
       "id": "qz-movies-tv-q178",
-      "question": "Which South Korean director made the 2019 film Parasite?",
-      "answers": ["Bong Joon-ho", "Bong Joon Ho", "Bong"],
+      "question": "Which actor played the school-skipping title role in Ferris Bueller's Day Off?",
+      "answers": ["Matthew Broderick", "Broderick"],
       "difficulty": "hard"
     },
     {
@@ -1101,7 +1101,7 @@
     {
       "id": "qz-movies-tv-q180",
       "question": "Who is the mysterious criminal mastermind in The Usual Suspects?",
-      "answers": ["Keyser Soze", "Keyser Söze", "Soze"],
+      "answers": ["Keyser Soze", "Keyser Söze", "Kaiser Soze", "Soze"],
       "difficulty": "hard"
     },
     {
@@ -1118,20 +1118,20 @@
     },
     {
       "id": "qz-movies-tv-q183",
-      "question": "Who directed the 2003 South Korean revenge thriller Oldboy?",
-      "answers": ["Park Chan-wook", "Park Chan Wook", "Park Chanwook"],
+      "question": "Complete the Princess Bride line: 'My name is ___ Montoya. You killed my father. Prepare to die.'",
+      "answers": ["Inigo"],
       "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q184",
-      "question": "Which Hong Kong director made In the Mood for Love?",
-      "answers": ["Wong Kar-wai", "Wong Kar Wai", "Wong Kar-Wai"],
+      "question": "What is the name of Will Ferrell's mustachioed San Diego news anchor in Anchorman?",
+      "answers": ["Ron Burgundy", "Burgundy"],
       "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q185",
-      "question": "Which 1972 Tarkovsky film is set on a station orbiting a sentient ocean planet?",
-      "answers": ["Solaris"],
+      "question": "In Seinfeld, what is the name of the holiday Frank Costanza invents 'for the rest of us'?",
+      "answers": ["Festivus"],
       "difficulty": "hard"
     },
     {
@@ -1154,8 +1154,8 @@
     },
     {
       "id": "qz-movies-tv-q189",
-      "question": "Who directed the 1960 French New Wave film Breathless?",
-      "answers": ["Jean-Luc Godard", "Godard", "Jean Luc Godard"],
+      "question": "Which child actor starred as Kevin in Home Alone?",
+      "answers": ["Macaulay Culkin", "Culkin"],
       "difficulty": "hard"
     },
     {
@@ -1166,8 +1166,8 @@
     },
     {
       "id": "qz-movies-tv-q191",
-      "question": "In the 1960s series The Prisoner, what number is assigned to the protagonist?",
-      "answers": ["6", "Six", "Number Six"],
+      "question": "According to the theme song, in which city was the Fresh Prince of Bel-Air 'born and raised'?",
+      "answers": ["Philadelphia", "West Philadelphia", "Philly"],
       "difficulty": "hard"
     },
     {
@@ -1214,14 +1214,14 @@
     },
     {
       "id": "qz-movies-tv-q199",
-      "question": "Which former journalist created the HBO series The Wire?",
-      "answers": ["David Simon", "Simon"],
+      "question": "In Grease, what is the name of John Travolta's leather-clad greaser?",
+      "answers": ["Danny", "Danny Zuko", "Zuko"],
       "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q200",
-      "question": "Which 1997 HBO prison drama was the network's first hour-long original drama series?",
-      "answers": ["Oz"],
+      "question": "Which actress played queen bee Cher in the 1995 comedy Clueless?",
+      "answers": ["Alicia Silverstone", "Silverstone"],
       "difficulty": "hard"
     }
   ]

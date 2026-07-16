@@ -8,8 +8,8 @@
   "questions": [
     {
       "id": "qz-geography-q001",
-      "question": "What is the capital city of France?",
-      "answers": ["Paris"],
+      "question": "The Christ the Redeemer statue stands above which city?",
+      "answers": ["Rio de Janeiro", "Rio"],
       "difficulty": "easy"
     },
     {
@@ -104,8 +104,8 @@
     },
     {
       "id": "qz-geography-q017",
-      "question": "The Great Wall is located in which country?",
-      "answers": ["China"],
+      "question": "Which Scandinavian country is famous for its dramatic fjords?",
+      "answers": ["Norway"],
       "difficulty": "easy"
     },
     {
@@ -164,7 +164,7 @@
     },
     {
       "id": "qz-geography-q027",
-      "question": "The Sydney Opera House is in which country?",
+      "question": "The Great Barrier Reef lies off the coast of which country?",
       "answers": ["Australia"],
       "difficulty": "easy"
     },
@@ -188,8 +188,8 @@
     },
     {
       "id": "qz-geography-q031",
-      "question": "Brazil is located on which continent?",
-      "answers": ["South America"],
+      "question": "Which country's flag features a blue Star of David?",
+      "answers": ["Israel"],
       "difficulty": "easy"
     },
     {
@@ -260,8 +260,8 @@
     },
     {
       "id": "qz-geography-q043",
-      "question": "Which US state is nicknamed the Sunshine State?",
-      "answers": ["Florida"],
+      "question": "Which island country is nicknamed the Emerald Isle?",
+      "answers": ["Ireland"],
       "difficulty": "easy"
     },
     {
@@ -380,8 +380,8 @@
     },
     {
       "id": "qz-geography-q063",
-      "question": "Which US state is nicknamed the Golden State?",
-      "answers": ["California"],
+      "question": "Hollywood, the heart of the American film industry, is part of which city?",
+      "answers": ["Los Angeles", "LA", "L.A."],
       "difficulty": "easy"
     },
     {
@@ -428,8 +428,8 @@
     },
     {
       "id": "qz-geography-q071",
-      "question": "What is the capital city of Morocco?",
-      "answers": ["Rabat"],
+      "question": "Loch Ness, home of a legendary monster, is in which part of the United Kingdom?",
+      "answers": ["Scotland"],
       "difficulty": "easy"
     },
     {
@@ -452,8 +452,8 @@
     },
     {
       "id": "qz-geography-q075",
-      "question": "What is the capital city of Saudi Arabia?",
-      "answers": ["Riyadh"],
+      "question": "The Burj Khalifa, the world's tallest building, is in which city?",
+      "answers": ["Dubai"],
       "difficulty": "easy"
     },
     {
@@ -482,8 +482,8 @@
     },
     {
       "id": "qz-geography-q080",
-      "question": "What is the capital city of Colombia?",
-      "answers": ["Bogota"],
+      "question": "Which Central American country is famous for its canal linking two oceans?",
+      "answers": ["Panama"],
       "difficulty": "easy"
     },
     {
@@ -506,8 +506,8 @@
     },
     {
       "id": "qz-geography-q084",
-      "question": "What is the capital city of Bulgaria?",
-      "answers": ["Sofia"],
+      "question": "Petra, the ancient city carved into rose-red cliffs, is in which country?",
+      "answers": ["Jordan"],
       "difficulty": "medium"
     },
     {
@@ -518,8 +518,8 @@
     },
     {
       "id": "qz-geography-q086",
-      "question": "What is the capital city of Serbia?",
-      "answers": ["Belgrade"],
+      "question": "The temple complex of Angkor Wat is in which country?",
+      "answers": ["Cambodia"],
       "difficulty": "medium"
     },
     {
@@ -554,14 +554,14 @@
     },
     {
       "id": "qz-geography-q092",
-      "question": "What is the capital city of Jordan?",
-      "answers": ["Amman"],
+      "question": "What is the official currency of Switzerland?",
+      "answers": ["Swiss franc", "Franc", "Swiss francs", "CHF"],
       "difficulty": "medium"
     },
     {
       "id": "qz-geography-q093",
-      "question": "What is the capital city of Lebanon?",
-      "answers": ["Beirut"],
+      "question": "Which country's flag features a red dragon?",
+      "answers": ["Wales"],
       "difficulty": "medium"
     },
     {
@@ -722,14 +722,8 @@
     },
     {
       "id": "qz-geography-q120",
-      "question": "Which country shares the world's longest land border with Canada?",
-      "answers": [
-        "United States",
-        "USA",
-        "US",
-        "America",
-        "United States of America"
-      ],
+      "question": "Which mountain range forms a natural border between France and Spain?",
+      "answers": ["Pyrenees", "The Pyrenees", "Pyrenees Mountains"],
       "difficulty": "medium"
     },
     {
@@ -902,8 +896,8 @@
     },
     {
       "id": "qz-geography-q149",
-      "question": "Salvador is the capital of which Brazilian state?",
-      "answers": ["Bahia"],
+      "question": "Which is the only South American country with both a Pacific and a Caribbean coastline?",
+      "answers": ["Colombia"],
       "difficulty": "medium"
     },
     {
@@ -925,8 +919,8 @@
     },
     {
       "id": "qz-geography-q152",
-      "question": "Which US state is nicknamed the Lone Star State?",
-      "answers": ["Texas"],
+      "question": "What is the most populous country in Africa?",
+      "answers": ["Nigeria"],
       "difficulty": "medium"
     },
     {
@@ -937,7 +931,7 @@
     },
     {
       "id": "qz-geography-q154",
-      "question": "Which country's flag is a white cross on a red background?",
+      "question": "Which country's flag is a red square with a white cross in the middle?",
       "answers": ["Switzerland"],
       "difficulty": "medium"
     },
@@ -980,7 +974,7 @@
     {
       "id": "qz-geography-q161",
       "question": "What is the capital city of Mongolia?",
-      "answers": ["Ulaanbaatar", "Ulan Bator"],
+      "answers": ["Ulaanbaatar", "Ulan Bator", "Ulanbatar", "Ulaanbatar", "Ulan Baatar"],
       "difficulty": "hard"
     },
     {
@@ -991,26 +985,26 @@
     },
     {
       "id": "qz-geography-q163",
-      "question": "What is the capital city of Myanmar?",
-      "answers": ["Naypyidaw", "Nay Pyi Taw"],
+      "question": "Which country has the only national flag that is not rectangular?",
+      "answers": ["Nepal"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q164",
       "question": "What is the capital city of Burkina Faso?",
-      "answers": ["Ouagadougou"],
+      "answers": ["Ouagadougou", "Ouagadugu", "Wagadougou", "Wagadugu"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q165",
-      "question": "What is the capital city of Kyrgyzstan?",
-      "answers": ["Bishkek"],
+      "question": "Which African country almost completely surrounds The Gambia?",
+      "answers": ["Senegal"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q166",
-      "question": "What is the capital city of Uzbekistan?",
-      "answers": ["Tashkent"],
+      "question": "Which country has the longest coastline in the world?",
+      "answers": ["Canada"],
       "difficulty": "hard"
     },
     {
@@ -1027,20 +1021,20 @@
     },
     {
       "id": "qz-geography-q169",
-      "question": "What is the capital city of Armenia?",
-      "answers": ["Yerevan"],
+      "question": "Besides Bolivia, which is the only other landlocked country in South America?",
+      "answers": ["Paraguay"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q170",
-      "question": "What is the capital city of Slovenia?",
-      "answers": ["Ljubljana"],
+      "question": "Counting its overseas territories, which country spans the most time zones?",
+      "answers": ["France"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q171",
-      "question": "What is the capital city of Slovakia?",
-      "answers": ["Bratislava"],
+      "question": "Which African country's flag features an AK-47 rifle?",
+      "answers": ["Mozambique"],
       "difficulty": "hard"
     },
     {
@@ -1051,44 +1045,38 @@
     },
     {
       "id": "qz-geography-q173",
-      "question": "What is the capital city of Latvia?",
-      "answers": ["Riga"],
+      "question": "Which is the only Central American country with English as its official language?",
+      "answers": ["Belize"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q174",
-      "question": "What is the capital city of Lithuania?",
-      "answers": ["Vilnius"],
+      "question": "Which island is divided among Malaysia, Indonesia, and Brunei?",
+      "answers": ["Borneo"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q175",
-      "question": "What is the capital city of Moldova?",
-      "answers": ["Chisinau"],
+      "question": "Haiti and the Dominican Republic share which Caribbean island?",
+      "answers": ["Hispaniola"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q176",
-      "question": "What is the capital city of Albania?",
-      "answers": ["Tirana"],
-      "difficulty": "hard"
-    },
-    {
-      "id": "qz-geography-q177",
-      "question": "What is the capital city of North Macedonia?",
-      "answers": ["Skopje"],
+      "question": "What is the largest country located entirely within Europe?",
+      "answers": ["Ukraine"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q178",
-      "question": "What is the official capital city of Tanzania?",
-      "answers": ["Dodoma"],
+      "question": "Aconcagua, the highest mountain outside Asia, is in which country?",
+      "answers": ["Argentina"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q179",
-      "question": "What is the official capital city of Ivory Coast (Cote d'Ivoire)?",
-      "answers": ["Yamoussoukro"],
+      "question": "Which strait, named after a famous explorer, separates mainland South America from Tierra del Fuego?",
+      "answers": ["Strait of Magellan", "Magellan", "Magellan Strait"],
       "difficulty": "hard"
     },
     {
@@ -1099,32 +1087,32 @@
     },
     {
       "id": "qz-geography-q181",
-      "question": "What is the capital city of Laos?",
-      "answers": ["Vientiane"],
+      "question": "Which tiny country sits high in the mountains between France and Spain?",
+      "answers": ["Andorra"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q182",
-      "question": "What is the capital city of Bhutan?",
-      "answers": ["Thimphu"],
+      "question": "Which Middle Eastern country's flag features a green cedar tree?",
+      "answers": ["Lebanon"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q183",
-      "question": "What is the capital city of Fiji?",
-      "answers": ["Suva"],
+      "question": "Which Southeast Asian country is made up of more than 17,000 islands?",
+      "answers": ["Indonesia"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q184",
-      "question": "What is the capital city of Papua New Guinea?",
-      "answers": ["Port Moresby"],
+      "question": "Which country's currency is the zloty?",
+      "answers": ["Poland"],
       "difficulty": "hard"
     },
     {
       "id": "qz-geography-q185",
-      "question": "What is the capital city of Madagascar?",
-      "answers": ["Antananarivo"],
+      "question": "Which sea lies between Italy and Croatia?",
+      "answers": ["Adriatic Sea", "Adriatic", "The Adriatic"],
       "difficulty": "hard"
     },
     {

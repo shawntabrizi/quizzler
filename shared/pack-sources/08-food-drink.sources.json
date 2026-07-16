@@ -20,8 +20,8 @@
     },
     {
       "id": "qz-food-drink-q003",
-      "question": "What is the main ingredient in an omelette?",
-      "answers": ["eggs", "egg"],
+      "question": "Which spiky tropical fruit with a crown of leaves is the star of a classic upside-down cake?",
+      "answers": ["pineapple", "pineapples"],
       "difficulty": "easy"
     },
     {
@@ -116,14 +116,14 @@
     },
     {
       "id": "qz-food-drink-q019",
-      "question": "What type of food is cheddar?",
-      "answers": ["cheese"],
+      "question": "Which tangy yellow condiment, squirted on hot dogs, is made from the ground seeds of its namesake plant?",
+      "answers": ["mustard", "yellow mustard"],
       "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q020",
-      "question": "Which grain is fermented to make Japanese sake?",
-      "answers": ["rice"],
+      "question": "What is the breaded, fried meat cutlet famously associated with Vienna called?",
+      "answers": ["schnitzel", "wiener schnitzel", "a schnitzel"],
       "difficulty": "easy"
     },
     {
@@ -152,8 +152,8 @@
     },
     {
       "id": "qz-food-drink-q025",
-      "question": "What do you call bread that has been browned with heat, often eaten with butter at breakfast?",
-      "answers": ["toast"],
+      "question": "Pad thai is the signature stir-fried noodle dish of which country?",
+      "answers": ["Thailand"],
       "difficulty": "easy"
     },
     {
@@ -224,8 +224,8 @@
     },
     {
       "id": "qz-food-drink-q037",
-      "question": "What frozen dessert is commonly served in a cone?",
-      "answers": ["ice cream", "icecream"],
+      "question": "What do we call the breakfast dish of bread slices dipped in beaten egg and fried, known to the French as 'lost bread'?",
+      "answers": ["french toast", "eggy bread", "pain perdu"],
       "difficulty": "easy"
     },
     {
@@ -404,14 +404,14 @@
     },
     {
       "id": "qz-food-drink-q067",
-      "question": "What French culinary term means ingredients are prepared and arranged before cooking begins?",
-      "answers": ["mise en place"],
+      "question": "Which coffee drink is made by lengthening a shot of espresso with hot water, reputedly named after American soldiers?",
+      "answers": ["americano", "caffe americano", "cafe americano"],
       "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q068",
-      "question": "Which drink is traditionally ordered by the pint in British pubs?",
-      "answers": ["beer", "ale"],
+      "question": "Which broad category of drink is traditionally ordered by the pint in British pubs?",
+      "answers": ["beer", "ale", "lager", "cider", "stout"],
       "difficulty": "easy"
     },
     {
@@ -436,12 +436,6 @@
       "id": "qz-food-drink-q072",
       "question": "Which buttery French sauce made with egg yolks is poured over eggs Benedict?",
       "answers": ["hollandaise", "hollandaise sauce"],
-      "difficulty": "easy"
-    },
-    {
-      "id": "qz-food-drink-q073",
-      "question": "What type of pastry is used to make eclairs and profiteroles?",
-      "answers": ["choux", "choux pastry", "pate a choux"],
       "difficulty": "easy"
     },
     {
@@ -584,8 +578,8 @@
     },
     {
       "id": "qz-food-drink-q097",
-      "question": "What spongy Ethiopian flatbread made from teff flour is used to scoop up stews?",
-      "answers": ["injera"],
+      "question": "Nutella is a sweet spread made from chocolate and which nut?",
+      "answers": ["hazelnut", "hazelnuts"],
       "difficulty": "medium"
     },
     {
@@ -788,8 +782,13 @@
     },
     {
       "id": "qz-food-drink-q131",
-      "question": "Which flower flavors the French liqueur St-Germain?",
-      "answers": ["elderflower", "elderflowers"],
+      "question": "Which small round green vegetables take their name from the capital of Belgium?",
+      "answers": [
+        "brussels sprouts",
+        "brussel sprouts",
+        "sprouts",
+        "brussels sprout"
+      ],
       "difficulty": "medium"
     },
     {
@@ -848,8 +847,8 @@
     },
     {
       "id": "qz-food-drink-q141",
-      "question": "What is the French technique of slowly cooking food submerged in fat at low temperature called?",
-      "answers": ["confit"],
+      "question": "Which brunch cocktail tops up orange juice with sparkling wine?",
+      "answers": ["mimosa", "bucks fizz", "buck's fizz"],
       "difficulty": "medium"
     },
     {
@@ -972,8 +971,8 @@
     },
     {
       "id": "qz-food-drink-q161",
-      "question": "What Georgian bread is baked in a boat shape, filled with cheese, and topped with an egg?",
-      "answers": ["khachapuri", "adjaruli khachapuri"],
+      "question": "The Caesar salad was invented in the 1920s by restaurateur Caesar Cardini in which country?",
+      "answers": ["Mexico"],
       "difficulty": "hard"
     },
     {
@@ -996,8 +995,8 @@
     },
     {
       "id": "qz-food-drink-q165",
-      "question": "Chablis wine is made exclusively from which grape variety?",
-      "answers": ["chardonnay"],
+      "question": "What is Spain's famous sparkling wine, made in the same bottle-fermented style as Champagne, called?",
+      "answers": ["cava"],
       "difficulty": "hard"
     },
     {
@@ -1020,8 +1019,8 @@
     },
     {
       "id": "qz-food-drink-q169",
-      "question": "What Yucatan dish of pork marinated in achiote and sour orange is slow-roasted in a pit?",
-      "answers": ["cochinita pibil"],
+      "question": "Despite its tropical name, the Hawaiian pizza was invented in which country?",
+      "answers": ["Canada"],
       "difficulty": "hard"
     },
     {
@@ -1038,8 +1037,8 @@
     },
     {
       "id": "qz-food-drink-q172",
-      "question": "What protein-digesting enzyme in pineapple prevents gelatin from setting?",
-      "answers": ["bromelain"],
+      "question": "Vanilla, the world's second-most expensive spice, is harvested from the pods of which flower?",
+      "answers": ["orchid", "orchids", "an orchid", "vanilla orchid"],
       "difficulty": "hard"
     },
     {
@@ -1074,8 +1073,8 @@
     },
     {
       "id": "qz-food-drink-q178",
-      "question": "What is the leftover mass of grape skins and seeds after pressing called, used to make grappa?",
-      "answers": ["pomace", "marc"],
+      "question": "The red bar syrup grenadine takes its name and flavor from which fruit?",
+      "answers": ["pomegranate", "pomegranates"],
       "difficulty": "hard"
     },
     {
@@ -1110,14 +1109,14 @@
     },
     {
       "id": "qz-food-drink-q184",
-      "question": "Basque burnt cheesecake was created at a bar in which Spanish city?",
-      "answers": ["san sebastian", "donostia"],
+      "question": "Traditional Worcestershire sauce gets its savory depth from which small fermented fish?",
+      "answers": ["anchovies", "anchovy"],
       "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q185",
-      "question": "What milky Mexican drink is made from the fermented sap of the agave plant?",
-      "answers": ["pulque"],
+      "question": "Before Dutch growers popularized the orange variety, most cultivated carrots were what color?",
+      "answers": ["purple", "violet"],
       "difficulty": "hard"
     },
     {
@@ -1134,8 +1133,8 @@
     },
     {
       "id": "qz-food-drink-q188",
-      "question": "What shredded Austrian pancake dessert is named after Emperor Franz Joseph?",
-      "answers": ["kaiserschmarrn", "kaiserschmarren"],
+      "question": "Which warm spice, grated from a hard brown seed, is the traditional dusting on eggnog?",
+      "answers": ["nutmeg"],
       "difficulty": "hard"
     },
     {
@@ -1158,8 +1157,8 @@
     },
     {
       "id": "qz-food-drink-q192",
-      "question": "What is the collective Italian term for cured meat products such as salami and prosciutto?",
-      "answers": ["salumi"],
+      "question": "On a beer menu, what do the letters IPA stand for?",
+      "answers": ["india pale ale", "indian pale ale"],
       "difficulty": "hard"
     },
     {
@@ -1170,11 +1169,13 @@
     },
     {
       "id": "qz-food-drink-q194",
-      "question": "What is the traditional method called in which sparkling wine undergoes a second fermentation in the bottle?",
+      "question": "Which spicy Italian pasta sauce, often served with penne, has a name meaning 'angry'?",
       "answers": [
-        "methode champenoise",
-        "traditional method",
-        "methode traditionnelle"
+        "arrabbiata",
+        "arrabiata",
+        "arabbiata",
+        "arabiata",
+        "all arrabbiata"
       ],
       "difficulty": "hard"
     },
@@ -1198,8 +1199,8 @@
     },
     {
       "id": "qz-food-drink-q198",
-      "question": "What Mexican delicacy, sometimes called corn truffle, is a fungus that grows on ears of corn?",
-      "answers": ["huitlacoche", "cuitlacoche", "corn smut"],
+      "question": "Which thin pasta has an Italian name meaning 'little worms'?",
+      "answers": ["vermicelli"],
       "difficulty": "hard"
     },
     {

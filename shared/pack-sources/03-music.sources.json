@@ -38,8 +38,8 @@
     },
     {
       "id": "qz-music-q006",
-      "question": "Which artist released the album Blue in 1971?",
-      "answers": ["Joni Mitchell", "Mitchell"],
+      "question": "Who sang the 2008 hit 'Single Ladies (Put a Ring on It)'?",
+      "answers": ["Beyonce", "Beyonce Knowles"],
       "difficulty": "easy"
     },
     {
@@ -92,8 +92,8 @@
     },
     {
       "id": "qz-music-q015",
-      "question": "In music, what does 'DJ' stand for?",
-      "answers": ["Disc jockey", "Disk jockey"],
+      "question": "Who sang the 1984 hit 'Like a Virgin'?",
+      "answers": ["Madonna"],
       "difficulty": "easy"
     },
     {
@@ -255,7 +255,7 @@
     {
       "id": "qz-music-q042",
       "question": "How many strings does a violin have?",
-      "answers": ["4"],
+      "answers": ["4", "four"],
       "difficulty": "easy"
     },
     {
@@ -476,8 +476,8 @@
     },
     {
       "id": "qz-music-q079",
-      "question": "Which English composer wrote 'The Planets' suite?",
-      "answers": ["Holst", "Gustav Holst"],
+      "question": "Which Colombian superstar sang the 2006 hit 'Hips Don't Lie'?",
+      "answers": ["Shakira"],
       "difficulty": "easy"
     },
     {
@@ -507,19 +507,19 @@
     {
       "id": "qz-music-q084",
       "question": "How many symphonies did Beethoven complete?",
-      "answers": ["9"],
+      "answers": ["9", "nine"],
       "difficulty": "medium"
     },
     {
       "id": "qz-music-q085",
       "question": "How many semitones are in one octave?",
-      "answers": ["12"],
+      "answers": ["12", "twelve"],
       "difficulty": "medium"
     },
     {
       "id": "qz-music-q086",
       "question": "How many lines are in a standard musical staff?",
-      "answers": ["5"],
+      "answers": ["5", "five"],
       "difficulty": "medium"
     },
     {
@@ -866,8 +866,8 @@
     },
     {
       "id": "qz-music-q144",
-      "question": "Which artist released the 1993 eurodance hit 'What Is Love'?",
-      "answers": ["Haddaway"],
+      "question": "Which British singer released the 2006 album 'Back to Black' and the hit 'Rehab'?",
+      "answers": ["Amy Winehouse", "Winehouse"],
       "difficulty": "medium"
     },
     {
@@ -1009,8 +1009,8 @@
     },
     {
       "id": "qz-music-q167",
-      "question": "Which gospel singer and electric guitar pioneer is called the 'Godmother of Rock and Roll'?",
-      "answers": ["Sister Rosetta Tharpe", "Rosetta Tharpe"],
+      "question": "Which French singer, nicknamed 'The Little Sparrow', made 'La Vie en rose' famous?",
+      "answers": ["Edith Piaf", "Piaf"],
       "difficulty": "hard"
     },
     {
@@ -1027,8 +1027,8 @@
     },
     {
       "id": "qz-music-q170",
-      "question": "What was the nickname of Motown's in-house studio band?",
-      "answers": ["The Funk Brothers", "Funk Brothers"],
+      "question": "Which Italian tenor, one of the Three Tenors, was famous for singing 'Nessun dorma'?",
+      "answers": ["Pavarotti", "Luciano Pavarotti"],
       "difficulty": "hard"
     },
     {
@@ -1135,8 +1135,8 @@
     },
     {
       "id": "qz-music-q188",
-      "question": "Under what fictional rock alter ego did Garth Brooks release a 1999 album?",
-      "answers": ["Chris Gaines"],
+      "question": "Which American singer, known as the 'Godfather of Soul', recorded 'I Got You (I Feel Good)'?",
+      "answers": ["James Brown", "Brown"],
       "difficulty": "hard"
     },
     {
@@ -1178,13 +1178,13 @@
     {
       "id": "qz-music-q195",
       "question": "In hertz, what is the standard concert pitch frequency of the A above middle C?",
-      "answers": ["440"],
+      "answers": ["440", "440 hz", "440hz", "a440"],
       "difficulty": "hard"
     },
     {
       "id": "qz-music-q196",
-      "question": "How many black keys are on a standard piano?",
-      "answers": ["36"],
+      "question": "Which Canadian singer-songwriter wrote the much-covered ballad 'Hallelujah'?",
+      "answers": ["Leonard Cohen", "Cohen"],
       "difficulty": "hard"
     },
     {
@@ -1207,8 +1207,8 @@
     },
     {
       "id": "qz-music-q200",
-      "question": "Which Austrian composer invented the twelve-tone technique?",
-      "answers": ["Schoenberg", "Arnold Schoenberg", "Schonberg"],
+      "question": "'The Girl from Ipanema' is the signature song of which laid-back Brazilian genre?",
+      "answers": ["Bossa nova", "Bossanova"],
       "difficulty": "hard"
     }
   ]

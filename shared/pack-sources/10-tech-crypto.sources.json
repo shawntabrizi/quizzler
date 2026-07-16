@@ -67,15 +67,9 @@
       "difficulty": "easy"
     },
     {
-      "id": "qz-tech-crypto-q011",
-      "question": "What does 'AI' stand for?",
-      "answers": ["Artificial Intelligence"],
-      "difficulty": "easy"
-    },
-    {
       "id": "qz-tech-crypto-q012",
-      "question": "Which cryptocurrency has the ticker symbol BTC?",
-      "answers": ["Bitcoin"],
+      "question": "According to crypto fans' favorite saying, a coin whose price is skyrocketing is headed 'to the' what?",
+      "answers": ["Moon", "The moon"],
       "difficulty": "easy"
     },
     {
@@ -176,8 +170,8 @@
     },
     {
       "id": "qz-tech-crypto-q029",
-      "question": "What does 'PC' stand for?",
-      "answers": ["Personal Computer"],
+      "question": "What do you call unwanted junk email, which shares its name with a canned meat?",
+      "answers": ["Spam", "Spam email", "Spam mail"],
       "difficulty": "easy"
     },
     {
@@ -278,8 +272,8 @@
     },
     {
       "id": "qz-tech-crypto-q046",
-      "question": "What does 'IT' stand for?",
-      "answers": ["Information Technology"],
+      "question": "What Japanese-born word describes the little smiley faces and hearts you add to your text messages?",
+      "answers": ["Emoji", "Emojis", "An emoji"],
       "difficulty": "easy"
     },
     {
@@ -290,8 +284,8 @@
     },
     {
       "id": "qz-tech-crypto-q048",
-      "question": "Which symbol separates the username from the domain in an email address?",
-      "answers": ["at sign", "at symbol", "at"],
+      "question": "What do you call a '#' label, like #ThrowbackThursday, used to tag topics on social media?",
+      "answers": ["Hashtag", "A hashtag", "Hash tag"],
       "difficulty": "easy"
     },
     {
@@ -368,8 +362,8 @@
     },
     {
       "id": "qz-tech-crypto-q061",
-      "question": "What does 'LOL' stand for?",
-      "answers": ["Laughing Out Loud", "Laugh Out Loud"],
+      "question": "How many guesses do you get to find the five-letter word in the daily puzzle game Wordle?",
+      "answers": ["6", "Six"],
       "difficulty": "easy"
     },
     {
@@ -404,8 +398,8 @@
     },
     {
       "id": "qz-tech-crypto-q067",
-      "question": "The word 'app' is short for what?",
-      "answers": ["Application"],
+      "question": "On a computer keyboard, Ctrl+C copies text. What does Ctrl+V do?",
+      "answers": ["Paste", "Pastes", "Pasting"],
       "difficulty": "easy"
     },
     {
@@ -428,8 +422,8 @@
     },
     {
       "id": "qz-tech-crypto-q071",
-      "question": "In what year did Tim Berners-Lee propose the World Wide Web?",
-      "answers": ["1989"],
+      "question": "What is the name of Apple's wireless earbuds?",
+      "answers": ["AirPods", "Air Pods", "Apple AirPods"],
       "difficulty": "easy"
     },
     {
@@ -464,26 +458,20 @@
     },
     {
       "id": "qz-tech-crypto-q077",
-      "question": "Bitcoin's block reward halves every how many blocks?",
-      "answers": ["210000"],
+      "question": "Which dating app, named after material used to start a fire, made swiping right famous?",
+      "answers": ["Tinder"],
       "difficulty": "easy"
     },
     {
       "id": "qz-tech-crypto-q078",
-      "question": "Who was the little-known third co-founder of Apple who sold his stake early?",
-      "answers": ["Ronald Wayne", "Wayne", "Ron Wayne"],
+      "question": "On which social platform do users 'pin' recipes, crafts, and home ideas to boards?",
+      "answers": ["Pinterest"],
       "difficulty": "easy"
     },
     {
       "id": "qz-tech-crypto-q079",
       "question": "What does 'DNS' stand for?",
       "answers": ["Domain Name System"],
-      "difficulty": "easy"
-    },
-    {
-      "id": "qz-tech-crypto-q080",
-      "question": "Which organization originally created the Rust programming language?",
-      "answers": ["Mozilla"],
       "difficulty": "easy"
     },
     {
@@ -494,18 +482,14 @@
     },
     {
       "id": "qz-tech-crypto-q082",
-      "question": "In Polkadot, what does the acronym XCM stand for?",
-      "answers": [
-        "Cross-Consensus Messaging",
-        "Cross Consensus Messaging",
-        "Cross-Consensus Message Format"
-      ],
+      "question": "Which American crypto exchange became the first major one to go public on the Nasdaq in 2021?",
+      "answers": ["Coinbase"],
       "difficulty": "medium"
     },
     {
       "id": "qz-tech-crypto-q083",
-      "question": "Which video site did Google acquire for 1.65 billion dollars in 2006?",
-      "answers": ["YouTube"],
+      "question": "Which six-second looping video app, beloved by internet comedians, was shut down by Twitter in 2017?",
+      "answers": ["Vine"],
       "difficulty": "medium"
     },
     {
@@ -943,8 +927,8 @@
     },
     {
       "id": "qz-tech-crypto-q154",
-      "question": "Who created JavaScript in about ten days while at Netscape?",
-      "answers": ["Brendan Eich", "Eich"],
+      "question": "Which app, sharing its name with a DC superhero, can tell you what song is playing when you hold up your phone?",
+      "answers": ["Shazam"],
       "difficulty": "medium"
     },
     {
@@ -991,8 +975,8 @@
     },
     {
       "id": "qz-tech-crypto-q162",
-      "question": "What was Apple's secret internal codename for the original iPhone project?",
-      "answers": ["Project Purple", "Purple"],
+      "question": "Apple's famous dystopian '1984' Super Bowl ad introduced which computer?",
+      "answers": ["Macintosh", "The Macintosh", "Apple Macintosh", "Mac"],
       "difficulty": "hard"
     },
     {
@@ -1003,26 +987,31 @@
     },
     {
       "id": "qz-tech-crypto-q164",
-      "question": "Which cryptographer proposed 'b-money', a precursor cited in the Bitcoin whitepaper?",
-      "answers": ["Wei Dai", "Dai"],
+      "question": "Before it was called Google, Larry Page and Sergey Brin's search engine had what massage-themed name?",
+      "answers": ["BackRub", "Back Rub"],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q165",
-      "question": "Which computer scientist designed 'Bit Gold', an early precursor to Bitcoin?",
-      "answers": ["Nick Szabo", "Szabo"],
+      "question": "When Amazon launched in 1995, it sold only one kind of product. What?",
+      "answers": ["Books", "Book"],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q166",
-      "question": "In what year did the Mt. Gox exchange collapse after losing hundreds of thousands of bitcoins?",
-      "answers": ["2014"],
+      "question": "The first item ever sold on eBay was a broken version of what small presentation gadget?",
+      "answers": [
+        "Laser pointer",
+        "A laser pointer",
+        "Broken laser pointer",
+        "Laser"
+      ],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q167",
-      "question": "In what year did The DAO hack occur, leading to the Ethereum chain split?",
-      "answers": ["2016"],
+      "question": "According to the famous 1947 logbook story, the first literal computer 'bug' was what kind of insect?",
+      "answers": ["Moth", "A moth"],
       "difficulty": "hard"
     },
     {
@@ -1033,8 +1022,8 @@
     },
     {
       "id": "qz-tech-crypto-q169",
-      "question": "What is the address format used across Polkadot ecosystem chains called?",
-      "answers": ["SS58"],
+      "question": "What sea creature is crypto slang for someone who holds a massive amount of a coin?",
+      "answers": ["Whale", "A whale", "Whales"],
       "difficulty": "hard"
     },
     {
@@ -1051,26 +1040,26 @@
     },
     {
       "id": "qz-tech-crypto-q172",
-      "question": "Which system translates a domain name into an IP address?",
-      "answers": ["DNS", "Domain Name System"],
+      "question": "The very first YouTube video, uploaded by a co-founder in 2005, was filmed at what kind of attraction?",
+      "answers": ["Zoo", "The zoo", "A zoo", "San Diego Zoo"],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q173",
-      "question": "Which data structure follows the 'last in, first out' rule?",
-      "answers": ["stack", "a stack"],
+      "question": "Twitter's original 140-character limit was chosen to fit tweets inside what older kind of message?",
+      "answers": ["Text message", "SMS", "Text", "Texts"],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q174",
-      "question": "In what year did Gavin Wood publish the original Polkadot whitepaper?",
-      "answers": ["2016"],
+      "question": "What buzzword for a decentralized, blockchain-powered next version of the internet was coined by Polkadot's founder?",
+      "answers": ["Web3", "Web 3", "Web 3.0", "Web three"],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q175",
-      "question": "What is the name of the compact serialization codec used throughout the Polkadot stack?",
-      "answers": ["SCALE"],
+      "question": "Google's name is a misspelling of which word for the number 1 followed by 100 zeros?",
+      "answers": ["Googol", "A googol"],
       "difficulty": "hard"
     },
     {
@@ -1081,14 +1070,14 @@
     },
     {
       "id": "qz-tech-crypto-q177",
-      "question": "Which Thiel Fellow co-founded Polkadot alongside Gavin Wood and Peter Czaban?",
-      "answers": ["Robert Habermeier", "Habermeier", "Rob Habermeier"],
+      "question": "Steve Jobs bought which animation studio from George Lucas in 1986?",
+      "answers": ["Pixar"],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q178",
-      "question": "What is Parity's Rust-based embedded domain-specific language for writing WebAssembly smart contracts called?",
-      "answers": ["ink!", "ink"],
+      "question": "Bluetooth technology is named after a 10th-century king of which country?",
+      "answers": ["Denmark", "Denmark and Norway", "Norway"],
       "difficulty": "hard"
     },
     {
@@ -1109,13 +1098,13 @@
     {
       "id": "qz-tech-crypto-q181",
       "question": "Who created the C++ programming language?",
-      "answers": ["Bjarne Stroustrup", "Stroustrup"],
+      "answers": ["Bjarne Stroustrup", "Stroustrup", "Bjarne"],
       "difficulty": "hard"
     },
     {
       "id": "qz-tech-crypto-q182",
-      "question": "What was the name of the first PC virus, written in Pakistan in 1986?",
-      "answers": ["Brain", "Brain virus"],
+      "question": "Which simple game about steering an ever-growing line came pre-installed on classic Nokia phones?",
+      "answers": ["Snake"],
       "difficulty": "hard"
     },
     {
@@ -1167,12 +1156,6 @@
       "difficulty": "hard"
     },
     {
-      "id": "qz-tech-crypto-q191",
-      "question": "In the acronym zk-SNARK, what does the 'S' stand for?",
-      "answers": ["Succinct"],
-      "difficulty": "hard"
-    },
-    {
       "id": "qz-tech-crypto-q192",
       "question": "Who co-invented public-key cryptography with Martin Hellman in 1976?",
       "answers": ["Whitfield Diffie", "Diffie"],
@@ -1186,8 +1169,8 @@
     },
     {
       "id": "qz-tech-crypto-q194",
-      "question": "Which German engineer built the Z3, an early programmable computer, in 1941?",
-      "answers": ["Konrad Zuse", "Zuse"],
+      "question": "What was the name of Sony's iconic portable cassette player, launched in 1979?",
+      "answers": ["Walkman", "Sony Walkman", "The Walkman"],
       "difficulty": "hard"
     },
     {
@@ -1215,15 +1198,9 @@
       "difficulty": "hard"
     },
     {
-      "id": "qz-tech-crypto-q199",
-      "question": "What is the name of Parity's lightweight client that lets apps connect to Polkadot without full nodes?",
-      "answers": ["Smoldot"],
-      "difficulty": "hard"
-    },
-    {
       "id": "qz-tech-crypto-q200",
-      "question": "Douglas Engelbart's famous 1968 demo of the mouse and hypertext is popularly known by what name?",
-      "answers": ["The Mother of All Demos", "Mother of All Demos"],
+      "question": "The world's first website went online in 1990 at which European physics laboratory?",
+      "answers": ["CERN"],
       "difficulty": "hard"
     }
   ]
