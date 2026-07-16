@@ -41,14 +41,18 @@ const MAX_STAGE_BLOCKS: u32 = 600;
 /// Each regular wager value 1..=num_questions is usable exactly once. The
 /// u32 mask below therefore supports this deployment's 20-question ceiling.
 const MAX_GAME_QUESTIONS: u8 = 20;
-/// A registry pack is capped at 200 ordinary question slots. Keeping this
+/// A registry pack can contain 255 questions in slots 0..=254. Keeping this
 /// bound here lets the game validate a foreign registry response before it
 /// turns that response into durable per-game state.
-const MAX_PACK_QUESTIONS: u8 = 200;
-/// Ordinary pack slots occupy 0..200, so this sentinel is never a valid
+const MAX_PACK_QUESTIONS: u8 = u8::MAX;
+/// Ordinary pack slots occupy 0..=254, so this sentinel is never a valid
 /// selected final question.
 const FINAL_SLOT_UNSET: u8 = 0xff;
 const DIFFICULTY_MASK_ALL: u8 = 0b111;
+/// A bounded `uint8[]` reply has two head words plus one padded word per
+/// element. Keep one additional word so the call guard never mistakes a
+/// valid maximum-sized reply for a truncated buffer.
+const MAX_QUESTION_SLOT_RESPONSE_BYTES: usize = (MAX_PACK_QUESTIONS as usize + 3) * 32;
 
 // ── Stored types (SCALE) ─────────────────────────────────────────────
 
@@ -524,14 +528,14 @@ fn registry_pack_status(pack_id: u32) -> PackStatus {
 
 fn registry_question_slots_for_difficulty(pack_id: u32, difficulty: u8) -> Vec<u8> {
     // ABI encoding for the registry's bounded `uint8[]`: one offset word,
-    // one length word, and at most 200 element words = 6,464 bytes. Keep a
-    // comfortable but finite cap so a malformed registry cannot make game
-    // creation allocate an unbounded response.
+    // one length word, and at most 255 element words = 8,224 bytes. The
+    // named cap adds one word because contract_view_call rejects a reply that
+    // exactly fills its output buffer as potentially truncated.
     registry_call(
         "getQuestionSlotsForDifficulty",
         &["uint32", "uint8"],
         &[abi_word_u32(pack_id), abi_word_u8(difficulty)],
-        8192,
+        MAX_QUESTION_SLOT_RESPONSE_BYTES,
     )
 }
 

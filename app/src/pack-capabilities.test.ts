@@ -20,6 +20,6 @@ describe("pack capabilities", () => {
         expect(maxPlayableQuestionCount(1, 20)).toBe(0);
         expect(maxPlayableQuestionCount(2, 20)).toBe(1);
         expect(maxPlayableQuestionCount(21, 20)).toBe(20);
-        expect(maxPlayableQuestionCount(200, 20)).toBe(20);
+        expect(maxPlayableQuestionCount(255, 20)).toBe(20);
     });
 });

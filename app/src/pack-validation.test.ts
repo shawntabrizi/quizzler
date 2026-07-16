@@ -22,6 +22,17 @@ describe("pack validation", () => {
         });
     });
 
+    it("accepts the 255-question protocol maximum and rejects one more", () => {
+        const questions = (count: number) => Array.from({ length: count }, (_, index) => ({
+            text: `Question ${index + 1}`,
+            answers: ["Answer"],
+            difficulty: "easy" as const,
+        }));
+
+        expect(validatePack({ title: "Full pack", questions: questions(255) }).questions).toHaveLength(255);
+        expect(() => validatePack({ title: "Too large", questions: questions(256) })).toThrow("expected 2–255 questions");
+    });
+
     it("rejects malformed and unusable content before a chain transaction", () => {
         expect(() => validatePack({ title: "", questions: [] }, "bad-pack")).toThrow("title");
         expect(() => validatePack({

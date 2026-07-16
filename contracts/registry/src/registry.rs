@@ -1,7 +1,7 @@
 //! Quizzler pack registry — quiz content lives in its own contract so the
 //! game contract can be redeployed freely without re-uploading packs.
 //!
-//! Packs hold up to 200 questions in ordinary sequential slots. Every
+//! Packs hold up to 255 questions in ordinary sequential slots. Every
 //! question declares its difficulty (easy, medium, or hard), including the
 //! question that a game later reserves for its final round. Accepted answers
 //! are stored normalized and are public: the game contract reads them
@@ -23,7 +23,7 @@ const MAX_TEXT_BYTES: usize = 256;
 const MAX_ANSWER_BYTES: usize = 64;
 const MAX_ANSWERS: usize = 5;
 /// A bounded authoring chunk keeps a large imported pack resumable without
-/// asking the chain to decode or write all 200 questions in one call.
+/// asking the chain to decode or write all 255 questions in one call.
 const MAX_QUESTIONS_PER_BATCH: usize = 8;
 /// Catalog clients can replace many individual `get_pack` calls with a small
 /// number of bounded read calls.
@@ -34,9 +34,9 @@ const MAX_SEALED_PACKS_PER_VIEW_PAGE: usize = 24;
 /// `get_sealed_packs` uses this cursor to request the newest page. Zero is
 /// reserved for the terminal cursor returned after the oldest page.
 const SEALED_PACK_CURSOR_LATEST: u32 = u32::MAX;
-/// Questions occupy sequential u8 slots 0..200, sized for the starter
-/// packs while leaving the sentinel values used by the game contract free.
-const MAX_PACK_QUESTIONS: u8 = 200;
+/// A count can reach the full u8 maximum. Its 255 questions occupy slots
+/// 0..=254, preserving slot 255 for sentinels in the game contract.
+const MAX_PACK_QUESTIONS: u8 = u8::MAX;
 
 #[derive(Encode, Decode, Clone)]
 struct PackMeta {
@@ -546,7 +546,7 @@ mod registry {
     }
 
     /// All ordinary slots for one difficulty (0 easy, 1 medium, 2 hard), in
-    /// immutable authoring order. The list is bounded by the pack's 200
+    /// immutable authoring order. The list is bounded by the pack's 255
     /// question ceiling and lets the game reserve final candidates and plan
     /// its regular-round distribution without a centralized indexer.
     #[pvm::method]

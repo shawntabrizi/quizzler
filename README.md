@@ -30,8 +30,9 @@ Asset Hub.
   `@parity/product-sdk-contracts`. The app polls the compact `getLiveGame` snapshot and
   renders whichever screen the chain says the table is on.
 - **Starter content** (`shared/packs/`): 10 packs × 200 questions, each labelled Easy,
-  Medium, or Hard, seeded on-chain by script. A game plans its regular rounds from those
-  questions and holds a different unused question back for its final. Repository-only
+  Medium, or Hard, seeded on-chain by script; community packs support up to 255 questions.
+  A game plans its regular rounds from those questions and holds a different unused question
+  back for its final. Repository-only
   provenance and editorial review
   records live alongside them in [`shared/pack-sources/`](shared/pack-sources/README.md);
   they are never deployed or read at runtime.

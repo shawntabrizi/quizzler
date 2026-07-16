@@ -7,7 +7,8 @@ export const MAX_ACCEPTED_ANSWERS = 5;
 export const MAX_ANSWER_BYTES = 64;
 /** A pack needs one regular round and one unused question for its final. */
 export const MIN_PACK_QUESTIONS = 2;
-export const MAX_PACK_QUESTIONS = 200;
+/** The u8-backed registry supports 255 questions in slots 0..=254. */
+export const MAX_PACK_QUESTIONS = 255;
 
 export const PACK_DIFFICULTIES = ["easy", "medium", "hard"] as const;
 export type PackDifficulty = (typeof PACK_DIFFICULTIES)[number];
