@@ -100,8 +100,10 @@ export interface PhaseView {
 }
 
 interface PackView {
-    regular_count: number | bigint;
-    finals_set_count: number | bigint;
+    question_count: number | bigint;
+    easy_count: number | bigint;
+    medium_count: number | bigint;
+    hard_count: number | bigint;
     sealed: boolean;
 }
 
@@ -327,13 +329,21 @@ export class ScriptedPlayer {
     }
 
     private static hasTestQuestions(pack: PackView): boolean {
-        return Number(pack.regular_count) === 1 && Number(pack.finals_set_count) === 3;
+        // One Easy opening question is always selected for a one-question
+        // game. The one Medium question remains unused and is therefore the
+        // sole ordinary question available for its final round.
+        return (
+            Number(pack.question_count) === 2
+            && Number(pack.easy_count) === 1
+            && Number(pack.medium_count) === 1
+            && Number(pack.hard_count) === 0
+        );
     }
 
     private async ensureTestQuestions(packId: number, questions: unknown[]): Promise<void> {
         let pack = await this.getPack(packId);
         if (ScriptedPlayer.hasTestQuestions(pack)) return;
-        if (Number(pack.regular_count) !== 0 || Number(pack.finals_set_count) !== 0) {
+        if (Number(pack.question_count) !== 0) {
             throw new Error("created test pack is unexpectedly partially populated");
         }
 
@@ -383,26 +393,15 @@ export class ScriptedPlayer {
             {
                 text: question.text,
                 answers: question.answers,
-                is_final: false,
                 difficulty: 0,
             },
             {
-                text: "Final (easy): what is 2 plus 2?",
+                // This is an ordinary question. With the Easy opening slot
+                // already planned, it is the one unused Medium question that
+                // the game reserves for its final round.
+                text: "Reserved test question: what is 2 plus 2?",
                 answers: ["4"],
-                is_final: true,
-                difficulty: 0,
-            },
-            {
-                text: "Final (medium): what is 6 times 7?",
-                answers: ["42"],
-                is_final: true,
                 difficulty: 1,
-            },
-            {
-                text: "Final (hard): what is 17 squared?",
-                answers: ["289"],
-                is_final: true,
-                difficulty: 2,
             },
         ]);
         await this.ensureSealed(packId);
@@ -433,7 +432,8 @@ export class ScriptedPlayer {
     /**
      * Play the whole game with a fixed strategy, polling the chain. Resolves
      * when the game reaches Finished. `answer` is what we submit for every
-     * regular/final question (pass a wrong answer to exercise overturns).
+     * round, including the final reserved from an unused ordinary question
+     * (pass a wrong answer to exercise overturns).
      * A UI test that only needs the final-results preview can stop at final
      * review, which deliberately has no player-ready action.
      * A test can hold its difficulty vote briefly to inspect the live

@@ -29,12 +29,10 @@ test("imports, previews, and publishes a pack through Pack studio", async ({ tes
     await frame.getByTestId("pack-emoji").fill("🧪");
     await frame.getByTestId("pack-json").fill(JSON.stringify({
         title,
-        questions: [{ text: "What is the capital of France?", answers: ["Paris"] }],
-        finals: {
-            easy: { text: "Easy final: how many days in a week?", answers: ["7"] },
-            medium: { text: "Medium final: what planet is known as the Red Planet?", answers: ["Mars"] },
-            hard: { text: "Hard final: what year did the Berlin Wall fall?", answers: ["1989"] },
-        },
+        questions: [
+            { text: "What is the capital of France?", answers: ["Paris"], difficulty: "easy" },
+            { text: "How many days are in a week?", answers: ["7"], difficulty: "medium" },
+        ],
     }, null, 2));
 
     await expect(frame.getByTestId("builder-preview")).toContainText(title);
