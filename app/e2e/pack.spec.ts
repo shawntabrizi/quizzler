@@ -30,6 +30,10 @@ test("imports, previews, and publishes a pack through Pack studio", async ({ tes
     // setup with the newly selected immutable pack.
     await expect(frame.getByTestId("screen-configure")).toBeVisible({ timeout: 240_000 });
     await expect(frame.getByTestId("config-pack-title")).toHaveText(title);
+    await expect(frame.locator("select")).toHaveCount(0);
+    await expect(frame.getByTestId("cfg-questions").locator('input[type="radio"]')).not.toHaveCount(0);
+    await expect(frame.getByTestId("cfg-answer-blocks").locator('input[type="radio"]')).toHaveCount(4);
+    await expect(frame.getByTestId("cfg-review-blocks").locator('input[type="radio"]')).toHaveCount(4);
     await frame.getByTestId("btn-config-back").click();
     await expect(frame.getByTestId("screen-pack-select")).toBeVisible();
     await expect(frame.getByTestId("pack-list").getByText(title)).toBeVisible();

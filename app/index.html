@@ -140,19 +140,19 @@
                 </aside>
                 <div class="card config-card">
                     <div class="config-fields">
-                        <div>
-                            <label for="cfg-questions">Questions</label>
-                            <select id="cfg-questions" data-testid="cfg-questions" aria-describedby="cfg-questions-hint"></select>
-                            <p id="cfg-questions-hint" class="field-hint">Up to 20 regular questions from this pack.</p>
-                        </div>
-                        <div>
-                            <label for="cfg-answer-blocks">Answer time</label>
-                            <select id="cfg-answer-blocks" data-testid="cfg-answer-blocks"></select>
-                        </div>
-                        <div>
-                            <label for="cfg-review-blocks">Review time</label>
-                            <select id="cfg-review-blocks" data-testid="cfg-review-blocks"></select>
-                        </div>
+                        <fieldset class="config-choice-field">
+                            <legend>Questions</legend>
+                            <div id="cfg-questions" class="config-choice-group config-question-choices" data-testid="cfg-questions" aria-describedby="cfg-questions-hint"></div>
+                            <p id="cfg-questions-hint" class="field-hint">Choose how many regular questions to play from this pack.</p>
+                        </fieldset>
+                        <fieldset class="config-choice-field">
+                            <legend>Answer time</legend>
+                            <div id="cfg-answer-blocks" class="config-choice-group" data-testid="cfg-answer-blocks"></div>
+                        </fieldset>
+                        <fieldset class="config-choice-field">
+                            <legend>Review time</legend>
+                            <div id="cfg-review-blocks" class="config-choice-group" data-testid="cfg-review-blocks"></div>
+                        </fieldset>
                     </div>
                     <div class="error-text" id="config-error" data-testid="config-error" role="alert"></div>
                     <div class="setup-actions">

@@ -41,13 +41,27 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         await frame.getByTestId(`pack-${packId}`).click();
         await frame.getByTestId("btn-pack-continue").click();
         await expect(frame.getByTestId("screen-configure")).toBeVisible();
-        await frame.getByTestId("cfg-questions").selectOption("1");
-        await frame.getByTestId("cfg-answer-blocks").selectOption("45");
-        await frame.getByTestId("cfg-review-blocks").selectOption("30");
+        const questionChoice = frame.getByTestId("cfg-questions-option-1");
+        const answerChoice = frame.getByTestId("cfg-answer-blocks-option-45");
+        const reviewChoice = frame.getByTestId("cfg-review-blocks-option-30");
+        await questionChoice.click();
+        await answerChoice.click();
+        await reviewChoice.click();
+        await expect(questionChoice.locator("input")).toBeChecked();
+        await expect(answerChoice.locator("input")).toBeChecked();
+        await expect(reviewChoice.locator("input")).toBeChecked();
         await frame.getByTestId("btn-create-game").click();
 
         await expect(frame.getByTestId("screen-lobby")).toBeVisible({ timeout: 120_000 });
         const gameId = BigInt((await frame.getByTestId("lobby-game-id").textContent()) ?? "");
+        const createdGame = await charlie.query<{
+            num_questions: number | bigint;
+            answer_blocks: number | bigint;
+            review_blocks: number | bigint;
+        }>("getGame", [gameId]);
+        expect(Number(createdGame.num_questions)).toBe(1);
+        expect(Number(createdGame.answer_blocks)).toBe(45);
+        expect(Number(createdGame.review_blocks)).toBe(30);
 
         // ── charlie joins, bob starts ────────────────────────────
         await charlie.tx("joinGame", [gameId]);

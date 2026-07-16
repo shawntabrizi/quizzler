@@ -39,7 +39,7 @@ import {
     countdownLabel,
     isAllowedBlockPreset,
     MAX_LOBBY_PLAYERS,
-    presetLabel,
+    presetDurationLabel,
     questionCountOptions,
     REVIEW_BLOCK_PRESETS,
 } from "./game-config";
@@ -767,6 +767,7 @@ function subscribeChainStatus(): void {
 }
 
 function fmtPlayer(snap: Pick<Snapshot, "players" | "playerLabels">, addr: string): string {
+    if (addr.toLowerCase() === myAddress.toLowerCase()) return "You";
     const index = snap.players.findIndex((player) => player.toLowerCase() === addr.toLowerCase());
     return index >= 0 ? snap.playerLabels[index] ?? playerName(addr) : playerName(addr);
 }
@@ -2263,9 +2264,9 @@ const $packSelectionError = getEl("pack-selection-error");
 const $configError = getEl("config-error");
 const $btnCreateGame = getEl<HTMLButtonElement>("btn-create-game");
 const $btnPackContinue = getEl<HTMLButtonElement>("btn-pack-continue");
-const $questionCount = getEl<HTMLSelectElement>("cfg-questions");
-const $answerBlocks = getEl<HTMLSelectElement>("cfg-answer-blocks");
-const $reviewBlocks = getEl<HTMLSelectElement>("cfg-review-blocks");
+const $questionCount = getEl("cfg-questions");
+const $answerBlocks = getEl("cfg-answer-blocks");
+const $reviewBlocks = getEl("cfg-review-blocks");
 const $configPackArt = getEl("config-pack-art");
 const $configPackTitle = getEl("config-pack-title");
 const $configPackMeta = getEl("config-pack-meta");
@@ -2615,31 +2616,62 @@ async function reopenKnownGame(id: bigint): Promise<boolean> {
     }
 }
 
-interface SelectOption {
+interface ConfigChoiceOption {
     value: number;
     label: string;
+    detail?: string;
 }
 
-function replaceSelectOptions(
-    select: HTMLSelectElement,
-    options: readonly SelectOption[],
-    preferredValue: number,
+let selectedQuestionCount = Math.min(5, MAX_GAME_QUESTIONS);
+let selectedAnswerBlocks = 30;
+let selectedReviewBlocks = 18;
+
+function onGameConfigChoiceChanged(): void {
+    $configError.textContent = "";
+    preparedGameCreationNonce = null;
+    scheduleCreateGamePreflight();
+}
+
+function renderConfigChoices(
+    container: HTMLElement,
+    name: string,
+    options: readonly ConfigChoiceOption[],
+    selectedValue: number,
+    onSelect: (value: number) => void,
 ): void {
-    const previous = Number(select.value);
-    const target = options.some((option) => option.value === previous)
-        ? previous
-        : options.some((option) => option.value === preferredValue)
-            ? preferredValue
-            : options[0]?.value;
-    select.replaceChildren(
-        ...options.map((option) => {
-            const node = document.createElement("option");
-            node.value = String(option.value);
-            node.textContent = option.label;
-            return node;
-        }),
-    );
-    if (target !== undefined) select.value = String(target);
+    const choices = document.createDocumentFragment();
+    for (const option of options) {
+        const id = `${name}-option-${option.value}`;
+        const label = document.createElement("label");
+        label.className = "config-choice";
+        label.dataset.testid = id;
+
+        const input = document.createElement("input");
+        input.className = "config-choice-input";
+        input.id = id;
+        input.name = name;
+        input.type = "radio";
+        input.value = String(option.value);
+        input.checked = option.value === selectedValue;
+        input.addEventListener("change", () => {
+            if (input.checked) onSelect(option.value);
+        });
+
+        const copy = document.createElement("span");
+        copy.className = "config-choice-copy";
+        const title = document.createElement("strong");
+        title.textContent = option.label;
+        copy.append(title);
+        if (option.detail) {
+            const detail = document.createElement("small");
+            detail.textContent = option.detail;
+            copy.append(detail);
+        }
+
+        label.append(input, copy);
+        choices.append(label);
+    }
+    container.replaceChildren(choices);
 }
 
 function renderQuestionCountOptions(maxQuestions: number): void {
@@ -2647,19 +2679,46 @@ function renderQuestionCountOptions(maxQuestions: number): void {
         value,
         label: `${value} ${value === 1 ? "question" : "questions"}`,
     }));
-    replaceSelectOptions($questionCount, options, Math.min(5, maxQuestions));
+    if (!options.some((option) => option.value === selectedQuestionCount)) {
+        const preferredValue = Math.min(5, maxQuestions);
+        selectedQuestionCount = options.find((option) => option.value === preferredValue)?.value
+            ?? options[0]?.value
+            ?? 0;
+    }
+    renderConfigChoices($questionCount, "cfg-questions", options, selectedQuestionCount, (value) => {
+        selectedQuestionCount = value;
+        onGameConfigChoiceChanged();
+    });
 }
 
 function configureGameControls(): void {
-    replaceSelectOptions(
+    renderConfigChoices(
         $answerBlocks,
-        ANSWER_BLOCK_PRESETS.map((preset) => ({ value: preset.blocks, label: presetLabel(preset) })),
-        30,
+        "cfg-answer-blocks",
+        ANSWER_BLOCK_PRESETS.map((preset) => ({
+            value: preset.blocks,
+            label: preset.name,
+            detail: presetDurationLabel(preset),
+        })),
+        selectedAnswerBlocks,
+        (value) => {
+            selectedAnswerBlocks = value;
+            onGameConfigChoiceChanged();
+        },
     );
-    replaceSelectOptions(
+    renderConfigChoices(
         $reviewBlocks,
-        REVIEW_BLOCK_PRESETS.map((preset) => ({ value: preset.blocks, label: presetLabel(preset) })),
-        18,
+        "cfg-review-blocks",
+        REVIEW_BLOCK_PRESETS.map((preset) => ({
+            value: preset.blocks,
+            label: preset.name,
+            detail: presetDurationLabel(preset),
+        })),
+        selectedReviewBlocks,
+        (value) => {
+            selectedReviewBlocks = value;
+            onGameConfigChoiceChanged();
+        },
     );
     renderQuestionCountOptions(MAX_GAME_QUESTIONS);
 }
@@ -3121,20 +3180,16 @@ function readCreatedGameConfig(showErrors = false): CreatedGameConfig | null {
         return null;
     };
     const maxQuestions = Math.min(selectedPack.regular_count, MAX_GAME_QUESTIONS);
-    const numQuestions = parseIntegerInRange(
-        $questionCount.value,
-        1,
-        maxQuestions,
-    );
-    if (numQuestions === null) {
+    const numQuestions = selectedQuestionCount;
+    if (!questionCountOptions(maxQuestions).includes(numQuestions)) {
         return fail(`Choose between 1 and ${maxQuestions} questions.`);
     }
-    const answerBlocks = Number($answerBlocks.value);
-    if (!Number.isInteger(answerBlocks) || !isAllowedBlockPreset(answerBlocks, ANSWER_BLOCK_PRESETS)) {
+    const answerBlocks = selectedAnswerBlocks;
+    if (!isAllowedBlockPreset(answerBlocks, ANSWER_BLOCK_PRESETS)) {
         return fail("Choose one of the listed answer-time options.");
     }
-    const reviewBlocks = Number($reviewBlocks.value);
-    if (!Number.isInteger(reviewBlocks) || !isAllowedBlockPreset(reviewBlocks, REVIEW_BLOCK_PRESETS)) {
+    const reviewBlocks = selectedReviewBlocks;
+    if (!isAllowedBlockPreset(reviewBlocks, REVIEW_BLOCK_PRESETS)) {
         return fail("Choose one of the listed review-time options.");
     }
     return {
@@ -3408,14 +3463,6 @@ getEl("btn-create-game").addEventListener("click", async () => {
         busy = false;
     }
 });
-
-for (const select of [$questionCount, $answerBlocks, $reviewBlocks]) {
-    select.addEventListener("change", () => {
-        $configError.textContent = "";
-        preparedGameCreationNonce = null;
-        scheduleCreateGamePreflight();
-    });
-}
 
 getEl("btn-join-game").addEventListener("click", async () => {
     if (busy || !productAccount) return;
