@@ -2320,6 +2320,8 @@ const $yourGames = getEl("your-games");
 const $yourGamesList = getEl("your-games-list");
 const $displayName = getEl<HTMLInputElement>("display-name");
 const $displayNameStatus = getEl("display-name-status");
+const $settingsDisplayName = getEl<HTMLInputElement>("settings-display-name");
+const $settingsDisplayNameStatus = getEl("settings-display-name-status");
 const $instantPlayCard = getEl("instant-play-card");
 const $instantPlayStatus = getEl("instant-play-status");
 const $instantPlayError = getEl("instant-play-error");
@@ -2333,18 +2335,44 @@ const $settingsInstantPlayStatus = getEl("settings-instant-play-status");
 const $settingsInstantPlayError = getEl("settings-instant-play-error");
 const $btnSettingsRetryInstantPlay = getEl<HTMLButtonElement>("btn-settings-retry-instant-play");
 const $btnSettingsTurnOffInstantPlay = getEl<HTMLButtonElement>("btn-settings-turn-off-instant-play");
+const displayNameDraftInputs = new Set<HTMLInputElement>();
+let displayNameFeedback: { message: string; error: boolean } | null = null;
 
-function syncDisplayNameProfile(status?: string): void {
+function displayNameDefaultStatus(fallback: string): string {
+    return myDisplayName
+        ? `You’ll appear as ${myDisplayName}.`
+        : `You’ll appear as ${fallback}.`;
+}
+
+function setDisplayNameStatus(message: string, error = false): void {
+    for (const status of [$displayNameStatus, $settingsDisplayNameStatus]) {
+        status.textContent = message;
+        status.classList.toggle("is-error", error);
+        status.setAttribute("role", error ? "alert" : "status");
+    }
+}
+
+function setDisplayNameFeedback(message: string, error = false): void {
+    displayNameFeedback = { message, error };
+    setDisplayNameStatus(message, error);
+}
+
+function syncDisplayNameProfile(): void {
     if (!myAddress) return;
     const fallback = generatedPlayerName(myAddress);
-    $displayName.placeholder = fallback;
-    // A live snapshot may arrive while the player is editing their name. Do
-    // not overwrite their unsaved text just because a polling read completes.
-    if (document.activeElement !== $displayName) $displayName.value = myDisplayName;
-    $displayNameStatus.textContent = status
-        ?? (myDisplayName
-            ? `You’ll appear as ${myDisplayName}.`
-            : `You’ll appear as ${fallback}.`);
+
+    for (const input of [$displayName, $settingsDisplayName]) {
+        input.placeholder = fallback;
+        // A live snapshot may arrive while the player is editing their name.
+        // Do not overwrite that field's unsaved text just because a polling
+        // read completes.
+        if (!displayNameDraftInputs.has(input)) input.value = myDisplayName;
+    }
+    const feedback = displayNameFeedback;
+    setDisplayNameStatus(
+        feedback?.message ?? displayNameDefaultStatus(fallback),
+        feedback?.error ?? false,
+    );
 }
 
 function applyOnChainDisplayName(name: string, observedRevision: number): void {
@@ -2488,34 +2516,59 @@ $btnSettingsTurnOffInstantPlay.addEventListener("click", () => void turnOffInsta
     $settingsInstantPlayError,
 ));
 
-getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", async () => {
+async function saveDisplayName(input: HTMLInputElement): Promise<void> {
     if (busy || !productAccount) return;
-    const name = $displayName.value;
+    const name = input.value;
     if (name !== "" && (name !== name.trim() || /[\u0000-\u001f\u007f-\u009f]/u.test(name) || utf8ByteLength(name) > 24)) {
-        $displayNameStatus.textContent = "Use a short, one-line name.";
+        displayNameDraftInputs.add(input);
+        setDisplayNameFeedback("Use a short, one-line name.", true);
         return;
     }
     busy = true;
     // Invalidate reads launched before the player chose this new value.
     displayNameRevision += 1;
-    $displayNameStatus.textContent = "";
+    setDisplayNameFeedback("Saving name…");
     setLoading("btn-save-display-name", true);
+    setLoading("btn-settings-save-display-name", true);
     try {
         await sendTx(game, "setDisplayName", name);
         myDisplayName = name;
         pendingDisplayName = name;
         displayNameRevision += 1;
-        syncDisplayNameProfile(name
+        displayNameDraftInputs.delete(input);
+        setDisplayNameFeedback(name
             ? `Saved as ${name}. Everyone in your games will see it.`
             : `Name cleared. You’ll appear as ${generatedPlayerName(myAddress)}.`);
+        syncDisplayNameProfile();
         applyMyDisplayNameToLatest();
     } catch (error) {
-        $displayNameStatus.textContent = friendlyError(error);
+        displayNameDraftInputs.add(input);
+        setDisplayNameFeedback(friendlyError(error), true);
+        syncDisplayNameProfile();
     } finally {
         busy = false;
         setLoading("btn-save-display-name", false);
+        setLoading("btn-settings-save-display-name", false);
     }
+}
+
+getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", () => {
+    void saveDisplayName($displayName);
 });
+getEl<HTMLButtonElement>("btn-settings-save-display-name").addEventListener("click", () => {
+    void saveDisplayName($settingsDisplayName);
+});
+for (const input of [$displayName, $settingsDisplayName]) {
+    input.addEventListener("input", () => {
+        displayNameDraftInputs.add(input);
+        setDisplayNameFeedback("Save to use this name in your games.");
+    });
+    input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || event.isComposing) return;
+        event.preventDefault();
+        void saveDisplayName(input);
+    });
+}
 
 // The configure screen shares one status line for progress and failures.
 // Progress must never wear error styling — a freshly created lobby reading
@@ -5156,6 +5209,7 @@ function renderGameSettings(snap: Snapshot): void {
         snap.phase.active_player_count,
         snap.phase.player_count,
     );
+    syncDisplayNameProfile();
 
     const $return = getEl<HTMLButtonElement>("btn-settings-return");
     const returnLabel = isLobby ? "Go to lobby" : "Return to game";

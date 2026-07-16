@@ -1018,6 +1018,7 @@ ul.pack-grid li { position: relative; min-width: 0; }
 .builder-json-label { margin-top: 8px; }
 #pack-json { min-height: min(50vh, 540px); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.82rem; tab-size: 2; }
 .draft-save-status { min-height: 1.25em; margin-top: 7px; color: var(--fg-secondary); font-size: 0.78rem; }
+.draft-save-status.is-error { color: var(--fg-error); }
 .builder-preview {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);

@@ -74,7 +74,7 @@
                 <div class="row">
                     <div class="grow">
                         <label for="display-name">Name</label>
-                        <input id="display-name" data-testid="display-name" type="text" maxlength="24" autocomplete="nickname" placeholder="Alex" />
+                        <input id="display-name" data-testid="display-name" type="text" maxlength="24" autocomplete="nickname" enterkeyhint="done" aria-describedby="display-name-status" placeholder="Alex" />
                     </div>
                     <button id="btn-save-display-name" class="primary" data-testid="btn-save-display-name" style="align-self: end;">Save name</button>
                 </div>
@@ -300,6 +300,18 @@
                     <button id="btn-settings-turn-off-instant-play" class="quiet" data-testid="btn-settings-turn-off-instant-play" type="button" style="display: none;">End instant actions</button>
                 </div>
                 <div id="settings-instant-play-error" class="error-text" data-testid="settings-instant-play-error" role="alert"></div>
+            </div>
+            <div class="card game-settings-display-name" data-testid="settings-display-name-card">
+                <h2>Your name</h2>
+                <p class="hint">Update the name everyone sees in your games and on scorecards.</p>
+                <div class="row">
+                    <div class="grow">
+                        <label for="settings-display-name">Name</label>
+                        <input id="settings-display-name" data-testid="settings-display-name" type="text" maxlength="24" autocomplete="nickname" enterkeyhint="done" aria-describedby="settings-display-name-status" placeholder="Alex" />
+                    </div>
+                    <button id="btn-settings-save-display-name" class="primary" data-testid="btn-settings-save-display-name" type="button" style="align-self: end;">Save name</button>
+                </div>
+                <div id="settings-display-name-status" class="draft-save-status" data-testid="settings-display-name-status" role="status" aria-live="polite"></div>
             </div>
             <div class="card game-settings-actions">
                 <h2>Game actions</h2>
