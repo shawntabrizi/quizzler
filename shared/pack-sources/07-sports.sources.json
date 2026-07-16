@@ -1,0 +1,1045 @@
+{
+  "version": 1,
+  "status": "draft",
+  "pack": {
+    "file": "07-sports.json",
+    "title": "Sports"
+  },
+  "questions": [
+    {
+      "id": "qz-sports-q001",
+      "question": "Which country won the 2022 FIFA World Cup?",
+      "answers": ["Argentina"]
+    },
+    {
+      "id": "qz-sports-q002",
+      "question": "How many players does one soccer team have on the pitch at kickoff?",
+      "answers": ["11", "Eleven"]
+    },
+    {
+      "id": "qz-sports-q003",
+      "question": "Which sport is played at Wimbledon?",
+      "answers": ["Tennis"]
+    },
+    {
+      "id": "qz-sports-q004",
+      "question": "Which country hosts the Tour de France?",
+      "answers": ["France"]
+    },
+    {
+      "id": "qz-sports-q005",
+      "question": "How many rings are on the Olympic flag?",
+      "answers": ["5", "Five"]
+    },
+    {
+      "id": "qz-sports-q006",
+      "question": "In basketball, how many points is a shot from beyond the arc worth?",
+      "answers": ["3", "Three"]
+    },
+    {
+      "id": "qz-sports-q007",
+      "question": "Which sport does Lionel Messi play?",
+      "answers": ["Football", "Soccer"]
+    },
+    {
+      "id": "qz-sports-q008",
+      "question": "What color jersey does the overall leader of the Tour de France wear?",
+      "answers": ["Yellow"]
+    },
+    {
+      "id": "qz-sports-q009",
+      "question": "The Ashes cricket series is contested between England and which other country?",
+      "answers": ["Australia"]
+    },
+    {
+      "id": "qz-sports-q010",
+      "question": "How many players from one basketball team are on the court at a time?",
+      "answers": ["5", "Five"]
+    },
+    {
+      "id": "qz-sports-q011",
+      "question": "Which sport is played with a shuttlecock?",
+      "answers": ["Badminton"]
+    },
+    {
+      "id": "qz-sports-q012",
+      "question": "Sprinter Usain Bolt competed for which country?",
+      "answers": ["Jamaica"]
+    },
+    {
+      "id": "qz-sports-q013",
+      "question": "Which sport is often called 'the beautiful game'?",
+      "answers": ["Football", "Soccer"]
+    },
+    {
+      "id": "qz-sports-q014",
+      "question": "How many holes are played in a standard round of golf?",
+      "answers": ["18", "Eighteen"]
+    },
+    {
+      "id": "qz-sports-q015",
+      "question": "Which country won the first FIFA World Cup in 1930?",
+      "answers": ["Uruguay"]
+    },
+    {
+      "id": "qz-sports-q016",
+      "question": "In which sport would you perform a slam dunk?",
+      "answers": ["Basketball"]
+    },
+    {
+      "id": "qz-sports-q017",
+      "question": "What is the maximum score possible with three darts?",
+      "answers": ["180"]
+    },
+    {
+      "id": "qz-sports-q018",
+      "question": "In which country did the martial art judo originate?",
+      "answers": ["Japan"]
+    },
+    {
+      "id": "qz-sports-q019",
+      "question": "Which sport did Serena Williams play professionally?",
+      "answers": ["Tennis"]
+    },
+    {
+      "id": "qz-sports-q020",
+      "question": "How many points is a touchdown worth in American football, before any extra point?",
+      "answers": ["6", "Six"]
+    },
+    {
+      "id": "qz-sports-q021",
+      "question": "Which city hosted the 2024 Summer Olympics?",
+      "answers": ["Paris"]
+    },
+    {
+      "id": "qz-sports-q022",
+      "question": "Which sport is played on a field called a diamond?",
+      "answers": ["Baseball"]
+    },
+    {
+      "id": "qz-sports-q023",
+      "question": "Michael Jordan played most of his NBA career for which team?",
+      "answers": ["Chicago Bulls", "Bulls", "Chicago"]
+    },
+    {
+      "id": "qz-sports-q024",
+      "question": "What is the national sport of Japan?",
+      "answers": ["Sumo", "Sumo wrestling"]
+    },
+    {
+      "id": "qz-sports-q025",
+      "question": "In tennis, what is a score of zero called?",
+      "answers": ["Love"]
+    },
+    {
+      "id": "qz-sports-q026",
+      "question": "Which country had won five FIFA Men's World Cup titles by 2002?",
+      "answers": ["Brazil"]
+    },
+    {
+      "id": "qz-sports-q027",
+      "question": "Which boxer was known as 'The Greatest'?",
+      "answers": ["Muhammad Ali", "Ali"]
+    },
+    {
+      "id": "qz-sports-q028",
+      "question": "In which sport do players hit a puck?",
+      "answers": ["Ice hockey", "Hockey"]
+    },
+    {
+      "id": "qz-sports-q029",
+      "question": "To the nearest whole number, how many kilometers long is a marathon?",
+      "answers": ["42"]
+    },
+    {
+      "id": "qz-sports-q030",
+      "question": "Which sport does Tiger Woods play?",
+      "answers": ["Golf"]
+    },
+    {
+      "id": "qz-sports-q031",
+      "question": "The All Blacks rugby team represents which country?",
+      "answers": ["New Zealand"]
+    },
+    {
+      "id": "qz-sports-q032",
+      "question": "Cristiano Ronaldo plays international football for which country?",
+      "answers": ["Portugal"]
+    },
+    {
+      "id": "qz-sports-q033",
+      "question": "How many Grand Slam tournaments are held in tennis each year?",
+      "answers": ["4", "Four"]
+    },
+    {
+      "id": "qz-sports-q034",
+      "question": "The Super Bowl is the championship game of which sport?",
+      "answers": ["American football", "Football", "NFL"]
+    },
+    {
+      "id": "qz-sports-q035",
+      "question": "Which F1 driver won his seventh world championship in 2020?",
+      "answers": ["Lewis Hamilton", "Hamilton"]
+    },
+    {
+      "id": "qz-sports-q036",
+      "question": "In golf, what is the term for a score of two under par on a single hole?",
+      "answers": ["Eagle"]
+    },
+    {
+      "id": "qz-sports-q037",
+      "question": "In which Brazilian city were the 2016 Summer Olympics held?",
+      "answers": ["Rio de Janeiro", "Rio"]
+    },
+    {
+      "id": "qz-sports-q038",
+      "question": "In football, what color card does a referee show to send a player off?",
+      "answers": ["Red", "Red card"]
+    },
+    {
+      "id": "qz-sports-q039",
+      "question": "Which swimmer won eight gold medals at the 2008 Beijing Olympics?",
+      "answers": ["Michael Phelps", "Phelps"]
+    },
+    {
+      "id": "qz-sports-q040",
+      "question": "What does NBA stand for?",
+      "answers": ["National Basketball Association"]
+    },
+    {
+      "id": "qz-sports-q041",
+      "question": "How many minutes long is a standard soccer match, excluding stoppage time?",
+      "answers": ["90", "Ninety"]
+    },
+    {
+      "id": "qz-sports-q042",
+      "question": "Which sport made Sachin Tendulkar famous?",
+      "answers": ["Cricket"]
+    },
+    {
+      "id": "qz-sports-q043",
+      "question": "In cricket, how many runs is a boundary worth when the ball crosses the rope along the ground?",
+      "answers": ["4", "Four"]
+    },
+    {
+      "id": "qz-sports-q044",
+      "question": "The football club Real Madrid is based in which country?",
+      "answers": ["Spain"]
+    },
+    {
+      "id": "qz-sports-q045",
+      "question": "Which martial art's name means 'empty hand' in Japanese?",
+      "answers": ["Karate"]
+    },
+    {
+      "id": "qz-sports-q046",
+      "question": "How many periods are there in an ice hockey game?",
+      "answers": ["3", "Three"]
+    },
+    {
+      "id": "qz-sports-q047",
+      "question": "Tennis star Novak Djokovic represents which country?",
+      "answers": ["Serbia"]
+    },
+    {
+      "id": "qz-sports-q048",
+      "question": "Which English football club plays its home games at Old Trafford?",
+      "answers": ["Manchester United", "Man United", "Man Utd"]
+    },
+    {
+      "id": "qz-sports-q049",
+      "question": "Which sport is traditionally known as 'The Sport of Kings'?",
+      "answers": ["Horse racing", "Horseracing"]
+    },
+    {
+      "id": "qz-sports-q050",
+      "question": "How many bases are there on a baseball field, including home plate?",
+      "answers": ["4", "Four"]
+    },
+    {
+      "id": "qz-sports-q051",
+      "question": "Which multi-sport games feature skiing, bobsleigh and figure skating?",
+      "answers": [
+        "Winter Olympics",
+        "Winter Olympic Games",
+        "The Winter Olympics"
+      ]
+    },
+    {
+      "id": "qz-sports-q052",
+      "question": "LeBron James is a star in which sport?",
+      "answers": ["Basketball"]
+    },
+    {
+      "id": "qz-sports-q053",
+      "question": "In cricket, how many runs are scored when the batter hits the ball over the boundary on the full?",
+      "answers": ["6", "Six"]
+    },
+    {
+      "id": "qz-sports-q054",
+      "question": "In ten-pin bowling, what is the term for three strikes in a row?",
+      "answers": ["Turkey"]
+    },
+    {
+      "id": "qz-sports-q055",
+      "question": "In which sport would you find a scrum?",
+      "answers": ["Rugby", "Rugby union"]
+    },
+    {
+      "id": "qz-sports-q056",
+      "question": "Which tennis Grand Slam tournament is played on clay courts?",
+      "answers": ["French Open", "Roland Garros"]
+    },
+    {
+      "id": "qz-sports-q057",
+      "question": "Which country's national football team is nicknamed 'Les Bleus'?",
+      "answers": ["France"]
+    },
+    {
+      "id": "qz-sports-q058",
+      "question": "How many points is a try worth in rugby union?",
+      "answers": ["5", "Five"]
+    },
+    {
+      "id": "qz-sports-q059",
+      "question": "Which city hosted the 2012 Summer Olympics?",
+      "answers": ["London"]
+    },
+    {
+      "id": "qz-sports-q060",
+      "question": "Which sport is governed worldwide by the ICC?",
+      "answers": ["Cricket"]
+    },
+    {
+      "id": "qz-sports-q061",
+      "question": "By what one-word nickname is Brazilian footballer Edson Arantes do Nascimento known?",
+      "answers": ["Pele"]
+    },
+    {
+      "id": "qz-sports-q062",
+      "question": "How many players does one volleyball team have on court at a time?",
+      "answers": ["6", "Six"]
+    },
+    {
+      "id": "qz-sports-q063",
+      "question": "Competitors in which sport traditionally follow the Queensberry Rules?",
+      "answers": ["Boxing"]
+    },
+    {
+      "id": "qz-sports-q064",
+      "question": "The Yankees baseball team plays in which US city?",
+      "answers": ["New York", "New York City", "NYC"]
+    },
+    {
+      "id": "qz-sports-q065",
+      "question": "In tennis, what is a serve called when the opponent fails to touch the ball?",
+      "answers": ["Ace"]
+    },
+    {
+      "id": "qz-sports-q066",
+      "question": "Which sport takes place in a velodrome?",
+      "answers": ["Cycling", "Track cycling"]
+    },
+    {
+      "id": "qz-sports-q067",
+      "question": "What color is the center ring of an archery target?",
+      "answers": ["Gold", "Yellow"]
+    },
+    {
+      "id": "qz-sports-q068",
+      "question": "Which footballer is known by the nickname 'CR7'?",
+      "answers": ["Cristiano Ronaldo", "Ronaldo"]
+    },
+    {
+      "id": "qz-sports-q069",
+      "question": "How many players are in a cricket team?",
+      "answers": ["11", "Eleven"]
+    },
+    {
+      "id": "qz-sports-q070",
+      "question": "What is the name of the trophy awarded to the NHL champions?",
+      "answers": ["Stanley Cup", "The Stanley Cup"]
+    },
+    {
+      "id": "qz-sports-q071",
+      "question": "Which country won the first Rugby World Cup in 1987?",
+      "answers": ["New Zealand"]
+    },
+    {
+      "id": "qz-sports-q072",
+      "question": "Which Jamaican sprinter set a 100m world record of 9.58 seconds in 2009?",
+      "answers": ["Usain Bolt", "Bolt"]
+    },
+    {
+      "id": "qz-sports-q073",
+      "question": "What is the men's 100m world record time in seconds, set in 2009?",
+      "answers": ["9.58"]
+    },
+    {
+      "id": "qz-sports-q074",
+      "question": "Which team won Formula 1's first Constructors' Championship in 1958?",
+      "answers": ["Vanwall"]
+    },
+    {
+      "id": "qz-sports-q075",
+      "question": "Which country hosted the 1996 Summer Olympics?",
+      "answers": ["United States", "USA", "US"]
+    },
+    {
+      "id": "qz-sports-q076",
+      "question": "Which club won the inaugural European Cup in 1956?",
+      "answers": ["Real Madrid", "Madrid"]
+    },
+    {
+      "id": "qz-sports-q077",
+      "question": "In which country was the 1974 'Rumble in the Jungle' boxing match held?",
+      "answers": [
+        "Zaire",
+        "DR Congo",
+        "Democratic Republic of the Congo",
+        "Congo"
+      ]
+    },
+    {
+      "id": "qz-sports-q078",
+      "question": "Which Serbian won a men's record 24th Grand Slam singles title at the 2023 US Open?",
+      "answers": ["Novak Djokovic", "Djokovic"]
+    },
+    {
+      "id": "qz-sports-q079",
+      "question": "Which country won the 2019 Rugby World Cup?",
+      "answers": ["South Africa"]
+    },
+    {
+      "id": "qz-sports-q080",
+      "question": "Diego Maradona's 'Hand of God' goal in 1986 was scored against which country?",
+      "answers": ["England"]
+    },
+    {
+      "id": "qz-sports-q081",
+      "question": "Which American athlete won four gold medals at the 1936 Berlin Olympics?",
+      "answers": ["Jesse Owens", "Owens"]
+    },
+    {
+      "id": "qz-sports-q082",
+      "question": "What is the highest possible break in snooker, without a free ball?",
+      "answers": ["147"]
+    },
+    {
+      "id": "qz-sports-q083",
+      "question": "Which country hosted the 2008 Summer Olympics?",
+      "answers": ["China"]
+    },
+    {
+      "id": "qz-sports-q084",
+      "question": "Which horse race is nicknamed 'The Most Exciting Two Minutes in Sports'?",
+      "answers": ["Kentucky Derby", "The Kentucky Derby"]
+    },
+    {
+      "id": "qz-sports-q085",
+      "question": "Which Italian football club is nicknamed 'The Old Lady'?",
+      "answers": ["Juventus", "Juve"]
+    },
+    {
+      "id": "qz-sports-q086",
+      "question": "Who was the first gymnast to score a perfect 10 at the Olympics, in 1976?",
+      "answers": ["Nadia Comaneci", "Comaneci"]
+    },
+    {
+      "id": "qz-sports-q087",
+      "question": "The Monza Formula 1 circuit is located in which country?",
+      "answers": ["Italy"]
+    },
+    {
+      "id": "qz-sports-q088",
+      "question": "Which cricketer is nicknamed 'The Little Master'?",
+      "answers": ["Sachin Tendulkar", "Tendulkar"]
+    },
+    {
+      "id": "qz-sports-q089",
+      "question": "Which NBA franchise plays its home games at Madison Square Garden?",
+      "answers": ["New York Knicks", "Knicks", "New York"]
+    },
+    {
+      "id": "qz-sports-q090",
+      "question": "Which country hosted the first modern Olympic Games in 1896?",
+      "answers": ["Greece"]
+    },
+    {
+      "id": "qz-sports-q091",
+      "question": "How many feet above the floor is a regulation basketball rim?",
+      "answers": ["10", "10 feet", "Ten"]
+    },
+    {
+      "id": "qz-sports-q092",
+      "question": "Which golfer won the Masters Tournament six times between 1963 and 1986?",
+      "answers": ["Jack Nicklaus", "Nicklaus"]
+    },
+    {
+      "id": "qz-sports-q093",
+      "question": "Which country has won the most Olympic gold medals in men's field hockey?",
+      "answers": ["India"]
+    },
+    {
+      "id": "qz-sports-q094",
+      "question": "The World Championship of which sport is held at the Crucible Theatre?",
+      "answers": ["Snooker"]
+    },
+    {
+      "id": "qz-sports-q095",
+      "question": "Bayern, Germany's most successful football club, is based in which city?",
+      "answers": ["Munich", "Munchen"]
+    },
+    {
+      "id": "qz-sports-q096",
+      "question": "Which club did Diego Maradona join for a world-record fee in 1984?",
+      "answers": ["Napoli"]
+    },
+    {
+      "id": "qz-sports-q097",
+      "question": "How many hurdles does each runner clear in a 110m hurdles race?",
+      "answers": ["10", "Ten"]
+    },
+    {
+      "id": "qz-sports-q098",
+      "question": "Which country won the FIFA Women's World Cup in 2023?",
+      "answers": ["Spain"]
+    },
+    {
+      "id": "qz-sports-q099",
+      "question": "Who is the all-time top goalscorer in FIFA World Cup finals tournaments?",
+      "answers": ["Miroslav Klose", "Klose"]
+    },
+    {
+      "id": "qz-sports-q100",
+      "question": "Which heavyweight boxer retired undefeated with a 49-0 record in 1956?",
+      "answers": ["Rocky Marciano", "Marciano"]
+    },
+    {
+      "id": "qz-sports-q101",
+      "question": "Which tennis player won the 'Golden Slam' of all four majors plus Olympic gold in 1988?",
+      "answers": ["Steffi Graf", "Graf"]
+    },
+    {
+      "id": "qz-sports-q102",
+      "question": "The Interlagos Formula 1 circuit is in which country?",
+      "answers": ["Brazil"]
+    },
+    {
+      "id": "qz-sports-q103",
+      "question": "What does MLB stand for?",
+      "answers": ["Major League Baseball"]
+    },
+    {
+      "id": "qz-sports-q104",
+      "question": "Which Kenyan runner became the first person to run a marathon in under two hours, in 2019?",
+      "answers": ["Eliud Kipchoge", "Kipchoge"]
+    },
+    {
+      "id": "qz-sports-q105",
+      "question": "Which team won the first Cricket World Cup in 1975?",
+      "answers": ["West Indies", "The West Indies"]
+    },
+    {
+      "id": "qz-sports-q106",
+      "question": "Which English football club is nicknamed 'The Gunners'?",
+      "answers": ["Arsenal"]
+    },
+    {
+      "id": "qz-sports-q107",
+      "question": "How many players does a rugby union team have on the field?",
+      "answers": ["15", "Fifteen"]
+    },
+    {
+      "id": "qz-sports-q108",
+      "question": "The Ryder Cup is a team competition in which sport?",
+      "answers": ["Golf"]
+    },
+    {
+      "id": "qz-sports-q109",
+      "question": "Which sprinter holds the women's 100m world record, set in 1988?",
+      "answers": [
+        "Florence Griffith-Joyner",
+        "Flo-Jo",
+        "Griffith-Joyner",
+        "Florence Griffith Joyner"
+      ]
+    },
+    {
+      "id": "qz-sports-q110",
+      "question": "Which football stadium is known as the 'Theatre of Dreams'?",
+      "answers": ["Old Trafford"]
+    },
+    {
+      "id": "qz-sports-q111",
+      "question": "Which country won the delayed Euro 2020 football championship, played in 2021?",
+      "answers": ["Italy"]
+    },
+    {
+      "id": "qz-sports-q112",
+      "question": "Which quarterback has won a record seven Super Bowls?",
+      "answers": ["Tom Brady", "Brady"]
+    },
+    {
+      "id": "qz-sports-q113",
+      "question": "The Vince Lombardi Trophy is awarded to the champions of which sport?",
+      "answers": ["American football", "NFL", "Football"]
+    },
+    {
+      "id": "qz-sports-q114",
+      "question": "Which country hosted the 2010 FIFA World Cup, the first held in Africa?",
+      "answers": ["South Africa"]
+    },
+    {
+      "id": "qz-sports-q115",
+      "question": "In golf, what is the term for a score of one under par on a hole?",
+      "answers": ["Birdie"]
+    },
+    {
+      "id": "qz-sports-q116",
+      "question": "What was Don Bradman's famous career Test batting average?",
+      "answers": ["99.94"]
+    },
+    {
+      "id": "qz-sports-q117",
+      "question": "Which Finnish driver won the 2007 Formula 1 world championship?",
+      "answers": ["Kimi Raikkonen", "Raikkonen"]
+    },
+    {
+      "id": "qz-sports-q118",
+      "question": "Which tennis Grand Slam is played at Flushing Meadows?",
+      "answers": ["US Open", "The US Open"]
+    },
+    {
+      "id": "qz-sports-q119",
+      "question": "How many gold medals did Michael Phelps win at the 2008 Beijing Olympics?",
+      "answers": ["8", "Eight"]
+    },
+    {
+      "id": "qz-sports-q120",
+      "question": "Which country's cricket team is nicknamed the 'Proteas'?",
+      "answers": ["South Africa"]
+    },
+    {
+      "id": "qz-sports-q121",
+      "question": "Which basketball star was nicknamed the 'Black Mamba'?",
+      "answers": ["Kobe Bryant", "Kobe"]
+    },
+    {
+      "id": "qz-sports-q122",
+      "question": "Which Spanish football club plays its home matches at Camp Nou?",
+      "answers": ["Barcelona", "FC Barcelona", "Barca"]
+    },
+    {
+      "id": "qz-sports-q123",
+      "question": "Which footballer won the Ballon d'Or in 2023, his eighth?",
+      "answers": ["Lionel Messi", "Messi"]
+    },
+    {
+      "id": "qz-sports-q124",
+      "question": "What is the minimum number of darts needed to finish a 501 leg?",
+      "answers": ["9", "Nine"]
+    },
+    {
+      "id": "qz-sports-q125",
+      "question": "Which city will host the 2028 Summer Olympics?",
+      "answers": ["Los Angeles", "LA"]
+    },
+    {
+      "id": "qz-sports-q126",
+      "question": "The America's Cup is a famous trophy in which sport?",
+      "answers": ["Sailing", "Yachting", "Yacht racing"]
+    },
+    {
+      "id": "qz-sports-q127",
+      "question": "Which boxer bit part of Evander Holyfield's ear off during a 1997 fight?",
+      "answers": ["Mike Tyson", "Tyson"]
+    },
+    {
+      "id": "qz-sports-q128",
+      "question": "Which country won the 2011 Cricket World Cup on home soil?",
+      "answers": ["India"]
+    },
+    {
+      "id": "qz-sports-q129",
+      "question": "What shirt number did Michael Jordan famously wear for most of his career?",
+      "answers": ["23"]
+    },
+    {
+      "id": "qz-sports-q130",
+      "question": "Which Swedish pole vaulter won Olympic gold at both Tokyo 2020 and Paris 2024?",
+      "answers": ["Armand Duplantis", "Mondo Duplantis", "Duplantis"]
+    },
+    {
+      "id": "qz-sports-q131",
+      "question": "What nickname was given to Arsenal's unbeaten 2003-04 Premier League team?",
+      "answers": ["The Invincibles", "Invincibles"]
+    },
+    {
+      "id": "qz-sports-q132",
+      "question": "Which Swiss tennis player won 20 Grand Slam singles titles?",
+      "answers": ["Roger Federer", "Federer"]
+    },
+    {
+      "id": "qz-sports-q133",
+      "question": "In baseball, how many strikes result in a strikeout?",
+      "answers": ["3", "Three"]
+    },
+    {
+      "id": "qz-sports-q134",
+      "question": "Which African nation became the first to reach a FIFA World Cup semi-final, in 2022?",
+      "answers": ["Morocco"]
+    },
+    {
+      "id": "qz-sports-q135",
+      "question": "In tennis, what is the term for a score of 40-40?",
+      "answers": ["Deuce"]
+    },
+    {
+      "id": "qz-sports-q136",
+      "question": "Which motor race is billed as 'The Greatest Spectacle in Racing'?",
+      "answers": ["Indianapolis 500", "Indy 500", "The Indy 500"]
+    },
+    {
+      "id": "qz-sports-q137",
+      "question": "Which American gymnast won the women's all-around Olympic gold in 2016?",
+      "answers": ["Simone Biles", "Biles"]
+    },
+    {
+      "id": "qz-sports-q138",
+      "question": "Pele spent most of his club career at which Brazilian team?",
+      "answers": ["Santos"]
+    },
+    {
+      "id": "qz-sports-q139",
+      "question": "Which country hosted the 2022 Winter Olympics?",
+      "answers": ["China", "Beijing"]
+    },
+    {
+      "id": "qz-sports-q140",
+      "question": "In cricket, what is it called when a batter is dismissed without scoring?",
+      "answers": ["Duck", "A duck"]
+    },
+    {
+      "id": "qz-sports-q141",
+      "question": "Which ice hockey player is known as 'The Great One'?",
+      "answers": ["Wayne Gretzky", "Gretzky"]
+    },
+    {
+      "id": "qz-sports-q142",
+      "question": "Which Sri Lankan spinner reached 800 Test wickets in 2010?",
+      "answers": ["Muttiah Muralitharan", "Muralitharan", "Murali"]
+    },
+    {
+      "id": "qz-sports-q143",
+      "question": "How many meters long is an Olympic long-course swimming pool?",
+      "answers": ["50", "50 meters", "50m"]
+    },
+    {
+      "id": "qz-sports-q144",
+      "question": "Which player won the most women's Grand Slam singles titles of the Open Era, with 23?",
+      "answers": ["Serena Williams", "Serena"]
+    },
+    {
+      "id": "qz-sports-q145",
+      "question": "Which team won the first Super Bowl in 1967?",
+      "answers": ["Green Bay Packers", "Packers", "Green Bay"]
+    },
+    {
+      "id": "qz-sports-q146",
+      "question": "Which driver won his first F1 world title on the final lap in Abu Dhabi in 2021?",
+      "answers": ["Max Verstappen", "Verstappen"]
+    },
+    {
+      "id": "qz-sports-q147",
+      "question": "In judo, what is the name of the winning score that ends a match instantly?",
+      "answers": ["Ippon"]
+    },
+    {
+      "id": "qz-sports-q148",
+      "question": "Which Rio de Janeiro stadium hosted the deciding matches of both the 1950 and 2014 World Cups?",
+      "answers": ["Maracana", "Maracana Stadium", "The Maracana"]
+    },
+    {
+      "id": "qz-sports-q149",
+      "question": "In which country was basketball inventor James Naismith born?",
+      "answers": ["Canada"]
+    },
+    {
+      "id": "qz-sports-q150",
+      "question": "Which marathon, first held in 1897, runs from Hopkinton to Boston?",
+      "answers": ["Boston Marathon", "Boston", "The Boston Marathon"]
+    },
+    {
+      "id": "qz-sports-q151",
+      "question": "Which Portuguese football manager called himself 'The Special One'?",
+      "answers": ["Jose Mourinho", "Mourinho"]
+    },
+    {
+      "id": "qz-sports-q152",
+      "question": "How many events make up a decathlon?",
+      "answers": ["10", "Ten"]
+    },
+    {
+      "id": "qz-sports-q153",
+      "question": "Which England fast bowler became the first pacer to take 700 Test wickets, in 2024?",
+      "answers": ["James Anderson", "Jimmy Anderson", "Anderson"]
+    },
+    {
+      "id": "qz-sports-q154",
+      "question": "Which Olympic sport combines fencing, swimming, riding, shooting and running?",
+      "answers": ["Modern pentathlon", "Pentathlon"]
+    },
+    {
+      "id": "qz-sports-q155",
+      "question": "Which baseball team plays its home games at Fenway Park?",
+      "answers": ["Boston Red Sox", "Red Sox"]
+    },
+    {
+      "id": "qz-sports-q156",
+      "question": "Which Spanish cyclist won five consecutive Tours de France from 1991 to 1995?",
+      "answers": ["Miguel Indurain", "Indurain"]
+    },
+    {
+      "id": "qz-sports-q157",
+      "question": "On what type of court surface is the Australian Open tennis tournament played?",
+      "answers": ["Hard", "Hard court", "Hardcourt"]
+    },
+    {
+      "id": "qz-sports-q158",
+      "question": "Which Argentine goalkeeper won the Golden Glove at the 2022 World Cup?",
+      "answers": ["Emiliano Martinez", "Martinez", "Dibu Martinez"]
+    },
+    {
+      "id": "qz-sports-q159",
+      "question": "How many points is the inner bullseye worth in darts?",
+      "answers": ["50", "Fifty"]
+    },
+    {
+      "id": "qz-sports-q160",
+      "question": "Which city hosted the 2000 Summer Olympics?",
+      "answers": ["Sydney"]
+    },
+    {
+      "id": "qz-sports-q161",
+      "question": "Which Turkish striker scored against South Korea after 10.8 seconds at the 2002 World Cup?",
+      "answers": ["Hakan Sukur", "Sukur"]
+    },
+    {
+      "id": "qz-sports-q162",
+      "question": "Which Japanese skateboarder won the first ever Olympic men's street skateboarding gold in 2021?",
+      "answers": ["Yuto Horigome", "Horigome"]
+    },
+    {
+      "id": "qz-sports-q163",
+      "question": "What was the score after 90 minutes in the 2005 Champions League final between Liverpool and AC Milan?",
+      "answers": ["3-3", "3:3", "3 3"]
+    },
+    {
+      "id": "qz-sports-q164",
+      "question": "Which athlete set a men's long jump mark of 8.95m at the 1991 World Championships?",
+      "answers": ["Mike Powell", "Powell"]
+    },
+    {
+      "id": "qz-sports-q165",
+      "question": "Which runner set a women's 800m mark of 1:53.28 in 1983?",
+      "answers": ["Jarmila Kratochvilova", "Kratochvilova"]
+    },
+    {
+      "id": "qz-sports-q166",
+      "question": "Which British driver won the 1976 F1 world championship, as dramatized in the film 'Rush'?",
+      "answers": ["James Hunt", "Hunt"]
+    },
+    {
+      "id": "qz-sports-q167",
+      "question": "Which West Indies batsman scored 400 not out in a Test match in 2004?",
+      "answers": ["Brian Lara", "Lara"]
+    },
+    {
+      "id": "qz-sports-q168",
+      "question": "Which club won the first English Premier League title in the 1992-93 season?",
+      "answers": ["Manchester United", "Man United", "Man Utd"]
+    },
+    {
+      "id": "qz-sports-q169",
+      "question": "Which nation won the first Winter Olympic ice hockey gold medal in 1924?",
+      "answers": ["Canada"]
+    },
+    {
+      "id": "qz-sports-q170",
+      "question": "Which Ethiopian runner won the 1960 Olympic marathon running barefoot?",
+      "answers": ["Abebe Bikila", "Bikila"]
+    },
+    {
+      "id": "qz-sports-q171",
+      "question": "Who beat Nicolas Mahut in their 2010 Wimbledon match that lasted more than 11 hours?",
+      "answers": ["John Isner", "Isner"]
+    },
+    {
+      "id": "qz-sports-q172",
+      "question": "Which nation stunned Brazil in the decisive 1950 World Cup match known as the 'Maracanazo'?",
+      "answers": ["Uruguay"]
+    },
+    {
+      "id": "qz-sports-q173",
+      "question": "What is the maximum number of clubs a golfer may carry in their bag?",
+      "answers": ["14", "Fourteen"]
+    },
+    {
+      "id": "qz-sports-q174",
+      "question": "Which swimmer won seven gold medals at the 1972 Munich Olympics?",
+      "answers": ["Mark Spitz", "Spitz"]
+    },
+    {
+      "id": "qz-sports-q175",
+      "question": "Which German scored the winning goal in the 2014 World Cup final?",
+      "answers": ["Mario Gotze", "Gotze", "Goetze"]
+    },
+    {
+      "id": "qz-sports-q176",
+      "question": "In which year did Muhammad Ali and Joe Frazier fight the 'Thrilla in Manila'?",
+      "answers": ["1975"]
+    },
+    {
+      "id": "qz-sports-q177",
+      "question": "Which team did the USA defeat in the 1980 'Miracle on Ice' Olympic hockey game?",
+      "answers": ["Soviet Union", "USSR", "The Soviet Union"]
+    },
+    {
+      "id": "qz-sports-q178",
+      "question": "Which England spinner took a record 19 wickets in a single Test match in 1956?",
+      "answers": ["Jim Laker", "Laker"]
+    },
+    {
+      "id": "qz-sports-q179",
+      "question": "Which Argentine driver won five Formula 1 world championships in the 1950s?",
+      "answers": ["Juan Manuel Fangio", "Fangio"]
+    },
+    {
+      "id": "qz-sports-q180",
+      "question": "What is the name of the trophy awarded to the Wimbledon ladies' singles champion?",
+      "answers": ["Venus Rosewater Dish", "Rosewater Dish"]
+    },
+    {
+      "id": "qz-sports-q181",
+      "question": "Whose 1968 long jump world record of 8.90m stood for 23 years?",
+      "answers": ["Bob Beamon", "Beamon"]
+    },
+    {
+      "id": "qz-sports-q182",
+      "question": "From which club did Zinedine Zidane join Real Madrid in 2001?",
+      "answers": ["Juventus", "Juve"]
+    },
+    {
+      "id": "qz-sports-q183",
+      "question": "Which Cuban boxer won three consecutive Olympic heavyweight gold medals from 1972 to 1980?",
+      "answers": ["Teofilo Stevenson", "Stevenson"]
+    },
+    {
+      "id": "qz-sports-q184",
+      "question": "Which is the only country to have played in every FIFA World Cup finals tournament?",
+      "answers": ["Brazil"]
+    },
+    {
+      "id": "qz-sports-q185",
+      "question": "Which woman beat Bobby Riggs in the 1973 'Battle of the Sexes' tennis match?",
+      "answers": ["Billie Jean King", "King"]
+    },
+    {
+      "id": "qz-sports-q186",
+      "question": "Which Japanese city hosted the 1998 Winter Olympics?",
+      "answers": ["Nagano"]
+    },
+    {
+      "id": "qz-sports-q187",
+      "question": "Which basketball player scored 100 points in a single NBA game in 1962?",
+      "answers": ["Wilt Chamberlain", "Chamberlain"]
+    },
+    {
+      "id": "qz-sports-q188",
+      "question": "Which country caused a huge upset by winning football's Euro 2004?",
+      "answers": ["Greece"]
+    },
+    {
+      "id": "qz-sports-q189",
+      "question": "Which horse won the English Triple Crown in 1970?",
+      "answers": ["Nijinsky"]
+    },
+    {
+      "id": "qz-sports-q190",
+      "question": "Which snooker player is nicknamed 'The Rocket'?",
+      "answers": ["Ronnie O'Sullivan", "O'Sullivan", "OSullivan"]
+    },
+    {
+      "id": "qz-sports-q191",
+      "question": "Which American sprinter won both the 200m and 400m gold at the 1996 Atlanta Olympics?",
+      "answers": ["Michael Johnson", "Johnson"]
+    },
+    {
+      "id": "qz-sports-q192",
+      "question": "Which West Indies all-rounder scored 365 not out in 1958, a Test record that stood for 36 years?",
+      "answers": ["Garfield Sobers", "Gary Sobers", "Sobers"]
+    },
+    {
+      "id": "qz-sports-q193",
+      "question": "Which American won heptathlon gold at the 1988 Olympics with 7,291 points?",
+      "answers": [
+        "Jackie Joyner-Kersee",
+        "Joyner-Kersee",
+        "Jackie Joyner Kersee"
+      ]
+    },
+    {
+      "id": "qz-sports-q194",
+      "question": "Which team won the Formula 1 constructors' championship in 2021, despite Verstappen taking the drivers' title?",
+      "answers": ["Mercedes"]
+    },
+    {
+      "id": "qz-sports-q195",
+      "question": "Which goalkeeper is the only one ever to win the Ballon d'Or, in 1963?",
+      "answers": ["Lev Yashin", "Yashin"]
+    },
+    {
+      "id": "qz-sports-q196",
+      "question": "Which country won the first FIFA Women's World Cup in 1991?",
+      "answers": ["United States", "USA", "America"]
+    },
+    {
+      "id": "qz-sports-q197",
+      "question": "Which Moroccan runner holds the men's 1500m world record, set in 1998?",
+      "answers": ["Hicham El Guerrouj", "El Guerrouj"]
+    },
+    {
+      "id": "qz-sports-q198",
+      "question": "Which NFL running back set the single-season rushing record of 2,105 yards in 1984?",
+      "answers": ["Eric Dickerson", "Dickerson"]
+    },
+    {
+      "id": "qz-sports-q199",
+      "question": "Which Hungarian footballer was the star of the 1950s 'Magical Magyars'?",
+      "answers": ["Ferenc Puskas", "Puskas"]
+    },
+    {
+      "id": "qz-sports-q200",
+      "question": "Which stadium hosts the AFL Grand Final in Australia every year?",
+      "answers": ["Melbourne Cricket Ground", "MCG", "The MCG"]
+    }
+  ],
+  "finals": {
+    "easy": {
+      "id": "qz-sports-final-easy",
+      "question": "How many years apart are the Summer Olympic Games normally held?",
+      "answers": ["4", "Four", "Every four years"]
+    },
+    "medium": {
+      "id": "qz-sports-final-medium",
+      "question": "Which country won the 2018 FIFA World Cup in Russia?",
+      "answers": ["France"]
+    },
+    "hard": {
+      "id": "qz-sports-final-hard",
+      "question": "Which cyclist won the very first Tour de France in 1903?",
+      "answers": ["Maurice Garin", "Garin"]
+    }
+  }
+}

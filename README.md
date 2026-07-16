@@ -29,7 +29,9 @@ Asset Hub.
   `@parity/product-sdk-contracts`. The app polls the compact `getLiveGame` snapshot and
   renders whichever screen the chain says the table is on.
 - **Starter content** (`shared/packs/`): 10 packs × 200 questions (+ easy/medium/hard
-  finals each), seeded on-chain by script.
+  finals each), seeded on-chain by script. Repository-only provenance and editorial review
+  records live alongside them in [`shared/pack-sources/`](shared/pack-sources/README.md);
+  they are never deployed or read at runtime.
 
 The trust model is deliberately casual: answers are public on-chain the moment they land,
 and the client simply doesn't show them before the review phase — like cards face-down on
@@ -78,6 +80,8 @@ pnpm install
 pnpm test                 # normalize-parity unit tests
 pnpm typecheck:tools      # type-check scripts, Playwright config, and E2E helpers
 pnpm validate:packs       # validate all starter-pack files offline
+pnpm validate:editorial   # non-blocking editorial coverage + quality lint for drafts
+pnpm audit:editorial      # strictly audit only packs marked release-ready
 pnpm deploy:contract      # fresh registry + session registry + signals + game deployment
 pnpm deploy:e2e-contracts # fresh, isolated four-contract stack for public LIVE_E2E
 pnpm seed:packs           # seed shared/packs/*.json into the active registry (resume-safe)

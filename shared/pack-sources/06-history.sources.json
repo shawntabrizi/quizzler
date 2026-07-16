@@ -1,0 +1,1044 @@
+{
+  "version": 1,
+  "status": "draft",
+  "pack": {
+    "file": "06-history.json",
+    "title": "History"
+  },
+  "questions": [
+    {
+      "id": "qz-history-q001",
+      "question": "Which ancient civilization built the pyramids at Giza?",
+      "answers": ["Ancient Egyptians", "Egyptians"]
+    },
+    {
+      "id": "qz-history-q002",
+      "question": "Who was the first President of the United States?",
+      "answers": ["George Washington", "Washington"]
+    },
+    {
+      "id": "qz-history-q003",
+      "question": "In which year did World War II end?",
+      "answers": ["1945"]
+    },
+    {
+      "id": "qz-history-q004",
+      "question": "Which Roman leader was assassinated on the Ides of March in 44 BC?",
+      "answers": ["Julius Caesar", "Caesar"]
+    },
+    {
+      "id": "qz-history-q005",
+      "question": "What was the name of the barrier that divided a German city from 1961 to 1989?",
+      "answers": ["Berlin Wall", "The Berlin Wall"]
+    },
+    {
+      "id": "qz-history-q006",
+      "question": "Which famous ocean liner sank on its maiden voyage in 1912 after hitting an iceberg?",
+      "answers": ["Titanic", "RMS Titanic", "The Titanic"]
+    },
+    {
+      "id": "qz-history-q007",
+      "question": "Who was the first person to walk on the Moon?",
+      "answers": ["Neil Armstrong", "Armstrong"]
+    },
+    {
+      "id": "qz-history-q008",
+      "question": "Who was the first human to travel into space, in 1961?",
+      "answers": ["Yuri Gagarin", "Gagarin"]
+    },
+    {
+      "id": "qz-history-q009",
+      "question": "At which 1815 battle was Napoleon Bonaparte finally defeated?",
+      "answers": ["Battle of Waterloo", "Waterloo"]
+    },
+    {
+      "id": "qz-history-q010",
+      "question": "In which year did World War I begin?",
+      "answers": ["1914"]
+    },
+    {
+      "id": "qz-history-q011",
+      "question": "The Great Wall was built to protect which country?",
+      "answers": ["China"]
+    },
+    {
+      "id": "qz-history-q012",
+      "question": "Who was the dictator of Nazi Germany during World War II?",
+      "answers": ["Adolf Hitler", "Hitler"]
+    },
+    {
+      "id": "qz-history-q013",
+      "question": "Which Egyptian boy king's tomb was discovered nearly intact in 1922?",
+      "answers": ["Tutankhamun", "King Tut", "Tutankhamen"]
+    },
+    {
+      "id": "qz-history-q014",
+      "question": "Which US president was assassinated in Dallas in 1963?",
+      "answers": ["John F. Kennedy", "JFK", "Kennedy", "John Kennedy"]
+    },
+    {
+      "id": "qz-history-q015",
+      "question": "Which American civil rights leader gave the famous 'I Have a Dream' speech in 1963?",
+      "answers": ["Martin Luther King Jr.", "Martin Luther King", "MLK"]
+    },
+    {
+      "id": "qz-history-q016",
+      "question": "The Parthenon sits on the Acropolis of which ancient Greek city?",
+      "answers": ["Athens"]
+    },
+    {
+      "id": "qz-history-q017",
+      "question": "What is the name of the war fought between the northern and southern United States from 1861 to 1865?",
+      "answers": [
+        "American Civil War",
+        "Civil War",
+        "The Civil War",
+        "US Civil War"
+      ]
+    },
+    {
+      "id": "qz-history-q018",
+      "question": "Which country gave the Statue of Liberty to the United States?",
+      "answers": ["France"]
+    },
+    {
+      "id": "qz-history-q019",
+      "question": "Which Roman city was buried by the eruption of Mount Vesuvius in AD 79?",
+      "answers": ["Pompeii"]
+    },
+    {
+      "id": "qz-history-q020",
+      "question": "Who led the Soviet Union during World War II?",
+      "answers": ["Joseph Stalin", "Stalin"]
+    },
+    {
+      "id": "qz-history-q021",
+      "question": "Who was the British Prime Minister for most of World War II?",
+      "answers": ["Winston Churchill", "Churchill"]
+    },
+    {
+      "id": "qz-history-q022",
+      "question": "In which city did Anne Frank and her family hide during World War II?",
+      "answers": ["Amsterdam"]
+    },
+    {
+      "id": "qz-history-q023",
+      "question": "Who became South Africa's first Black president in 1994?",
+      "answers": ["Nelson Mandela", "Mandela"]
+    },
+    {
+      "id": "qz-history-q024",
+      "question": "Which leader guided India's independence movement using nonviolent resistance?",
+      "answers": ["Mahatma Gandhi", "Gandhi", "Mohandas Gandhi"]
+    },
+    {
+      "id": "qz-history-q025",
+      "question": "Which city was the capital of the Roman Empire?",
+      "answers": ["Rome"]
+    },
+    {
+      "id": "qz-history-q026",
+      "question": "Which Renaissance artist painted the Mona Lisa?",
+      "answers": ["Leonardo da Vinci", "Da Vinci", "Leonardo"]
+    },
+    {
+      "id": "qz-history-q027",
+      "question": "Which document did the American colonies adopt on July 4, 1776?",
+      "answers": [
+        "Declaration of Independence",
+        "The Declaration of Independence"
+      ]
+    },
+    {
+      "id": "qz-history-q028",
+      "question": "In which year did the United States declare independence from Britain?",
+      "answers": ["1776"]
+    },
+    {
+      "id": "qz-history-q029",
+      "question": "Which Paris fortress-prison was stormed on July 14, 1789?",
+      "answers": ["Bastille", "The Bastille"]
+    },
+    {
+      "id": "qz-history-q030",
+      "question": "Which French queen was executed by guillotine in 1793?",
+      "answers": ["Marie Antoinette"]
+    },
+    {
+      "id": "qz-history-q031",
+      "question": "Which country attacked Pearl Harbor in 1941?",
+      "answers": ["Japan"]
+    },
+    {
+      "id": "qz-history-q032",
+      "question": "In which year was Pearl Harbor attacked?",
+      "answers": ["1941"]
+    },
+    {
+      "id": "qz-history-q033",
+      "question": "Cleopatra was the last active ruler of which ancient kingdom?",
+      "answers": ["Egypt", "Ancient Egypt"]
+    },
+    {
+      "id": "qz-history-q034",
+      "question": "Which French heroine was known as the Maid of Orleans?",
+      "answers": ["Joan of Arc"]
+    },
+    {
+      "id": "qz-history-q035",
+      "question": "What is the name of the war fought on the Korean peninsula from 1950 to 1953?",
+      "answers": ["Korean War", "The Korean War"]
+    },
+    {
+      "id": "qz-history-q036",
+      "question": "Which US president delivered the Gettysburg Address?",
+      "answers": ["Abraham Lincoln", "Lincoln"]
+    },
+    {
+      "id": "qz-history-q037",
+      "question": "Who assassinated Abraham Lincoln?",
+      "answers": ["John Wilkes Booth", "Booth"]
+    },
+    {
+      "id": "qz-history-q038",
+      "question": "Which South American empire built Machu Picchu?",
+      "answers": ["Inca", "Incas", "Inca Empire"]
+    },
+    {
+      "id": "qz-history-q039",
+      "question": "The Vikings originally came from which northern European region?",
+      "answers": ["Scandinavia"]
+    },
+    {
+      "id": "qz-history-q040",
+      "question": "In which year did humans first land on the Moon?",
+      "answers": ["1969"]
+    },
+    {
+      "id": "qz-history-q041",
+      "question": "Which 1066 battle decided the Norman conquest of England?",
+      "answers": ["Battle of Hastings", "Hastings"]
+    },
+    {
+      "id": "qz-history-q042",
+      "question": "Who won the Battle of Hastings and became King of England?",
+      "answers": ["William the Conqueror", "William I", "William of Normandy"]
+    },
+    {
+      "id": "qz-history-q043",
+      "question": "What name is given to the plague pandemic that devastated Europe in the 14th century?",
+      "answers": [
+        "Black Death",
+        "The Black Death",
+        "Bubonic Plague",
+        "Black Plague"
+      ]
+    },
+    {
+      "id": "qz-history-q044",
+      "question": "In which year did the Berlin Wall fall?",
+      "answers": ["1989"]
+    },
+    {
+      "id": "qz-history-q045",
+      "question": "In which year did the Titanic sink?",
+      "answers": ["1912"]
+    },
+    {
+      "id": "qz-history-q046",
+      "question": "Which Greek philosopher tutored the young Alexander the Great?",
+      "answers": ["Aristotle"]
+    },
+    {
+      "id": "qz-history-q047",
+      "question": "Alexander the Great was king of which ancient kingdom?",
+      "answers": ["Macedonia", "Macedon"]
+    },
+    {
+      "id": "qz-history-q048",
+      "question": "Ancient Egyptian civilization developed along which river?",
+      "answers": ["Nile", "The Nile", "Nile River"]
+    },
+    {
+      "id": "qz-history-q049",
+      "question": "Who was the first woman to fly solo across the Atlantic Ocean?",
+      "answers": ["Amelia Earhart", "Earhart"]
+    },
+    {
+      "id": "qz-history-q050",
+      "question": "The United States faced which superpower rival during the Cold War?",
+      "answers": ["Soviet Union", "USSR", "The Soviet Union"]
+    },
+    {
+      "id": "qz-history-q051",
+      "question": "What was the name of the ship that carried the Pilgrims to America in 1620?",
+      "answers": ["Mayflower", "The Mayflower"]
+    },
+    {
+      "id": "qz-history-q052",
+      "question": "What was the name of the huge land deal in which the US bought territory from France in 1803?",
+      "answers": ["Louisiana Purchase", "The Louisiana Purchase"]
+    },
+    {
+      "id": "qz-history-q053",
+      "question": "Which royal dynasty ruled Russia from 1613 until 1917?",
+      "answers": ["Romanov", "Romanovs", "House of Romanov"]
+    },
+    {
+      "id": "qz-history-q054",
+      "question": "In which year did the Russian Revolution overthrow the tsar?",
+      "answers": ["1917"]
+    },
+    {
+      "id": "qz-history-q055",
+      "question": "Who led the Bolsheviks to power in Russia?",
+      "answers": ["Vladimir Lenin", "Lenin"]
+    },
+    {
+      "id": "qz-history-q056",
+      "question": "In which year was the Great Fire of London?",
+      "answers": ["1666"]
+    },
+    {
+      "id": "qz-history-q057",
+      "question": "In which year was the Magna Carta sealed?",
+      "answers": ["1215"]
+    },
+    {
+      "id": "qz-history-q058",
+      "question": "Which English king sealed the Magna Carta?",
+      "answers": ["King John", "John"]
+    },
+    {
+      "id": "qz-history-q059",
+      "question": "Britain fought which country in the 1982 Falklands War?",
+      "answers": ["Argentina"]
+    },
+    {
+      "id": "qz-history-q060",
+      "question": "The D-Day landings of World War II took place in which region of France?",
+      "answers": ["Normandy"]
+    },
+    {
+      "id": "qz-history-q061",
+      "question": "In which year did the D-Day landings take place?",
+      "answers": ["1944"]
+    },
+    {
+      "id": "qz-history-q062",
+      "question": "Which Japanese city was the first to be hit by an atomic bomb?",
+      "answers": ["Hiroshima"]
+    },
+    {
+      "id": "qz-history-q063",
+      "question": "Which Japanese city was the second to be hit by an atomic bomb?",
+      "answers": ["Nagasaki"]
+    },
+    {
+      "id": "qz-history-q064",
+      "question": "In which famous Roman arena did gladiators fight?",
+      "answers": ["Colosseum", "The Colosseum", "Coliseum"]
+    },
+    {
+      "id": "qz-history-q065",
+      "question": "Which ancient Greek city-state was famed for its strict warrior society?",
+      "answers": ["Sparta"]
+    },
+    {
+      "id": "qz-history-q066",
+      "question": "According to legend, what giant wooden gift did the Greeks use to enter Troy?",
+      "answers": ["Trojan Horse", "Wooden Horse"]
+    },
+    {
+      "id": "qz-history-q067",
+      "question": "Which navigator completed the first circumnavigation after Ferdinand Magellan's death?",
+      "answers": ["Juan Sebastian Elcano", "Juan Sebastián Elcano", "Elcano"]
+    },
+    {
+      "id": "qz-history-q068",
+      "question": "Which English king famously had six wives?",
+      "answers": ["Henry VIII", "Henry the Eighth"]
+    },
+    {
+      "id": "qz-history-q069",
+      "question": "What is the name of the picture-based writing system of ancient Egypt?",
+      "answers": ["Hieroglyphics", "Hieroglyphs"]
+    },
+    {
+      "id": "qz-history-q070",
+      "question": "In which year did the September 11 attacks on the United States occur?",
+      "answers": ["2001"]
+    },
+    {
+      "id": "qz-history-q071",
+      "question": "Which Spanish conquistador conquered the Aztec Empire?",
+      "answers": ["Hernan Cortes", "Cortes", "Hernán Cortés", "Cortez"]
+    },
+    {
+      "id": "qz-history-q072",
+      "question": "Which Spanish conquistador conquered the Inca Empire?",
+      "answers": ["Francisco Pizarro", "Pizarro"]
+    },
+    {
+      "id": "qz-history-q073",
+      "question": "What was the capital city of the Aztec Empire?",
+      "answers": ["Tenochtitlan", "Tenochtitlán"]
+    },
+    {
+      "id": "qz-history-q074",
+      "question": "Which 1919 treaty formally ended World War I with Germany?",
+      "answers": ["Treaty of Versailles", "Versailles"]
+    },
+    {
+      "id": "qz-history-q075",
+      "question": "The assassination of which Austrian archduke sparked World War I?",
+      "answers": ["Franz Ferdinand", "Archduke Franz Ferdinand"]
+    },
+    {
+      "id": "qz-history-q076",
+      "question": "In which city was Archduke Franz Ferdinand assassinated in 1914?",
+      "answers": ["Sarajevo"]
+    },
+    {
+      "id": "qz-history-q077",
+      "question": "Which British commander led the allied army at the Battle of Waterloo?",
+      "answers": ["Duke of Wellington", "Wellington", "Arthur Wellesley"]
+    },
+    {
+      "id": "qz-history-q078",
+      "question": "On which remote island did Napoleon spend his final exile?",
+      "answers": ["Saint Helena", "St Helena", "St. Helena"]
+    },
+    {
+      "id": "qz-history-q079",
+      "question": "At which 1805 naval battle did Admiral Nelson die while defeating the French and Spanish fleets?",
+      "answers": ["Battle of Trafalgar", "Trafalgar"]
+    },
+    {
+      "id": "qz-history-q080",
+      "question": "What was the name of Admiral Nelson's flagship at Trafalgar?",
+      "answers": ["HMS Victory", "Victory"]
+    },
+    {
+      "id": "qz-history-q081",
+      "question": "Most of the Great Wall of China standing today was built by which dynasty?",
+      "answers": ["Ming", "Ming Dynasty"]
+    },
+    {
+      "id": "qz-history-q082",
+      "question": "Who was the first emperor of a unified China?",
+      "answers": ["Qin Shi Huang", "Qin Shi Huangdi", "Shi Huangdi"]
+    },
+    {
+      "id": "qz-history-q083",
+      "question": "The Terracotta Army was discovered near which Chinese city?",
+      "answers": ["Xi'an", "Xian"]
+    },
+    {
+      "id": "qz-history-q084",
+      "question": "Who founded the Mongol Empire?",
+      "answers": ["Genghis Khan", "Chinggis Khan"]
+    },
+    {
+      "id": "qz-history-q085",
+      "question": "Which grandson of Genghis Khan founded China's Yuan dynasty?",
+      "answers": ["Kublai Khan"]
+    },
+    {
+      "id": "qz-history-q086",
+      "question": "Which Venetian merchant famously traveled to the court of Kublai Khan?",
+      "answers": ["Marco Polo"]
+    },
+    {
+      "id": "qz-history-q087",
+      "question": "By what name is the Eastern Roman Empire, centered on Constantinople, commonly known?",
+      "answers": ["Byzantine Empire", "Byzantium"]
+    },
+    {
+      "id": "qz-history-q088",
+      "question": "In which year did Constantinople fall to the Ottomans?",
+      "answers": ["1453"]
+    },
+    {
+      "id": "qz-history-q089",
+      "question": "Which Ottoman sultan conquered Constantinople?",
+      "answers": ["Mehmed II", "Mehmed the Conqueror", "Mehmet II"]
+    },
+    {
+      "id": "qz-history-q090",
+      "question": "What is the modern name of the city once called Constantinople?",
+      "answers": ["Istanbul"]
+    },
+    {
+      "id": "qz-history-q091",
+      "question": "Which second wife of Henry VIII was beheaded in 1536?",
+      "answers": ["Anne Boleyn"]
+    },
+    {
+      "id": "qz-history-q092",
+      "question": "Which queen ruled England from 1558 to 1603?",
+      "answers": ["Elizabeth I", "Queen Elizabeth I"]
+    },
+    {
+      "id": "qz-history-q093",
+      "question": "In which year did England defeat the Spanish Armada?",
+      "answers": ["1588"]
+    },
+    {
+      "id": "qz-history-q094",
+      "question": "Which conspirator was caught guarding gunpowder beneath Parliament in 1605?",
+      "answers": ["Guy Fawkes"]
+    },
+    {
+      "id": "qz-history-q095",
+      "question": "In which year was the Gunpowder Plot foiled?",
+      "answers": ["1605"]
+    },
+    {
+      "id": "qz-history-q096",
+      "question": "Which English king was executed in 1649 after the English Civil War?",
+      "answers": ["Charles I", "King Charles I"]
+    },
+    {
+      "id": "qz-history-q097",
+      "question": "Who ruled England as Lord Protector in the 1650s?",
+      "answers": ["Oliver Cromwell", "Cromwell"]
+    },
+    {
+      "id": "qz-history-q098",
+      "question": "In which year was the United States Constitution written and signed in Philadelphia?",
+      "answers": ["1787"]
+    },
+    {
+      "id": "qz-history-q099",
+      "question": "At which 1781 siege did the British surrender, effectively ending the American Revolutionary War?",
+      "answers": ["Yorktown", "Battle of Yorktown", "Siege of Yorktown"]
+    },
+    {
+      "id": "qz-history-q100",
+      "question": "Who was the principal author of the Declaration of Independence?",
+      "answers": ["Thomas Jefferson", "Jefferson"]
+    },
+    {
+      "id": "qz-history-q101",
+      "question": "What is the name of the 1773 protest in which colonists dumped tea into a harbor?",
+      "answers": ["Boston Tea Party", "The Boston Tea Party"]
+    },
+    {
+      "id": "qz-history-q102",
+      "question": "The Trail of Tears mainly forced which Native American tribe from its lands?",
+      "answers": ["Cherokee"]
+    },
+    {
+      "id": "qz-history-q103",
+      "question": "Which 1823 US policy warned European powers against colonizing the Americas?",
+      "answers": ["Monroe Doctrine", "The Monroe Doctrine"]
+    },
+    {
+      "id": "qz-history-q104",
+      "question": "Which Confederate general surrendered at Appomattox Court House in 1865?",
+      "answers": ["Robert E. Lee", "Lee", "Robert E Lee"]
+    },
+    {
+      "id": "qz-history-q105",
+      "question": "Which Union general accepted the Confederate surrender and later became US president?",
+      "answers": ["Ulysses S. Grant", "Grant", "Ulysses Grant"]
+    },
+    {
+      "id": "qz-history-q106",
+      "question": "What was the name of Lincoln's 1863 order freeing slaves in the rebelling states?",
+      "answers": ["Emancipation Proclamation", "The Emancipation Proclamation"]
+    },
+    {
+      "id": "qz-history-q107",
+      "question": "Which amendment to the US Constitution abolished slavery?",
+      "answers": ["13th Amendment", "Thirteenth Amendment", "13th"]
+    },
+    {
+      "id": "qz-history-q108",
+      "question": "Which US president resigned over the Watergate scandal?",
+      "answers": ["Richard Nixon", "Nixon"]
+    },
+    {
+      "id": "qz-history-q109",
+      "question": "In which year did the Cuban Missile Crisis take place?",
+      "answers": ["1962"]
+    },
+    {
+      "id": "qz-history-q110",
+      "question": "The failed 1961 Bay of Pigs invasion targeted which country?",
+      "answers": ["Cuba"]
+    },
+    {
+      "id": "qz-history-q111",
+      "question": "Which US president demanded 'Mr. Gorbachev, tear down this wall'?",
+      "answers": ["Ronald Reagan", "Reagan"]
+    },
+    {
+      "id": "qz-history-q112",
+      "question": "Who was the last leader of the Soviet Union?",
+      "answers": ["Mikhail Gorbachev", "Gorbachev"]
+    },
+    {
+      "id": "qz-history-q113",
+      "question": "What was Gorbachev's policy of political 'openness' called?",
+      "answers": ["Glasnost"]
+    },
+    {
+      "id": "qz-history-q114",
+      "question": "What was Gorbachev's policy of economic 'restructuring' called?",
+      "answers": ["Perestroika"]
+    },
+    {
+      "id": "qz-history-q115",
+      "question": "What was the name of the first artificial satellite, launched in 1957?",
+      "answers": ["Sputnik", "Sputnik 1"]
+    },
+    {
+      "id": "qz-history-q116",
+      "question": "What was the name of the Soviet dog that became the first animal to orbit Earth?",
+      "answers": ["Laika"]
+    },
+    {
+      "id": "qz-history-q117",
+      "question": "Which South Vietnamese capital fell to North Vietnamese forces in 1975?",
+      "answers": ["Saigon"]
+    },
+    {
+      "id": "qz-history-q118",
+      "question": "Which February 1945 Allied conference was held at a Crimean resort?",
+      "answers": ["Yalta", "Yalta Conference"]
+    },
+    {
+      "id": "qz-history-q119",
+      "question": "What was the codename for Germany's 1941 invasion of the Soviet Union?",
+      "answers": ["Operation Barbarossa", "Barbarossa"]
+    },
+    {
+      "id": "qz-history-q120",
+      "question": "Which brutal city battle of 1942-43 marked the turning point on the Eastern Front?",
+      "answers": ["Battle of Stalingrad", "Stalingrad"]
+    },
+    {
+      "id": "qz-history-q121",
+      "question": "Which June 1942 carrier battle turned the tide of the Pacific War?",
+      "answers": ["Battle of Midway", "Midway"]
+    },
+    {
+      "id": "qz-history-q122",
+      "question": "What was the name of Nazi Germany's air force?",
+      "answers": ["Luftwaffe", "The Luftwaffe"]
+    },
+    {
+      "id": "qz-history-q123",
+      "question": "At which English country estate did British codebreakers work during World War II?",
+      "answers": ["Bletchley Park"]
+    },
+    {
+      "id": "qz-history-q124",
+      "question": "Which British mathematician led the effort to crack the Enigma cipher?",
+      "answers": ["Alan Turing", "Turing"]
+    },
+    {
+      "id": "qz-history-q125",
+      "question": "Who was the scientific director of the Manhattan Project?",
+      "answers": ["J. Robert Oppenheimer", "Robert Oppenheimer", "Oppenheimer"]
+    },
+    {
+      "id": "qz-history-q126",
+      "question": "In which German city were leading Nazis put on trial after World War II?",
+      "answers": ["Nuremberg"]
+    },
+    {
+      "id": "qz-history-q127",
+      "question": "Which general led the Free French forces during World War II?",
+      "answers": ["Charles de Gaulle", "De Gaulle"]
+    },
+    {
+      "id": "qz-history-q128",
+      "question": "Who was the fascist dictator of Italy during World War II?",
+      "answers": ["Benito Mussolini", "Mussolini"]
+    },
+    {
+      "id": "qz-history-q129",
+      "question": "Which general ruled Spain as dictator after winning the Spanish Civil War?",
+      "answers": ["Francisco Franco", "Franco"]
+    },
+    {
+      "id": "qz-history-q130",
+      "question": "Who proclaimed the founding of the People's Republic of China in 1949?",
+      "answers": ["Mao Zedong", "Mao", "Chairman Mao", "Mao Tse-tung"]
+    },
+    {
+      "id": "qz-history-q131",
+      "question": "Which Chinese Nationalist leader retreated to Taiwan in 1949?",
+      "answers": ["Chiang Kai-shek", "Chiang Kai Shek"]
+    },
+    {
+      "id": "qz-history-q132",
+      "question": "In which year were India and Pakistan partitioned at independence?",
+      "answers": ["1947"]
+    },
+    {
+      "id": "qz-history-q133",
+      "question": "Who was the first Prime Minister of independent India?",
+      "answers": ["Jawaharlal Nehru", "Nehru"]
+    },
+    {
+      "id": "qz-history-q134",
+      "question": "Who is regarded as the founder of Pakistan?",
+      "answers": ["Muhammad Ali Jinnah", "Jinnah"]
+    },
+    {
+      "id": "qz-history-q135",
+      "question": "Which Egyptian president nationalized the Suez Canal in 1956?",
+      "answers": ["Gamal Abdel Nasser", "Nasser"]
+    },
+    {
+      "id": "qz-history-q136",
+      "question": "In which year was the Six-Day War fought between Israel and its neighbors?",
+      "answers": ["1967"]
+    },
+    {
+      "id": "qz-history-q137",
+      "question": "Which Egyptian president signed the Camp David Accords with Israel?",
+      "answers": ["Anwar Sadat", "Sadat"]
+    },
+    {
+      "id": "qz-history-q138",
+      "question": "Who was Israel's first Prime Minister?",
+      "answers": ["David Ben-Gurion", "Ben-Gurion"]
+    },
+    {
+      "id": "qz-history-q139",
+      "question": "In which year did the Iranian Revolution overthrow the Shah?",
+      "answers": ["1979"]
+    },
+    {
+      "id": "qz-history-q140",
+      "question": "Which religious leader took power in Iran after the 1979 revolution?",
+      "answers": ["Ayatollah Khomeini", "Khomeini", "Ruhollah Khomeini"]
+    },
+    {
+      "id": "qz-history-q141",
+      "question": "What was the name of the 1948-49 operation that supplied a blockaded German city by air?",
+      "answers": ["Berlin Airlift", "The Berlin Airlift"]
+    },
+    {
+      "id": "qz-history-q142",
+      "question": "In which year was NATO founded?",
+      "answers": ["1949"]
+    },
+    {
+      "id": "qz-history-q143",
+      "question": "Who led the Khmer Rouge regime?",
+      "answers": ["Pol Pot"]
+    },
+    {
+      "id": "qz-history-q144",
+      "question": "The Khmer Rouge ruled which country in the 1970s?",
+      "answers": ["Cambodia"]
+    },
+    {
+      "id": "qz-history-q145",
+      "question": "In which year did the Rwandan genocide take place?",
+      "answers": ["1994"]
+    },
+    {
+      "id": "qz-history-q146",
+      "question": "What was the system of racial segregation in South Africa called?",
+      "answers": ["Apartheid"]
+    },
+    {
+      "id": "qz-history-q147",
+      "question": "On which island was Nelson Mandela imprisoned for 18 years?",
+      "answers": ["Robben Island"]
+    },
+    {
+      "id": "qz-history-q148",
+      "question": "What was Gandhi's famous 1930 protest march against a British tax called?",
+      "answers": ["Salt March", "Dandi March", "The Salt March"]
+    },
+    {
+      "id": "qz-history-q149",
+      "question": "Which Babylonian king created one of the earliest written law codes?",
+      "answers": ["Hammurabi"]
+    },
+    {
+      "id": "qz-history-q150",
+      "question": "What is the name of the wedge-shaped writing system of ancient Mesopotamia?",
+      "answers": ["Cuneiform"]
+    },
+    {
+      "id": "qz-history-q151",
+      "question": "At which battle did 300 Spartans famously hold a mountain pass against the Persians?",
+      "answers": ["Battle of Thermopylae", "Thermopylae"]
+    },
+    {
+      "id": "qz-history-q152",
+      "question": "Which Spartan king led the defense at Thermopylae?",
+      "answers": ["Leonidas", "Leonidas I"]
+    },
+    {
+      "id": "qz-history-q153",
+      "question": "Which Persian king led the invasion of Greece in 480 BC?",
+      "answers": ["Xerxes", "Xerxes I"]
+    },
+    {
+      "id": "qz-history-q154",
+      "question": "What is the name of the long war fought between Athens and Sparta?",
+      "answers": ["Peloponnesian War", "The Peloponnesian War"]
+    },
+    {
+      "id": "qz-history-q155",
+      "question": "Which ancient Greek writer is called the 'Father of History'?",
+      "answers": ["Herodotus"]
+    },
+    {
+      "id": "qz-history-q156",
+      "question": "The general Hannibal fought for which ancient North African city?",
+      "answers": ["Carthage"]
+    },
+    {
+      "id": "qz-history-q157",
+      "question": "What name is given to the series of wars between Rome and Carthage?",
+      "answers": ["Punic Wars", "The Punic Wars"]
+    },
+    {
+      "id": "qz-history-q158",
+      "question": "Which mountain range did Hannibal famously cross with war elephants?",
+      "answers": ["Alps", "The Alps"]
+    },
+    {
+      "id": "qz-history-q159",
+      "question": "Which Roman emperor legalized Christianity in the empire?",
+      "answers": ["Constantine", "Constantine the Great", "Constantine I"]
+    },
+    {
+      "id": "qz-history-q160",
+      "question": "In which year did the Western Roman Empire fall?",
+      "answers": ["476"]
+    },
+    {
+      "id": "qz-history-q161",
+      "question": "Which Roman general defeated Hannibal at the Battle of Zama?",
+      "answers": ["Scipio Africanus", "Scipio"]
+    },
+    {
+      "id": "qz-history-q162",
+      "question": "Who was the last emperor of the Western Roman Empire?",
+      "answers": ["Romulus Augustulus", "Romulus Augustus"]
+    },
+    {
+      "id": "qz-history-q163",
+      "question": "Which French scholar deciphered Egyptian hieroglyphs using the Rosetta Stone?",
+      "answers": [
+        "Jean-Francois Champollion",
+        "Champollion",
+        "Jean-François Champollion"
+      ]
+    },
+    {
+      "id": "qz-history-q164",
+      "question": "At which battle around 1274 BC did Ramesses II fight the Hittites?",
+      "answers": ["Battle of Kadesh", "Kadesh", "Qadesh"]
+    },
+    {
+      "id": "qz-history-q165",
+      "question": "Which female pharaoh of Egypt was often depicted wearing a false beard?",
+      "answers": ["Hatshepsut"]
+    },
+    {
+      "id": "qz-history-q166",
+      "question": "Who founded the Akkadian Empire, often called history's first empire?",
+      "answers": ["Sargon of Akkad", "Sargon"]
+    },
+    {
+      "id": "qz-history-q167",
+      "question": "Which king founded the Persian Achaemenid Empire?",
+      "answers": ["Cyrus the Great", "Cyrus", "Cyrus II"]
+    },
+    {
+      "id": "qz-history-q168",
+      "question": "At which 331 BC battle did Alexander the Great decisively defeat Darius III?",
+      "answers": ["Battle of Gaugamela", "Gaugamela", "Arbela"]
+    },
+    {
+      "id": "qz-history-q169",
+      "question": "Which Roman emperor divided the empire into eastern and western halves in the 3rd century?",
+      "answers": ["Diocletian"]
+    },
+    {
+      "id": "qz-history-q170",
+      "question": "Under which Byzantine emperor was the Hagia Sophia built?",
+      "answers": ["Justinian", "Justinian I"]
+    },
+    {
+      "id": "qz-history-q171",
+      "question": "Which general led Emperor Justinian's reconquests of Italy and North Africa?",
+      "answers": ["Belisarius"]
+    },
+    {
+      "id": "qz-history-q172",
+      "question": "Which Frankish leader halted the Muslim advance at the Battle of Tours in 732?",
+      "answers": ["Charles Martel", "Martel"]
+    },
+    {
+      "id": "qz-history-q173",
+      "question": "In which year was Charlemagne crowned Emperor of the Romans by the pope?",
+      "answers": ["800"]
+    },
+    {
+      "id": "qz-history-q174",
+      "question": "Which crusade ended with the sack of Constantinople in 1204?",
+      "answers": ["Fourth Crusade", "The Fourth Crusade", "4th Crusade"]
+    },
+    {
+      "id": "qz-history-q175",
+      "question": "Mansa Musa, famed for his gold-laden pilgrimage to Mecca, ruled which West African empire?",
+      "answers": ["Mali Empire", "Mali"]
+    },
+    {
+      "id": "qz-history-q176",
+      "question": "The temple complex of Angkor Wat was built by which Southeast Asian empire?",
+      "answers": ["Khmer Empire", "Khmer"]
+    },
+    {
+      "id": "qz-history-q177",
+      "question": "At which 1571 naval battle did the Holy League defeat the Ottoman fleet?",
+      "answers": ["Battle of Lepanto", "Lepanto"]
+    },
+    {
+      "id": "qz-history-q178",
+      "question": "The 1618 Defenestration of Prague helped start which European war?",
+      "answers": ["Thirty Years' War", "Thirty Years War", "30 Years War"]
+    },
+    {
+      "id": "qz-history-q179",
+      "question": "Which 1648 peace settlement ended the Thirty Years' War?",
+      "answers": ["Peace of Westphalia", "Treaty of Westphalia", "Westphalia"]
+    },
+    {
+      "id": "qz-history-q180",
+      "question": "Which new capital city did Peter the Great found on the Baltic in 1703?",
+      "answers": ["Saint Petersburg", "St Petersburg", "St. Petersburg"]
+    },
+    {
+      "id": "qz-history-q181",
+      "question": "Which 1494 treaty divided the New World between Spain and Portugal?",
+      "answers": ["Treaty of Tordesillas", "Tordesillas"]
+    },
+    {
+      "id": "qz-history-q182",
+      "question": "In which year did the British East India Company win the Battle of Plassey?",
+      "answers": ["1757"]
+    },
+    {
+      "id": "qz-history-q183",
+      "question": "In which year did the Indian Rebellion, or Sepoy Mutiny, begin?",
+      "answers": ["1857"]
+    },
+    {
+      "id": "qz-history-q184",
+      "question": "Which empress dowager dominated the late Qing dynasty for nearly half a century?",
+      "answers": ["Cixi", "Empress Dowager Cixi", "Tzu-hsi"]
+    },
+    {
+      "id": "qz-history-q185",
+      "question": "Who was the last emperor of China?",
+      "answers": ["Puyi", "Pu Yi", "Henry Puyi"]
+    },
+    {
+      "id": "qz-history-q186",
+      "question": "Which warlord won the Battle of Sekigahara in 1600 and founded Japan's last shogunate?",
+      "answers": ["Tokugawa Ieyasu", "Ieyasu"]
+    },
+    {
+      "id": "qz-history-q187",
+      "question": "Which king founded the Zulu Kingdom in southern Africa?",
+      "answers": ["Shaka", "Shaka Zulu"]
+    },
+    {
+      "id": "qz-history-q188",
+      "question": "At which 1896 battle did Ethiopia defeat an invading Italian army?",
+      "answers": ["Battle of Adwa", "Adwa", "Adowa"]
+    },
+    {
+      "id": "qz-history-q189",
+      "question": "Which former slave led the Haitian Revolution?",
+      "answers": ["Toussaint Louverture", "Toussaint L'Ouverture"]
+    },
+    {
+      "id": "qz-history-q190",
+      "question": "Who fired the shots that killed Archduke Franz Ferdinand in 1914?",
+      "answers": ["Gavrilo Princip", "Princip"]
+    },
+    {
+      "id": "qz-history-q191",
+      "question": "The Zimmermann Telegram proposed that which country attack the United States?",
+      "answers": ["Mexico"]
+    },
+    {
+      "id": "qz-history-q192",
+      "question": "What was the real name of the German flying ace known as the Red Baron?",
+      "answers": ["Manfred von Richthofen", "Von Richthofen", "Richthofen"]
+    },
+    {
+      "id": "qz-history-q193",
+      "question": "Which French army officer was wrongly convicted of treason in 1894, dividing France for years?",
+      "answers": ["Alfred Dreyfus", "Dreyfus"]
+    },
+    {
+      "id": "qz-history-q194",
+      "question": "Which 1928 international pact renounced war as an instrument of national policy?",
+      "answers": ["Kellogg-Briand Pact", "Kellogg-Briand", "Pact of Paris"]
+    },
+    {
+      "id": "qz-history-q195",
+      "question": "In which German city did Hitler stage his failed Beer Hall Putsch in 1923?",
+      "answers": ["Munich"]
+    },
+    {
+      "id": "qz-history-q196",
+      "question": "The Soviet Union fought which country in the Winter War of 1939-40?",
+      "answers": ["Finland"]
+    },
+    {
+      "id": "qz-history-q197",
+      "question": "Operation Market Garden failed to capture a bridge in which Dutch city?",
+      "answers": ["Arnhem"]
+    },
+    {
+      "id": "qz-history-q198",
+      "question": "Which 1943 engagement is considered history's largest tank battle?",
+      "answers": ["Battle of Kursk", "Kursk"]
+    },
+    {
+      "id": "qz-history-q199",
+      "question": "Which American U-2 pilot was shot down over the Soviet Union in 1960?",
+      "answers": ["Francis Gary Powers", "Gary Powers", "Powers"]
+    },
+    {
+      "id": "qz-history-q200",
+      "question": "Who was the first Secretary-General of the United Nations?",
+      "answers": ["Trygve Lie"]
+    }
+  ],
+  "finals": {
+    "easy": {
+      "id": "qz-history-final-easy",
+      "question": "In which year did Christopher Columbus first reach the Americas?",
+      "answers": ["1492"]
+    },
+    "medium": {
+      "id": "qz-history-final-medium",
+      "question": "Who was the first emperor of Rome?",
+      "answers": ["Augustus", "Octavian", "Caesar Augustus"]
+    },
+    "hard": {
+      "id": "qz-history-final-hard",
+      "question": "Which 843 treaty divided Charlemagne's empire among his three grandsons?",
+      "answers": ["Treaty of Verdun", "Verdun"]
+    }
+  }
+}

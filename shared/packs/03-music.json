@@ -1,7 +1,7 @@
 {
   "title": "Music",
   "questions": [
-    { "text": "Which composer wrote the opera The Magic Flute?", "answers": ["Wolfgang Amadeus Mozart", "Mozart"] },
+    { "text": "Which composer wrote the opera Carmen?", "answers": ["Georges Bizet", "Bizet"] },
     { "text": "The Beatles formed in which English city?", "answers": ["Liverpool"] },
     { "text": "Which Italian musical direction tells a performer to play softly?", "answers": ["piano"] },
     { "text": "Who sang the 2014 hit 'Shake It Off'?", "answers": ["Taylor Swift"] },

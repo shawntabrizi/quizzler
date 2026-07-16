@@ -1,0 +1,1027 @@
+{
+  "version": 1,
+  "status": "draft",
+  "pack": {
+    "file": "09-video-games.json",
+    "title": "Video Games"
+  },
+  "questions": [
+    {
+      "id": "qz-video-games-q001",
+      "question": "Which mustachioed plumber is Nintendo's mascot?",
+      "answers": ["Mario", "Super Mario"]
+    },
+    {
+      "id": "qz-video-games-q002",
+      "question": "What is the name of Mario's taller brother?",
+      "answers": ["Luigi"]
+    },
+    {
+      "id": "qz-video-games-q003",
+      "question": "Which yellow arcade character eats dots while being chased through a maze by ghosts?",
+      "answers": ["Pac-Man", "Pacman", "Pac Man"]
+    },
+    {
+      "id": "qz-video-games-q004",
+      "question": "Which company makes the PlayStation consoles?",
+      "answers": ["Sony"]
+    },
+    {
+      "id": "qz-video-games-q005",
+      "question": "Which company makes the Xbox consoles?",
+      "answers": ["Microsoft"]
+    },
+    {
+      "id": "qz-video-games-q006",
+      "question": "What is the name of Sega's speedy blue hedgehog?",
+      "answers": ["Sonic", "Sonic the Hedgehog"]
+    },
+    {
+      "id": "qz-video-games-q007",
+      "question": "Which block-building survival game features exploding enemies called Creepers?",
+      "answers": ["Minecraft"]
+    },
+    {
+      "id": "qz-video-games-q008",
+      "question": "Which princess does Mario most often rescue from Bowser?",
+      "answers": ["Peach", "Princess Peach"]
+    },
+    {
+      "id": "qz-video-games-q009",
+      "question": "What is the name of the green-clad hero in The Legend of Zelda series?",
+      "answers": ["Link"]
+    },
+    {
+      "id": "qz-video-games-q010",
+      "question": "Which 1984 puzzle game has players stack falling blocks into complete lines?",
+      "answers": ["Tetris"]
+    },
+    {
+      "id": "qz-video-games-q011",
+      "question": "Which yellow electric mouse is the mascot of the Pokemon franchise?",
+      "answers": ["Pikachu"]
+    },
+    {
+      "id": "qz-video-games-q012",
+      "question": "Which battle royale game by Epic Games features building and a shrinking storm?",
+      "answers": ["Fortnite"]
+    },
+    {
+      "id": "qz-video-games-q013",
+      "question": "What is the name of Nintendo's hybrid home/portable console released in 2017?",
+      "answers": ["Switch", "Nintendo Switch"]
+    },
+    {
+      "id": "qz-video-games-q014",
+      "question": "What does GTA stand for in the famous Rockstar series?",
+      "answers": ["Grand Theft Auto"]
+    },
+    {
+      "id": "qz-video-games-q015",
+      "question": "Adventurer Lara Croft stars in which video game series?",
+      "answers": ["Tomb Raider"]
+    },
+    {
+      "id": "qz-video-games-q016",
+      "question": "Master Chief is the protagonist of which sci-fi shooter franchise?",
+      "answers": ["Halo"]
+    },
+    {
+      "id": "qz-video-games-q017",
+      "question": "In which 1981 arcade game does a giant ape throw barrels at the player?",
+      "answers": ["Donkey Kong"]
+    },
+    {
+      "id": "qz-video-games-q018",
+      "question": "What is the name of Nintendo's kart-racing series starring Mario and friends?",
+      "answers": ["Mario Kart"]
+    },
+    {
+      "id": "qz-video-games-q019",
+      "question": "What is the name of Sonic the Hedgehog's egg-shaped arch-enemy?",
+      "answers": ["Dr. Eggman", "Eggman", "Dr. Robotnik", "Robotnik"]
+    },
+    {
+      "id": "qz-video-games-q020",
+      "question": "Which company publishes the FIFA / EA Sports FC soccer games?",
+      "answers": ["EA", "Electronic Arts"]
+    },
+    {
+      "id": "qz-video-games-q021",
+      "question": "Which Valve puzzle game gives the player a gun that shoots blue and orange portals?",
+      "answers": ["Portal"]
+    },
+    {
+      "id": "qz-video-games-q022",
+      "question": "What is the name of Mario's green dinosaur companion?",
+      "answers": ["Yoshi"]
+    },
+    {
+      "id": "qz-video-games-q023",
+      "question": "Who is the main villain of The Legend of Zelda series?",
+      "answers": ["Ganon", "Ganondorf"]
+    },
+    {
+      "id": "qz-video-games-q024",
+      "question": "Which military shooter franchise is commonly abbreviated as CoD?",
+      "answers": ["Call of Duty"]
+    },
+    {
+      "id": "qz-video-games-q025",
+      "question": "What item do Pokemon trainers throw to catch wild Pokemon?",
+      "answers": ["Poke Ball", "Pokeball", "Poke Balls"]
+    },
+    {
+      "id": "qz-video-games-q026",
+      "question": "In which 1978 arcade classic do players shoot rows of descending aliens?",
+      "answers": ["Space Invaders"]
+    },
+    {
+      "id": "qz-video-games-q027",
+      "question": "Complete the title of the famous life-simulation game: The ___.",
+      "answers": ["Sims"]
+    },
+    {
+      "id": "qz-video-games-q028",
+      "question": "In Angry Birds, what green animals are the birds flung at?",
+      "answers": ["Pigs", "Green pigs"]
+    },
+    {
+      "id": "qz-video-games-q029",
+      "question": "What color is Nintendo's round hero Kirby?",
+      "answers": ["Pink"]
+    },
+    {
+      "id": "qz-video-games-q030",
+      "question": "Which motion-controlled Nintendo console launched in 2006?",
+      "answers": ["Wii", "Nintendo Wii"]
+    },
+    {
+      "id": "qz-video-games-q031",
+      "question": "Which orange marsupial starred in a classic PlayStation platformer series?",
+      "answers": ["Crash Bandicoot", "Crash"]
+    },
+    {
+      "id": "qz-video-games-q032",
+      "question": "In Among Us, what is the secret killer role among the crewmates called?",
+      "answers": ["Impostor", "Imposter"]
+    },
+    {
+      "id": "qz-video-games-q033",
+      "question": "Complete the name of the hit mobile puzzle game: Candy Crush ___.",
+      "answers": ["Saga"]
+    },
+    {
+      "id": "qz-video-games-q034",
+      "question": "How many ghosts chase Pac-Man in the original arcade game?",
+      "answers": ["4"]
+    },
+    {
+      "id": "qz-video-games-q035",
+      "question": "What color is Mario's hat?",
+      "answers": ["Red"]
+    },
+    {
+      "id": "qz-video-games-q036",
+      "question": "What golden items does Mario collect throughout his games?",
+      "answers": ["Coins", "Gold coins"]
+    },
+    {
+      "id": "qz-video-games-q037",
+      "question": "What golden circular items does Sonic the Hedgehog collect?",
+      "answers": ["Rings"]
+    },
+    {
+      "id": "qz-video-games-q038",
+      "question": "Which Swedish studio created Minecraft?",
+      "answers": ["Mojang"]
+    },
+    {
+      "id": "qz-video-games-q039",
+      "question": "In which tower-defense game do sunflowers and peashooters battle the undead?",
+      "answers": ["Plants vs. Zombies", "Plants vs Zombies", "PvZ"]
+    },
+    {
+      "id": "qz-video-games-q040",
+      "question": "Which game combines soccer with rocket-powered cars?",
+      "answers": ["Rocket League"]
+    },
+    {
+      "id": "qz-video-games-q041",
+      "question": "Complete the title of the Nintendo series: The Legend of ___.",
+      "answers": ["Zelda"]
+    },
+    {
+      "id": "qz-video-games-q042",
+      "question": "The word 'Pokemon' is short for what two-word phrase?",
+      "answers": ["Pocket Monsters"]
+    },
+    {
+      "id": "qz-video-games-q043",
+      "question": "What is the armored super-soldier protagonist of Halo called?",
+      "answers": ["Master Chief", "John-117"]
+    },
+    {
+      "id": "qz-video-games-q044",
+      "question": "What is Mario's profession?",
+      "answers": ["Plumber"]
+    },
+    {
+      "id": "qz-video-games-q045",
+      "question": "Which Pokemon is number 1 in the National Pokedex?",
+      "answers": ["Bulbasaur"]
+    },
+    {
+      "id": "qz-video-games-q046",
+      "question": "What does Pikachu evolve into?",
+      "answers": ["Raichu"]
+    },
+    {
+      "id": "qz-video-games-q047",
+      "question": "Which company made the Game Boy handheld?",
+      "answers": ["Nintendo"]
+    },
+    {
+      "id": "qz-video-games-q048",
+      "question": "What is the name of Ryu's famous fireball move in Street Fighter?",
+      "answers": ["Hadouken", "Hadoken"]
+    },
+    {
+      "id": "qz-video-games-q049",
+      "question": "In Mortal Kombat, what is the gruesome finishing move called?",
+      "answers": ["Fatality"]
+    },
+    {
+      "id": "qz-video-games-q050",
+      "question": "Skyrim is the fifth entry in which fantasy RPG series?",
+      "answers": ["The Elder Scrolls", "Elder Scrolls"]
+    },
+    {
+      "id": "qz-video-games-q051",
+      "question": "Who is the monster-hunting protagonist of The Witcher games?",
+      "answers": ["Geralt", "Geralt of Rivia"]
+    },
+    {
+      "id": "qz-video-games-q052",
+      "question": "Who is the Spartan protagonist of the God of War series?",
+      "answers": ["Kratos"]
+    },
+    {
+      "id": "qz-video-games-q053",
+      "question": "What is the name of the princess of Hyrule?",
+      "answers": ["Zelda", "Princess Zelda"]
+    },
+    {
+      "id": "qz-video-games-q054",
+      "question": "What is the name of the raccoon businessman in Animal Crossing?",
+      "answers": ["Tom Nook", "Nook"]
+    },
+    {
+      "id": "qz-video-games-q055",
+      "question": "Which studio created Overwatch and World of Warcraft?",
+      "answers": ["Blizzard", "Blizzard Entertainment"]
+    },
+    {
+      "id": "qz-video-games-q056",
+      "question": "Which massively multiplayer online game is abbreviated WoW?",
+      "answers": ["World of Warcraft"]
+    },
+    {
+      "id": "qz-video-games-q057",
+      "question": "Which Riot Games MOBA is abbreviated LoL?",
+      "answers": ["League of Legends"]
+    },
+    {
+      "id": "qz-video-games-q058",
+      "question": "Which Nintendo fighting series pits characters like Mario, Link, and Pikachu against each other?",
+      "answers": ["Super Smash Bros", "Smash Bros", "Super Smash Brothers"]
+    },
+    {
+      "id": "qz-video-games-q059",
+      "question": "What is the virtual currency used in Roblox?",
+      "answers": ["Robux"]
+    },
+    {
+      "id": "qz-video-games-q060",
+      "question": "What is the name of Xbox's monthly game subscription service?",
+      "answers": ["Game Pass", "Xbox Game Pass"]
+    },
+    {
+      "id": "qz-video-games-q061",
+      "question": "Which 2006 Nintendo console popularized motion-controlled play with its Wii Remote?",
+      "answers": ["Wii", "Nintendo Wii"]
+    },
+    {
+      "id": "qz-video-games-q062",
+      "question": "What color is Sonic the Hedgehog?",
+      "answers": ["Blue"]
+    },
+    {
+      "id": "qz-video-games-q063",
+      "question": "What is the name of Mario's greedy, yellow-clad rival?",
+      "answers": ["Wario"]
+    },
+    {
+      "id": "qz-video-games-q064",
+      "question": "Who is the grizzled male protagonist who escorts Ellie in The Last of Us?",
+      "answers": ["Joel", "Joel Miller"]
+    },
+    {
+      "id": "qz-video-games-q065",
+      "question": "Which sports game came packaged with the Nintendo Wii in most regions?",
+      "answers": ["Wii Sports"]
+    },
+    {
+      "id": "qz-video-games-q066",
+      "question": "Which Nintendo handheld, released in 2004, features two screens?",
+      "answers": ["DS", "Nintendo DS"]
+    },
+    {
+      "id": "qz-video-games-q067",
+      "question": "In Pokemon, what type is Charmander?",
+      "answers": ["Fire"]
+    },
+    {
+      "id": "qz-video-games-q068",
+      "question": "What sport does the FIFA video game series simulate?",
+      "answers": ["Soccer", "Football"]
+    },
+    {
+      "id": "qz-video-games-q069",
+      "question": "In Mario games, what green-capped mushroom grants an extra life?",
+      "answers": ["1-Up Mushroom", "1-Up", "1UP Mushroom"]
+    },
+    {
+      "id": "qz-video-games-q070",
+      "question": "Rocksteady's Batman game trilogy is named after which asylum?",
+      "answers": ["Arkham"]
+    },
+    {
+      "id": "qz-video-games-q071",
+      "question": "In what year was Super Mario Bros. first released?",
+      "answers": ["1985"]
+    },
+    {
+      "id": "qz-video-games-q072",
+      "question": "Which Japanese company created Pac-Man?",
+      "answers": ["Namco"]
+    },
+    {
+      "id": "qz-video-games-q073",
+      "question": "Which Japanese company created Space Invaders?",
+      "answers": ["Taito"]
+    },
+    {
+      "id": "qz-video-games-q074",
+      "question": "Which company released the arcade hit Pong in 1972?",
+      "answers": ["Atari"]
+    },
+    {
+      "id": "qz-video-games-q075",
+      "question": "Which studio developed the original Doom?",
+      "answers": ["id Software", "id"]
+    },
+    {
+      "id": "qz-video-games-q076",
+      "question": "Which company developed Half-Life and runs the Steam store?",
+      "answers": ["Valve"]
+    },
+    {
+      "id": "qz-video-games-q077",
+      "question": "Who is the crowbar-wielding scientist protagonist of Half-Life?",
+      "answers": ["Gordon Freeman", "Freeman"]
+    },
+    {
+      "id": "qz-video-games-q078",
+      "question": "Which game designer created the Metal Gear series?",
+      "answers": ["Hideo Kojima", "Kojima"]
+    },
+    {
+      "id": "qz-video-games-q079",
+      "question": "The Legend of Zelda: Ocarina of Time was released on which console?",
+      "answers": ["Nintendo 64", "N64"]
+    },
+    {
+      "id": "qz-video-games-q080",
+      "question": "Which British studio developed GoldenEye 007 for the Nintendo 64?",
+      "answers": ["Rare", "Rareware"]
+    },
+    {
+      "id": "qz-video-games-q081",
+      "question": "Which Japanese company makes the Final Fantasy series?",
+      "answers": ["Square Enix", "Square", "Squaresoft"]
+    },
+    {
+      "id": "qz-video-games-q082",
+      "question": "Cloud Strife is the protagonist of which Final Fantasy game?",
+      "answers": ["Final Fantasy VII", "Final Fantasy 7", "FF7", "FFVII"]
+    },
+    {
+      "id": "qz-video-games-q083",
+      "question": "Which flower seller is famously killed by Sephiroth in Final Fantasy VII?",
+      "answers": ["Aerith", "Aeris", "Aerith Gainsborough"]
+    },
+    {
+      "id": "qz-video-games-q084",
+      "question": "What is the name of the underwater city in BioShock?",
+      "answers": ["Rapture"]
+    },
+    {
+      "id": "qz-video-games-q085",
+      "question": "What is the name of the flying city in BioShock Infinite?",
+      "answers": ["Columbia"]
+    },
+    {
+      "id": "qz-video-games-q086",
+      "question": "What is the name of the blond, winking mascot of the Fallout series?",
+      "answers": ["Vault Boy"]
+    },
+    {
+      "id": "qz-video-games-q087",
+      "question": "What item serves as currency in the Fallout games?",
+      "answers": ["Caps", "Bottle caps", "Bottlecaps"]
+    },
+    {
+      "id": "qz-video-games-q088",
+      "question": "What three words make up the first dragon shout the player learns in Skyrim?",
+      "answers": ["Fus Ro Dah"]
+    },
+    {
+      "id": "qz-video-games-q089",
+      "question": "Which Japanese studio developed Dark Souls and Elden Ring?",
+      "answers": ["FromSoftware", "From Software"]
+    },
+    {
+      "id": "qz-video-games-q090",
+      "question": "Which fantasy author helped create the world of Elden Ring?",
+      "answers": ["George R.R. Martin", "George RR Martin", "GRRM"]
+    },
+    {
+      "id": "qz-video-games-q091",
+      "question": "What is the subtitle of FromSoftware's 2019 game Sekiro?",
+      "answers": ["Shadows Die Twice"]
+    },
+    {
+      "id": "qz-video-games-q092",
+      "question": "Which studio developed the Red Dead Redemption series?",
+      "answers": ["Rockstar", "Rockstar Games"]
+    },
+    {
+      "id": "qz-video-games-q093",
+      "question": "Who is the outlaw protagonist of Red Dead Redemption 2?",
+      "answers": ["Arthur Morgan", "Arthur"]
+    },
+    {
+      "id": "qz-video-games-q094",
+      "question": "What is the name of the fictional city in Grand Theft Auto V?",
+      "answers": ["Los Santos"]
+    },
+    {
+      "id": "qz-video-games-q095",
+      "question": "GTA: Vice City is modeled after which real American city?",
+      "answers": ["Miami"]
+    },
+    {
+      "id": "qz-video-games-q096",
+      "question": "Which French company publishes the Assassin's Creed series?",
+      "answers": ["Ubisoft"]
+    },
+    {
+      "id": "qz-video-games-q097",
+      "question": "What retractable wrist weapon do the Assassins use in Assassin's Creed?",
+      "answers": ["Hidden Blade"]
+    },
+    {
+      "id": "qz-video-games-q098",
+      "question": "In which country is Assassin's Creed II with Ezio primarily set?",
+      "answers": ["Italy"]
+    },
+    {
+      "id": "qz-video-games-q099",
+      "question": "Who is the treasure-hunting protagonist of the Uncharted series?",
+      "answers": ["Nathan Drake", "Nate", "Drake"]
+    },
+    {
+      "id": "qz-video-games-q100",
+      "question": "Which studio developed Uncharted and The Last of Us?",
+      "answers": ["Naughty Dog"]
+    },
+    {
+      "id": "qz-video-games-q101",
+      "question": "Who is the machine-hunting heroine of Horizon Zero Dawn?",
+      "answers": ["Aloy"]
+    },
+    {
+      "id": "qz-video-games-q102",
+      "question": "Who is the samurai protagonist of Ghost of Tsushima?",
+      "answers": ["Jin Sakai", "Jin"]
+    },
+    {
+      "id": "qz-video-games-q103",
+      "question": "What is the name of the gothic plague-ridden city in Bloodborne?",
+      "answers": ["Yharnam"]
+    },
+    {
+      "id": "qz-video-games-q104",
+      "question": "What is the codename of the protagonist in Persona 5?",
+      "answers": ["Joker"]
+    },
+    {
+      "id": "qz-video-games-q105",
+      "question": "Which beloved Nintendo president passed away in 2015?",
+      "answers": ["Satoru Iwata", "Iwata"]
+    },
+    {
+      "id": "qz-video-games-q106",
+      "question": "Which Nintendo designer created Mario, Donkey Kong, and Zelda?",
+      "answers": ["Shigeru Miyamoto", "Miyamoto"]
+    },
+    {
+      "id": "qz-video-games-q107",
+      "question": "What is the name of Sonic's two-tailed fox sidekick?",
+      "answers": ["Tails", "Miles Prower", "Miles Tails Prower"]
+    },
+    {
+      "id": "qz-video-games-q108",
+      "question": "What species is Knuckles from the Sonic series?",
+      "answers": ["Echidna"]
+    },
+    {
+      "id": "qz-video-games-q109",
+      "question": "Who is the bounty hunter protagonist of the Metroid series?",
+      "answers": ["Samus", "Samus Aran"]
+    },
+    {
+      "id": "qz-video-games-q110",
+      "question": "What is the name of the angelic protagonist of Kid Icarus?",
+      "answers": ["Pit"]
+    },
+    {
+      "id": "qz-video-games-q111",
+      "question": "Who leads the mercenary pilot team in Nintendo's Star Fox?",
+      "answers": ["Fox McCloud", "Fox"]
+    },
+    {
+      "id": "qz-video-games-q112",
+      "question": "Which F-Zero racer is famous for his Falcon Punch in Smash Bros?",
+      "answers": ["Captain Falcon"]
+    },
+    {
+      "id": "qz-video-games-q113",
+      "question": "Who is the psychic boy protagonist of EarthBound?",
+      "answers": ["Ness"]
+    },
+    {
+      "id": "qz-video-games-q114",
+      "question": "Which game director created the Super Smash Bros. and Kirby series?",
+      "answers": ["Masahiro Sakurai", "Sakurai"]
+    },
+    {
+      "id": "qz-video-games-q115",
+      "question": "What region are Pokemon Red and Blue set in?",
+      "answers": ["Kanto"]
+    },
+    {
+      "id": "qz-video-games-q116",
+      "question": "What region are Pokemon Gold and Silver set in?",
+      "answers": ["Johto"]
+    },
+    {
+      "id": "qz-video-games-q117",
+      "question": "How many Pokemon were in the original Generation 1 Pokedex?",
+      "answers": ["151"]
+    },
+    {
+      "id": "qz-video-games-q118",
+      "question": "Mewtwo was cloned from which Pokemon?",
+      "answers": ["Mew"]
+    },
+    {
+      "id": "qz-video-games-q119",
+      "question": "How many different Pokemon could Eevee evolve into in Red and Blue?",
+      "answers": ["3"]
+    },
+    {
+      "id": "qz-video-games-q120",
+      "question": "Which company developed the mobile game Pokemon Go?",
+      "answers": ["Niantic"]
+    },
+    {
+      "id": "qz-video-games-q121",
+      "question": "Articuno, Zapdos, and which other Pokemon form the legendary bird trio?",
+      "answers": ["Moltres"]
+    },
+    {
+      "id": "qz-video-games-q122",
+      "question": "What is the name of Link's fairy companion in Ocarina of Time?",
+      "answers": ["Navi"]
+    },
+    {
+      "id": "qz-video-games-q123",
+      "question": "In Majora's Mask, how many in-game days does Link have before the moon falls?",
+      "answers": ["3"]
+    },
+    {
+      "id": "qz-video-games-q124",
+      "question": "What is the title of the 2023 sequel to Zelda: Breath of the Wild?",
+      "answers": ["Tears of the Kingdom", "Zelda: Tears of the Kingdom"]
+    },
+    {
+      "id": "qz-video-games-q125",
+      "question": "What is the name of Link's talking boat in The Wind Waker?",
+      "answers": ["King of Red Lions", "The King of Red Lions"]
+    },
+    {
+      "id": "qz-video-games-q126",
+      "question": "What are the squid-kid characters in Splatoon called?",
+      "answers": ["Inklings"]
+    },
+    {
+      "id": "qz-video-games-q127",
+      "question": "Luigi's Mansion was a launch title for which Nintendo console?",
+      "answers": ["GameCube", "Nintendo GameCube"]
+    },
+    {
+      "id": "qz-video-games-q128",
+      "question": "In what year did the Nintendo 64 launch in Japan and North America?",
+      "answers": ["1996"]
+    },
+    {
+      "id": "qz-video-games-q129",
+      "question": "Which Sony engineer is known as the 'Father of the PlayStation'?",
+      "answers": ["Ken Kutaragi", "Kutaragi"]
+    },
+    {
+      "id": "qz-video-games-q130",
+      "question": "What was Sega's final home console?",
+      "answers": ["Dreamcast", "Sega Dreamcast"]
+    },
+    {
+      "id": "qz-video-games-q131",
+      "question": "Who is the Keyblade-wielding protagonist of Kingdom Hearts?",
+      "answers": ["Sora"]
+    },
+    {
+      "id": "qz-video-games-q132",
+      "question": "Who is the white-haired demon hunter protagonist of Devil May Cry?",
+      "answers": ["Dante"]
+    },
+    {
+      "id": "qz-video-games-q133",
+      "question": "Which Japanese company makes the Resident Evil series?",
+      "answers": ["Capcom"]
+    },
+    {
+      "id": "qz-video-games-q134",
+      "question": "What is the name of the zombie-infested city in the early Resident Evil games?",
+      "answers": ["Raccoon City"]
+    },
+    {
+      "id": "qz-video-games-q135",
+      "question": "Which rookie cop from Resident Evil 2 returns as the hero of Resident Evil 4?",
+      "answers": ["Leon", "Leon Kennedy", "Leon S. Kennedy"]
+    },
+    {
+      "id": "qz-video-games-q136",
+      "question": "Which company publishes Silent Hill, Castlevania, and Metal Gear?",
+      "answers": ["Konami"]
+    },
+    {
+      "id": "qz-video-games-q137",
+      "question": "What is the surname of the vampire-hunting family in Castlevania?",
+      "answers": ["Belmont"]
+    },
+    {
+      "id": "qz-video-games-q138",
+      "question": "Who is the mad scientist arch-enemy of Mega Man?",
+      "answers": ["Dr. Wily", "Wily", "Albert Wily"]
+    },
+    {
+      "id": "qz-video-games-q139",
+      "question": "Street Fighter's Chun-Li comes from which country?",
+      "answers": ["China"]
+    },
+    {
+      "id": "qz-video-games-q140",
+      "question": "Who is the thunder god character in Mortal Kombat?",
+      "answers": ["Raiden"]
+    },
+    {
+      "id": "qz-video-games-q141",
+      "question": "What is the surname of Tekken's feuding family of Heihachi, Kazuya, and Jin?",
+      "answers": ["Mishima"]
+    },
+    {
+      "id": "qz-video-games-q142",
+      "question": "What was Overwatch's cowboy hero McCree renamed to in 2021?",
+      "answers": ["Cassidy", "Cole Cassidy"]
+    },
+    {
+      "id": "qz-video-games-q143",
+      "question": "What is the insectoid alien swarm race in StarCraft called?",
+      "answers": ["Zerg"]
+    },
+    {
+      "id": "qz-video-games-q144",
+      "question": "What was the first expansion for World of Warcraft?",
+      "answers": ["The Burning Crusade", "Burning Crusade"]
+    },
+    {
+      "id": "qz-video-games-q145",
+      "question": "What is the name of the town where the original Diablo takes place?",
+      "answers": ["Tristram"]
+    },
+    {
+      "id": "qz-video-games-q146",
+      "question": "The card game Hearthstone is set in which game universe?",
+      "answers": ["Warcraft", "World of Warcraft"]
+    },
+    {
+      "id": "qz-video-games-q147",
+      "question": "Which company developed League of Legends and Valorant?",
+      "answers": ["Riot Games", "Riot"]
+    },
+    {
+      "id": "qz-video-games-q148",
+      "question": "What is the name of Dota 2's annual world championship tournament?",
+      "answers": ["The International", "International", "TI"]
+    },
+    {
+      "id": "qz-video-games-q149",
+      "question": "What game replaced Counter-Strike: Global Offensive in 2023?",
+      "answers": ["Counter-Strike 2", "CS2"]
+    },
+    {
+      "id": "qz-video-games-q150",
+      "question": "Which studio developed Apex Legends and Titanfall?",
+      "answers": ["Respawn", "Respawn Entertainment"]
+    },
+    {
+      "id": "qz-video-games-q151",
+      "question": "Which studio originally created Halo before making Destiny?",
+      "answers": ["Bungie"]
+    },
+    {
+      "id": "qz-video-games-q152",
+      "question": "What is the name of the chainsaw-equipped rifle in Gears of War?",
+      "answers": ["Lancer"]
+    },
+    {
+      "id": "qz-video-games-q153",
+      "question": "What is the name of Master Chief's AI companion?",
+      "answers": ["Cortana"]
+    },
+    {
+      "id": "qz-video-games-q154",
+      "question": "What is the nickname of Minecraft's original creator, Markus Persson?",
+      "answers": ["Notch"]
+    },
+    {
+      "id": "qz-video-games-q155",
+      "question": "What boss awaits players in Minecraft's End dimension?",
+      "answers": ["Ender Dragon", "The Ender Dragon"]
+    },
+    {
+      "id": "qz-video-games-q156",
+      "question": "By what developer name is Eric Barone, the solo creator of Stardew Valley, known?",
+      "answers": ["ConcernedApe"]
+    },
+    {
+      "id": "qz-video-games-q157",
+      "question": "Which developer single-handedly created Undertale?",
+      "answers": ["Toby Fox"]
+    },
+    {
+      "id": "qz-video-games-q158",
+      "question": "Which Australian studio developed Hollow Knight?",
+      "answers": ["Team Cherry"]
+    },
+    {
+      "id": "qz-video-games-q159",
+      "question": "What is the name of Cuphead's brother?",
+      "answers": ["Mugman"]
+    },
+    {
+      "id": "qz-video-games-q160",
+      "question": "Which small studio developed Among Us?",
+      "answers": ["Innersloth", "InnerSloth"]
+    },
+    {
+      "id": "qz-video-games-q161",
+      "question": "Which Atari co-founder is often called the godfather of the arcade industry?",
+      "answers": ["Nolan Bushnell", "Bushnell"]
+    },
+    {
+      "id": "qz-video-games-q162",
+      "question": "Which Japanese designer created Pac-Man?",
+      "answers": ["Toru Iwatani", "Iwatani"]
+    },
+    {
+      "id": "qz-video-games-q163",
+      "question": "What is the name of the red ghost in Pac-Man?",
+      "answers": ["Blinky"]
+    },
+    {
+      "id": "qz-video-games-q164",
+      "question": "Which 1982 Atari game was famously buried in a New Mexico landfill?",
+      "answers": ["E.T.", "ET", "E.T. the Extra-Terrestrial"]
+    },
+    {
+      "id": "qz-video-games-q165",
+      "question": "Which Atari 2600 game contained the first widely known video game Easter egg?",
+      "answers": ["Adventure"]
+    },
+    {
+      "id": "qz-video-games-q166",
+      "question": "Which programmer hid his name in Atari's Adventure, creating the first famous Easter egg?",
+      "answers": ["Warren Robinett", "Robinett"]
+    },
+    {
+      "id": "qz-video-games-q167",
+      "question": "What was Mario originally called in the 1981 Donkey Kong arcade game?",
+      "answers": ["Jumpman"]
+    },
+    {
+      "id": "qz-video-games-q168",
+      "question": "Princess Zelda was named after the wife of which famous American author?",
+      "answers": ["Zelda Fitzgerald", "F. Scott Fitzgerald's wife"]
+    },
+    {
+      "id": "qz-video-games-q169",
+      "question": "The name Sega is derived from what two-word phrase?",
+      "answers": ["Service Games"]
+    },
+    {
+      "id": "qz-video-games-q170",
+      "question": "In what year was Nintendo founded?",
+      "answers": ["1889"]
+    },
+    {
+      "id": "qz-video-games-q171",
+      "question": "What product did Nintendo originally manufacture when it was founded?",
+      "answers": ["Playing cards", "Hanafuda cards", "Hanafuda", "Cards"]
+    },
+    {
+      "id": "qz-video-games-q172",
+      "question": "Which game designer created the Final Fantasy series?",
+      "answers": ["Hironobu Sakaguchi", "Sakaguchi"]
+    },
+    {
+      "id": "qz-video-games-q173",
+      "question": "Which game designer created the Dragon Quest series?",
+      "answers": ["Yuji Horii", "Horii"]
+    },
+    {
+      "id": "qz-video-games-q174",
+      "question": "Which Dragon Ball artist designed the characters and monsters of Dragon Quest?",
+      "answers": ["Akira Toriyama", "Toriyama"]
+    },
+    {
+      "id": "qz-video-games-q175",
+      "question": "How many colossi does the player fight in Shadow of the Colossus?",
+      "answers": ["16"]
+    },
+    {
+      "id": "qz-video-games-q176",
+      "question": "Which director created Ico and Shadow of the Colossus?",
+      "answers": ["Fumito Ueda", "Ueda"]
+    },
+    {
+      "id": "qz-video-games-q177",
+      "question": "Which FromSoftware director created the Dark Souls series?",
+      "answers": ["Hidetaka Miyazaki", "Miyazaki"]
+    },
+    {
+      "id": "qz-video-games-q178",
+      "question": "In which NES game does entering the Konami Code grant 30 extra lives?",
+      "answers": ["Contra"]
+    },
+    {
+      "id": "qz-video-games-q179",
+      "question": "Which 1981 Nintendo arcade game introduced the character later known as Mario?",
+      "answers": ["Donkey Kong"]
+    },
+    {
+      "id": "qz-video-games-q180",
+      "question": "Which Soviet programmer created Tetris in 1984?",
+      "answers": ["Alexey Pajitnov", "Pajitnov", "Alexey Pazhitnov"]
+    },
+    {
+      "id": "qz-video-games-q181",
+      "question": "The classic Tetris 'Type A' theme is based on which Russian folk song?",
+      "answers": ["Korobeiniki", "Korobeyniki"]
+    },
+    {
+      "id": "qz-video-games-q182",
+      "question": "What is the name of the first episode of the original Doom, released as shareware?",
+      "answers": ["Knee-Deep in the Dead"]
+    },
+    {
+      "id": "qz-video-games-q183",
+      "question": "Which opera singer voices GLaDOS in the Portal games?",
+      "answers": ["Ellen McLain", "McLain"]
+    },
+    {
+      "id": "qz-video-games-q184",
+      "question": "In Portal, complete the famous phrase: 'The cake is a ___.'",
+      "answers": ["lie", "a lie"]
+    },
+    {
+      "id": "qz-video-games-q185",
+      "question": "What is the name of the dystopian Eastern European city in Half-Life 2?",
+      "answers": ["City 17"]
+    },
+    {
+      "id": "qz-video-games-q186",
+      "question": "Which 1993 point-and-click island adventure became the best-selling PC game of the 1990s?",
+      "answers": ["Myst"]
+    },
+    {
+      "id": "qz-video-games-q187",
+      "question": "Which Icelandic company develops the space MMO EVE Online?",
+      "answers": ["CCP Games", "CCP"]
+    },
+    {
+      "id": "qz-video-games-q188",
+      "question": "By what one-word nickname is legendary League of Legends midlaner Lee Sang-hyeok known?",
+      "answers": ["Faker"]
+    },
+    {
+      "id": "qz-video-games-q189",
+      "question": "Which Japanese engineer designed Space Invaders?",
+      "answers": ["Tomohiro Nishikado", "Nishikado"]
+    },
+    {
+      "id": "qz-video-games-q190",
+      "question": "Which 1979 Namco shooter was the predecessor to Galaga?",
+      "answers": ["Galaxian"]
+    },
+    {
+      "id": "qz-video-games-q191",
+      "question": "What was the Atari 2600 originally sold as before being renamed?",
+      "answers": ["Video Computer System", "Atari VCS", "VCS"]
+    },
+    {
+      "id": "qz-video-games-q192",
+      "question": "What was the first commercial home video game console, released in 1972?",
+      "answers": ["Magnavox Odyssey", "Odyssey"]
+    },
+    {
+      "id": "qz-video-games-q193",
+      "question": "Which engineer, known as the 'Father of Video Games', invented the first home console?",
+      "answers": ["Ralph Baer", "Baer"]
+    },
+    {
+      "id": "qz-video-games-q194",
+      "question": "The pioneering 1962 game Spacewar! ran on which DEC computer?",
+      "answers": ["PDP-1"]
+    },
+    {
+      "id": "qz-video-games-q195",
+      "question": "Who composed the soundtrack of Chrono Trigger?",
+      "answers": ["Yasunori Mitsuda", "Mitsuda"]
+    },
+    {
+      "id": "qz-video-games-q196",
+      "question": "Which Nintendo composer wrote the iconic Super Mario Bros. and Zelda themes?",
+      "answers": ["Koji Kondo", "Kondo"]
+    },
+    {
+      "id": "qz-video-games-q197",
+      "question": "Which bug-collecting enthusiast created the Pokemon franchise?",
+      "answers": ["Satoshi Tajiri", "Tajiri"]
+    },
+    {
+      "id": "qz-video-games-q198",
+      "question": "In what year did Nintendo release the ill-fated Virtual Boy?",
+      "answers": ["1995"]
+    },
+    {
+      "id": "qz-video-games-q199",
+      "question": "Which programmer single-handedly created Atari's infamous E.T. game in about five weeks?",
+      "answers": ["Howard Scott Warshaw", "Warshaw"]
+    },
+    {
+      "id": "qz-video-games-q200",
+      "question": "Typing the cheat code IDDQD activates god mode in which 1993 shooter?",
+      "answers": ["Doom"]
+    }
+  ],
+  "finals": {
+    "easy": {
+      "id": "qz-video-games-final-easy",
+      "question": "What color is Pac-Man?",
+      "answers": ["Yellow"]
+    },
+    "medium": {
+      "id": "qz-video-games-final-medium",
+      "question": "What was Sega's 16-bit console called in North America?",
+      "answers": ["Genesis", "Sega Genesis", "Mega Drive"]
+    },
+    "hard": {
+      "id": "qz-video-games-final-hard",
+      "question": "What gaming phone-console hybrid did Nokia release in 2003?",
+      "answers": ["N-Gage", "NGage", "Nokia N-Gage"]
+    }
+  }
+}
