@@ -495,10 +495,10 @@ fn planned_difficulty_sequence(
     sequence
 }
 
-/// Build the regular order and reserve all final candidates that can coexist
-/// with it. When a sparse pack has room for fewer final choices than the
-/// number of represented tiers, the tiers with the deepest candidate pools
-/// win (ties prefer easier) so the regular plan can retain rare questions.
+/// Build the regular order, then reserve one final candidate for every
+/// difficulty represented by the *leftover* slots. Planning the regular game
+/// first is important: a pack with exactly one Easy question must use that as
+/// the opening warm-up rather than hide it behind an Easy final choice.
 fn build_question_plan(
     creator: &[u8; 20],
     game_id: u64,
@@ -524,40 +524,6 @@ fn build_question_plan(
     );
     let mut round = 0u16;
 
-    let mut ranked = [0usize, 1, 2];
-    // Three elements are clearer and cheaper than pulling a sort dependency
-    // into this no_std contract. More candidates rank first; equal counts
-    // retain easy → medium → hard ordering.
-    for left in 0..2 {
-        for right in (left + 1)..3 {
-            if slots_by_difficulty[ranked[right]].len() > slots_by_difficulty[ranked[left]].len() {
-                ranked.swap(left, right);
-            }
-        }
-    }
-    let represented = slots_by_difficulty
-        .iter()
-        .filter(|slots| !slots.is_empty())
-        .count();
-    let free_for_final = total_candidates - num_questions as usize;
-    let final_choice_count = core::cmp::min(represented, free_for_final);
-    if final_choice_count == 0 {
-        fail("NotEnoughQuestionsForFinal");
-    }
-
-    let mut final_slots = [FINAL_SLOT_UNSET; 3];
-    let mut viable_final_difficulties = 0u8;
-    for ranked_index in 0..final_choice_count {
-        let difficulty = ranked[ranked_index];
-        let candidates = &mut slots_by_difficulty[difficulty];
-        if candidates.is_empty() {
-            fail("QuestionPlanImpossible");
-        }
-        let index = plan_random_index(&mut seed, &mut round, candidates.len());
-        final_slots[difficulty] = candidates.swap_remove(index);
-        viable_final_difficulties |= difficulty_bit(difficulty as u8);
-    }
-
     let capacity = [
         slots_by_difficulty[0].len() as u8,
         slots_by_difficulty[1].len() as u8,
@@ -573,6 +539,25 @@ fn build_question_plan(
     }
     if regular_slots.len() != num_questions as usize {
         fail("QuestionPlanImpossible");
+    }
+
+    // Only difficulties with an unused candidate after the regular plan are
+    // valid final-vote controls. This naturally adapts an all-easy pack (one
+    // Easy choice, no vote) and never promises a tier that would repeat a
+    // regular question.
+    let mut final_slots = [FINAL_SLOT_UNSET; 3];
+    let mut viable_final_difficulties = 0u8;
+    for difficulty in 0..3 {
+        let candidates = &mut slots_by_difficulty[difficulty];
+        if candidates.is_empty() {
+            continue;
+        }
+        let index = plan_random_index(&mut seed, &mut round, candidates.len());
+        final_slots[difficulty] = candidates.swap_remove(index);
+        viable_final_difficulties |= difficulty_bit(difficulty as u8);
+    }
+    if viable_final_difficulties == 0 {
+        fail("NotEnoughQuestionsForFinal");
     }
 
     QuestionPlan {
