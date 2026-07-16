@@ -169,6 +169,7 @@ header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-
     font-size: 1.2rem;
     line-height: 1;
 }
+.game-settings-trigger[hidden] { display: none !important; }
 .game-settings-trigger:hover { background: var(--bg-selection-container-hover); }
 main.game-stage-open #chain-status { display: none; }
 main.game-stage-open #game-stage-timer { margin-right: auto; }
