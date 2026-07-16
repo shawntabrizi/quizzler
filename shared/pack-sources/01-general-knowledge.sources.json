@@ -32,8 +32,8 @@
     },
     {
       "id": "qz-general-knowledge-q005",
-      "question": "What do you call a word that is spelled the same as another word but has a different meaning?",
-      "answers": ["Homograph", "a homograph", "Homonym", "a homonym"],
+      "question": "What is the linguistic term for two words spelled the same but with different meanings, such as bat the animal and bat the sports equipment?",
+      "answers": ["Homograph", "homographs", "a homograph"],
       "difficulty": "easy"
     },
     {
@@ -158,8 +158,8 @@
     },
     {
       "id": "qz-general-knowledge-q027",
-      "question": "Which orange vegetable is popularly said to help you see in the dark?",
-      "answers": ["Carrot", "carrots"],
+      "question": "Carrots are rich in beta-carotene, which the body can convert into which vitamin?",
+      "answers": ["Vitamin A", "A"],
       "difficulty": "easy"
     },
     {
@@ -351,7 +351,7 @@
     {
       "id": "qz-general-knowledge-q059",
       "question": "Which Italian city is home to a famously leaning bell tower?",
-      "answers": ["Pisa", "Leaning Tower of Pisa"],
+      "answers": ["Pisa"],
       "difficulty": "easy"
     },
     {
@@ -680,7 +680,7 @@
     },
     {
       "id": "qz-general-knowledge-q114",
-      "question": "What unit is used to measure the loudness of sound?",
+      "question": "What unit is commonly used to measure sound level?",
       "answers": ["Decibel", "decibels"],
       "difficulty": "medium"
     },

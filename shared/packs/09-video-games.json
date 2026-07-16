@@ -199,7 +199,7 @@
     { "text": "Which Nintendo composer wrote the iconic Super Mario Bros. and Zelda themes?", "answers": ["Koji Kondo","Kondo"], "difficulty": "hard" },
     { "text": "Which bug-collecting enthusiast created the Pokemon franchise?", "answers": ["Satoshi Tajiri","Tajiri"], "difficulty": "hard" },
     { "text": "In what year did Nintendo release the ill-fated Virtual Boy?", "answers": ["1995"], "difficulty": "hard" },
-    { "text": "Which famously peaceful world leader is notorious among Civilization players for reaching for nuclear weapons?", "answers": ["Gandhi","Mahatma Gandhi"], "difficulty": "hard" },
+    { "text": "Which 1982 Atari 2600 game was famously buried in a New Mexico landfill?", "answers": ["E.T.","ET","E.T. the Extra-Terrestrial","E.T. the Extra Terrestrial"], "difficulty": "hard" },
     { "text": "Typing the cheat code IDDQD activates god mode in which 1993 shooter?", "answers": ["Doom"], "difficulty": "hard" }
   ]
 }

@@ -410,8 +410,8 @@
     },
     {
       "id": "qz-food-drink-q068",
-      "question": "Which broad category of drink is traditionally ordered by the pint in British pubs?",
-      "answers": ["beer", "ale", "lager", "cider", "stout"],
+      "question": "Which alcoholic drink category includes ale and lager and is traditionally ordered by the pint in British pubs?",
+      "answers": ["beer"],
       "difficulty": "easy"
     },
     {
@@ -847,8 +847,8 @@
     },
     {
       "id": "qz-food-drink-q141",
-      "question": "Which brunch cocktail tops up orange juice with sparkling wine?",
-      "answers": ["mimosa", "bucks fizz", "buck's fizz"],
+      "question": "Which cocktail is traditionally made with equal parts orange juice and sparkling wine?",
+      "answers": ["mimosa"],
       "difficulty": "medium"
     },
     {
@@ -1037,7 +1037,7 @@
     },
     {
       "id": "qz-food-drink-q172",
-      "question": "Vanilla, the world's second-most expensive spice, is harvested from the pods of which flower?",
+      "question": "Vanilla is harvested from the pods of which kind of flower?",
       "answers": ["orchid", "orchids", "an orchid", "vanilla orchid"],
       "difficulty": "hard"
     },
@@ -1073,7 +1073,7 @@
     },
     {
       "id": "qz-food-drink-q178",
-      "question": "The red bar syrup grenadine takes its name and flavor from which fruit?",
+      "question": "Traditionally, grenadine is made from the juice of which fruit?",
       "answers": ["pomegranate", "pomegranates"],
       "difficulty": "hard"
     },

@@ -1353,11 +1353,11 @@
    "difficulty": "hard"
   },
   {
-   "text": "Bluetooth technology is named after a 10th-century king of which country?",
+   "text": "Bluetooth technology is named after Harald Bluetooth, a 10th-century king of which two countries?",
    "answers": [
-    "Denmark",
     "Denmark and Norway",
-    "Norway"
+    "Norway and Denmark",
+    "Denmark & Norway"
    ],
    "difficulty": "hard"
   },
