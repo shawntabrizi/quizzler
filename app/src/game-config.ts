@@ -38,10 +38,13 @@ function durationLabel(seconds: number): string {
     return `~${minutes} min ${remainder} sec`;
 }
 
+export function presetDurationLabel(preset: BlockPreset): string {
+    return durationLabel(preset.blocks * BLOCK_SECONDS_ESTIMATE);
+}
+
 /** A friendly label for the UI; the encoded block count remains internal. */
 export function presetLabel(preset: BlockPreset): string {
-    const seconds = preset.blocks * BLOCK_SECONDS_ESTIMATE;
-    return `${preset.name} · ${durationLabel(seconds)}`;
+    return `${preset.name} · ${presetDurationLabel(preset)}`;
 }
 
 /**
@@ -61,7 +64,13 @@ export function countdownLabel(deadline: bigint, currentBlock: bigint, msSinceSn
 }
 
 export function questionCountOptions(maxQuestions: number): number[] {
-    return Array.from({ length: Math.max(0, maxQuestions) }, (_, index) => index + 1);
+    const maximum = Math.max(0, Math.floor(maxQuestions));
+    if (maximum <= 5) {
+        return Array.from({ length: maximum }, (_, index) => index + 1);
+    }
+
+    const commonLengths = [5, 10, 15, 20].filter((length) => length <= maximum);
+    return commonLengths.at(-1) === maximum ? commonLengths : [...commonLengths, maximum];
 }
 
 export function isAllowedBlockPreset(value: number, presets: readonly BlockPreset[]): boolean {

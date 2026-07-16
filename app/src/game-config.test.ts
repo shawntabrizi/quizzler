@@ -28,9 +28,12 @@ describe("game configuration presets", () => {
         expect(MAX_LOBBY_PLAYERS).toBe(24);
     });
 
-    it("caps question choices to the selected pack", () => {
+    it("offers compact, pack-bounded question choices", () => {
         expect(questionCountOptions(1)).toEqual([1]);
         expect(questionCountOptions(4)).toEqual([1, 2, 3, 4]);
+        expect(questionCountOptions(6)).toEqual([5, 6]);
+        expect(questionCountOptions(13)).toEqual([5, 10, 13]);
+        expect(questionCountOptions(20)).toEqual([5, 10, 15, 20]);
         expect(questionCountOptions(0)).toEqual([]);
     });
 
