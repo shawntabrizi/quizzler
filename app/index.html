@@ -13,13 +13,11 @@
 <body>
     <main>
         <header>
-            <h1>Quizzler</h1>
-            <span class="tagline">Proof of Knowledge</span>
             <div id="chain-status" data-testid="chain-status">
                 <span class="chain-status-dot" aria-hidden="true"></span>
                 <span id="conn-pill" data-testid="conn-pill" role="status">connecting…</span>
                 <span class="chain-status-divider" aria-hidden="true"></span>
-                <span id="chain-account" data-testid="chain-account" title="Active account">—</span>
+                <span id="chain-account" data-testid="chain-account" title="Your player name">—</span>
             </div>
             <div id="game-actions" class="row" data-testid="game-actions">
                 <button id="btn-leave-screen" class="quiet" data-testid="btn-leave-screen">Back home — resume later</button>
@@ -74,15 +72,15 @@
                     <button id="btn-new-pack" data-testid="btn-new-pack">Make a pack</button>
                 </div>
             </div>
-            <div id="display-name-card" class="card" data-testid="display-name-card" style="display: none;">
-                <h2>Player name</h2>
-                <p class="hint">Optional. It appears for everyone in your lobby and scorecard instead of your shortened address.</p>
+            <div id="display-name-card" class="card" data-testid="display-name-card">
+                <h2>Your player alias</h2>
+                <p class="hint">Choose the name everyone sees in your lobbies and scorecards. Leave it empty to use your friendly generated player name.</p>
                 <div class="row">
                     <div class="grow">
-                        <label for="display-name">Name</label>
+                        <label for="display-name">Alias</label>
                         <input id="display-name" data-testid="display-name" type="text" maxlength="24" autocomplete="nickname" placeholder="Alex" />
                     </div>
-                    <button id="btn-save-display-name" class="primary" data-testid="btn-save-display-name" style="align-self: end;">Save name</button>
+                    <button id="btn-save-display-name" class="primary" data-testid="btn-save-display-name" style="align-self: end;">Save alias</button>
                 </div>
                 <div id="display-name-status" class="draft-save-status" data-testid="display-name-status" role="status" aria-live="polite"></div>
             </div>

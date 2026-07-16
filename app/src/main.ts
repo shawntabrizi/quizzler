@@ -24,7 +24,7 @@ import {
     createContractRuntimeFromClient,
     ensureContractAccountMapped,
 } from "@parity/product-sdk-contracts";
-import { accountIdBytes, ss58Encode, ss58ToH160, truncateAddress } from "@parity/product-sdk-address";
+import { accountIdBytes, ss58Encode, ss58ToH160 } from "@parity/product-sdk-address";
 import { encodeFunctionData, erc20Abi, hexToBytes } from "viem";
 
 import registryAbi from "./abi-registry.json";
@@ -32,6 +32,7 @@ import gameAbi from "./abi-game.json";
 import sessionRegistryAbi from "./abi-session-registry.json";
 import contractInfo from "./contract-address.json";
 import { retryChainRead } from "./chain-read-retry";
+import { generatedPlayerName, playerLabels as resolvePlayerLabels, playerName } from "./player-identity";
 import {
     ANSWER_BLOCK_PRESETS,
     countdownLabel,
@@ -291,6 +292,8 @@ interface Snapshot {
     players: string[];
     /** Optional on-chain names, parallel to `players`. */
     playerNames: string[];
+    /** Friendly labels derived from on-chain aliases and stable fallbacks. */
+    playerLabels: string[];
     scores: number[];
     /** Per-roster-player difficulty choice and whether it is locked. */
     difficultyChoices: number[];
@@ -479,6 +482,11 @@ let createGamePreflightTimer: ReturnType<typeof setTimeout> | null = null;
 let preparedGameCreationNonce: bigint | null = null;
 
 let myDisplayName = "";
+// Profile reads are intentionally non-blocking, so guard an optimistic save
+// from an older RPC response (or a pre-inclusion game snapshot) that arrives
+// afterwards. Keep the local result until the chain echoes the same value.
+let displayNameRevision = 0;
+let pendingDisplayName: string | null = null;
 
 // Pack studio state. Draft contents are deliberately local until the final
 // publish action; only the selected cover and validated quiz are ever sent to
@@ -611,12 +619,11 @@ function setTransactionStatus(message: string | null): void {
     $transactionStatus.textContent = message ?? "";
 }
 
-function showActiveAccount(address: string): void {
-    // Keep this compact enough for the phone header. CSS must not ellipsize an
-    // already shortened value, otherwise it reads like two nested truncations.
-    $chainAccount.textContent = truncateAddress(address, 4, 3);
-    $chainAccount.title = `Active account: ${address}`;
-    $chainAccount.setAttribute("aria-label", `Active account: ${address}`);
+function showActivePlayerName(): void {
+    const name = playerName(myAddress, myDisplayName);
+    $chainAccount.textContent = name;
+    $chainAccount.title = `Your player name: ${name}`;
+    $chainAccount.setAttribute("aria-label", `Your player name: ${name}`);
 }
 
 // Chain plumbing (block numbers) stays out of the header; the shared block
@@ -632,14 +639,9 @@ function subscribeChainStatus(): void {
     chainStatusSubscription = bestBlocks.subscribe(onBlockSignal);
 }
 
-function fmtAddr(addr: string): string {
-    return addr.toLowerCase() === myAddress ? "You" : truncateAddress(addr);
-}
-
-function fmtPlayer(snap: Pick<Snapshot, "players" | "playerNames">, addr: string): string {
+function fmtPlayer(snap: Pick<Snapshot, "players" | "playerLabels">, addr: string): string {
     const index = snap.players.findIndex((player) => player.toLowerCase() === addr.toLowerCase());
-    const name = index >= 0 ? snap.playerNames[index]?.trim() : "";
-    return name || fmtAddr(addr);
+    return index >= 0 ? snap.playerLabels[index] ?? playerName(addr) : playerName(addr);
 }
 
 /** In-flight tx feedback: spinner + disabled, cleared in the finally. */
@@ -1977,8 +1979,8 @@ async function init(): Promise<void> {
     productAccount = productRes.value;
     myAddress = ss58ToH160(productAccount.address).toLowerCase();
     savedGameId = readSavedGame();
-    showActiveAccount(productAccount.address);
-    bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
+    showActivePlayerName();
+    bootLog("Player account ready", "ok");
 
     bootLog("Opening chain client…");
     const { paseo_asset_hub } = await descriptorReady;
@@ -2028,6 +2030,12 @@ async function init(): Promise<void> {
         }
         return;
     }
+
+    // A profile read is independent of resuming a game. Start it now so the
+    // home form and compact header show the saved on-chain alias as soon as it
+    // arrives, without delaying a returning player's game recovery.
+    syncDisplayNameProfile();
+    void hydrateDisplayName();
 
     // Sealed packs are immutable. Restore their last known metadata for an
     // instant picker on a return visit, then reconcile the current registry
@@ -2109,6 +2117,61 @@ const $lobbyInstantPlayStatus = getEl("lobby-instant-play-status");
 const $lobbyInstantPlayError = getEl("lobby-instant-play-error");
 const $btnRetryInstantPlay = getEl<HTMLButtonElement>("btn-retry-instant-play");
 
+function syncDisplayNameProfile(status?: string): void {
+    if (!myAddress) return;
+    const fallback = generatedPlayerName(myAddress);
+    $displayName.placeholder = fallback;
+    // A live snapshot may arrive while the player is editing their alias. Do
+    // not overwrite their unsaved text just because a polling read completes.
+    if (document.activeElement !== $displayName) $displayName.value = myDisplayName;
+    $displayNameStatus.textContent = status
+        ?? (myDisplayName
+            ? `Saved alias: ${myDisplayName}.`
+            : `No custom alias yet — you’ll appear as ${fallback}.`);
+    showActivePlayerName();
+}
+
+function applyOnChainDisplayName(name: string, observedRevision: number): void {
+    if (observedRevision !== displayNameRevision) return;
+    if (pendingDisplayName !== null) {
+        if (name !== pendingDisplayName) return;
+        pendingDisplayName = null;
+    }
+    if (name === myDisplayName) return;
+    myDisplayName = name;
+    displayNameRevision += 1;
+    syncDisplayNameProfile();
+}
+
+function applyMyDisplayNameToLatest(): void {
+    if (latest === null) return;
+    const index = latest.players.findIndex((player) => player.toLowerCase() === myAddress);
+    if (index < 0) return;
+    const playerNames = [...latest.playerNames];
+    playerNames[index] = myDisplayName;
+    latest = {
+        ...latest,
+        playerNames,
+        playerLabels: resolvePlayerLabels(latest.players, playerNames),
+    };
+    render(latest);
+}
+
+async function hydrateDisplayName(): Promise<void> {
+    if (!productAccount || !myAddress) return;
+    const observedRevision = displayNameRevision;
+    try {
+        const result = await retryChainRead<any>(() => game.getDisplayName.query(myAddress, {
+            origin: productAccount!.address,
+        }));
+        if (!result.success) return;
+        applyOnChainDisplayName(String(result.value).trim(), observedRevision);
+    } catch {
+        // The party game remains usable with its generated identity when this
+        // optional profile read is temporarily unavailable.
+    }
+}
+
 function renderQuickPlayStatus(): void {
     const configured = sessionRegistryConfigured();
     const enabled = sessionAccount !== null;
@@ -2178,12 +2241,19 @@ getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", asyn
         return;
     }
     busy = true;
+    // Invalidate reads launched before the player chose this new value.
+    displayNameRevision += 1;
     $displayNameStatus.textContent = "";
     setLoading("btn-save-display-name", true);
     try {
         await sendTx(game, "setDisplayName", name);
         myDisplayName = name;
-        $displayNameStatus.textContent = name ? "Name saved for your next lobby refresh." : "Name cleared.";
+        pendingDisplayName = name;
+        displayNameRevision += 1;
+        syncDisplayNameProfile(name
+            ? `Saved as ${name}. Everyone in your games will see it.`
+            : `Alias cleared. You’ll appear as ${generatedPlayerName(myAddress)}.`);
+        applyMyDisplayNameToLatest();
     } catch (error) {
         $displayNameStatus.textContent = friendlyError(error);
     } finally {
@@ -2681,6 +2751,9 @@ getEl("btn-pack-continue").addEventListener("click", () => {
     $configError.textContent = "";
     updateSelectedPackSummary();
     showScreen("configure");
+    // The picker owns its own scroll region on phones. Start the next setup
+    // step at its heading rather than preserving the previous page position.
+    window.scrollTo(0, 0);
     scheduleCreateGamePreflight();
 });
 
@@ -3487,6 +3560,7 @@ async function publishPackDraft(): Promise<void> {
         updateSelectedPackSummary();
         $builderPublishStatus.textContent = "Published — now set up your game.";
         showScreen("configure");
+        window.scrollTo(0, 0);
         scheduleCreateGamePreflight();
     } catch (error) {
         $builderError.textContent = friendlyError(error);
@@ -3518,6 +3592,8 @@ window.addEventListener("pagehide", () => {
 // ── Game loop ────────────────────────────────────────────────────────
 
 function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
+    const players = [myAddress];
+    const playerNames = [myDisplayName];
     return {
         phase: {
             stage: STAGE_LOBBY,
@@ -3545,8 +3621,9 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             player_count: 1,
             active_player_count: 1,
         },
-        players: [myAddress],
-        playerNames: [myDisplayName],
+        players,
+        playerNames,
+        playerLabels: resolvePlayerLabels(players, playerNames),
         scores: [0],
         difficultyChoices: [0],
         difficultyVoteLocked: [false],
@@ -3794,6 +3871,7 @@ async function poll(): Promise<void> {
     }
     const polledGameId = gameId;
     const polledSession = gameSession;
+    const polledDisplayNameRevision = displayNameRevision;
     pollInFlight = true;
     try {
         const liveResult = await retryChainRead<any>(() => game.getLiveGame.query(polledGameId));
@@ -3853,11 +3931,18 @@ async function poll(): Promise<void> {
         const normalizedPlayerNames = playerNames.length === players.length
             ? playerNames
             : Array.from({ length: players.length }, () => "");
-        const myPlayerIndex = players.indexOf(myAddress);
+        const myPlayerIndex = players.findIndex((player) => player.toLowerCase() === myAddress);
         if (myPlayerIndex >= 0 && normalizedPlayerNames[myPlayerIndex] !== undefined) {
-            myDisplayName = normalizedPlayerNames[myPlayerIndex];
-            $displayName.value = myDisplayName;
+            applyOnChainDisplayName(normalizedPlayerNames[myPlayerIndex], polledDisplayNameRevision);
         }
+        // A read from just before a successful alias save must not make the
+        // table briefly revert to a generated name while the next block
+        // catches up. Other players always retain their chain values.
+        const visiblePlayerNames = [...normalizedPlayerNames];
+        if (myPlayerIndex >= 0 && pendingDisplayName !== null) {
+            visiblePlayerNames[myPlayerIndex] = myDisplayName;
+        }
+        const friendlyPlayerLabels = resolvePlayerLabels(players, visiblePlayerNames);
 
         let qText = "";
         let aText = "";
@@ -3886,7 +3971,8 @@ async function poll(): Promise<void> {
             phase,
             game: gameView,
             players,
-            playerNames: normalizedPlayerNames,
+            playerNames: visiblePlayerNames,
+            playerLabels: friendlyPlayerLabels,
             scores,
             difficultyChoices,
             difficultyVoteLocked,

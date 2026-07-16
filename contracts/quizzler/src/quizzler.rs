@@ -163,8 +163,8 @@ struct LiveGameView {
     active_player_count: u8,
     players: alloc::vec::Vec<pvm::Address>,
     scores: alloc::vec::Vec<u32>,
-    /// Parallel to `players`; an empty string means the client should fall
-    /// back to its normal abbreviated address label.
+    /// Parallel to `players`; an empty string means the client should use its
+    /// deterministic friendly fallback label.
     player_names: alloc::vec::Vec<String>,
     /// Parallel to `players`. A zero is meaningful only when the matching
     /// `difficulty_vote_locked` entry is true; otherwise the player has not
@@ -232,8 +232,8 @@ struct Storage {
     // concurrent creation from the same account.
     created_game_of: pvm::storage::Mapping<([u8; 20], u64), u64>,
     // Optional, global social label for an account. A blank mapping value is
-    // intentionally represented by an absent entry so legacy UI can retain
-    // address labels as a safe fallback.
+    // intentionally represented by an absent entry so clients can generate a
+    // stable friendly fallback without storing extra profile data.
     display_names: pvm::storage::Mapping<[u8; 20], String>,
 }
 
@@ -1089,7 +1089,7 @@ mod quizzler {
 
     /// Set the optional social label shown next to this account in every
     /// lobby, review, and scorecard. Sending an empty string clears it;
-    /// clients then fall back to their standard abbreviated address.
+    /// clients then fall back to a deterministic friendly identity.
     #[pvm::method]
     pub fn set_display_name(name: String) {
         let who = main_caller();
@@ -1101,6 +1101,16 @@ mod quizzler {
             fail("BadDisplayName");
         }
         Storage::display_names().insert(&who, &name);
+    }
+
+    /// The optional global social label for an account. This lets a returning
+    /// player hydrate their Home profile before they join a lobby. An empty
+    /// result means no custom label has been saved.
+    #[pvm::method]
+    pub fn get_display_name(who: pvm::Address) -> String {
+        Storage::display_names()
+            .get(&who.to_fixed_bytes())
+            .unwrap_or_default()
     }
 
     fn create_game_record(
@@ -1547,7 +1557,7 @@ mod quizzler {
     }
 
     /// Optional display names parallel to `get_players`; an empty entry means
-    /// no name has been set and clients should render their address fallback.
+    /// no name has been set and clients should render their friendly fallback.
     #[pvm::method]
     pub fn get_player_names(game_id: u64) -> Vec<String> {
         load_game(game_id);

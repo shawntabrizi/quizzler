@@ -99,13 +99,6 @@ main.pack-picker-open > #screen-pack-select.active {
 }
 
 header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-header h1 {
-    font-family: Georgia, "Times New Roman", serif;
-    font-weight: 400;
-    font-size: 2rem;
-    line-height: 1.25;
-}
-header .tagline { color: var(--fg-secondary); font-size: 0.85rem; }
 #chain-status {
     margin-left: auto;
     display: inline-flex;
@@ -140,7 +133,13 @@ header .tagline { color: var(--fg-secondary); font-size: 0.85rem; }
 #conn-pill { color: var(--fg-secondary); }
 #conn-pill.ok { color: var(--fg-success); }
 #conn-pill.err { color: var(--fg-error); }
-#chain-account { color: var(--fg-primary); }
+#chain-account {
+    min-width: 0;
+    max-width: 26ch;
+    overflow: hidden;
+    color: var(--fg-primary);
+    text-overflow: ellipsis;
+}
 .transaction-status {
     color: var(--fg-secondary);
     font-size: 0.76rem;
@@ -676,6 +675,17 @@ ul.pack-grid li { position: relative; min-width: 0; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
+.config-fields > div { min-width: 0; }
+/* Keep these as real platform controls. Some Android WebViews are less
+   reliable at opening a restyled select, so explicitly preserve the native
+   menu affordance and give it a comfortably large touch target. */
+.config-fields select {
+    display: block;
+    min-height: 48px;
+    touch-action: manipulation;
+    appearance: auto;
+    -webkit-appearance: menulist;
+}
 .field-hint {
     color: var(--fg-secondary);
     font-size: 0.8rem;
@@ -1208,22 +1218,19 @@ ul.pack-grid li { position: relative; min-width: 0; }
             max(16px, env(safe-area-inset-left));
     }
     header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 6px 10px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 14px;
     }
-    header h1 { min-width: 0; font-size: 1.75rem; }
-    header .tagline { grid-column: 1; grid-row: 2; }
     #chain-status {
-        grid-column: 2;
-        grid-row: 1;
         gap: 4px;
         margin-left: 0;
         padding: 4px 7px;
         justify-self: end;
     }
+    #chain-account { max-width: 17ch; }
     #conn-pill.ok {
         position: absolute;
         width: 1px;
@@ -1235,9 +1242,9 @@ ul.pack-grid li { position: relative; min-width: 0; }
         white-space: nowrap;
     }
     #chain-status .chain-status-divider { display: none; }
-    #game-actions { grid-column: 1 / -1; width: 100%; gap: 8px; }
+    #game-actions { width: 100%; gap: 8px; }
     #game-actions button { flex: 1 1 0; min-width: 0; }
-    .transaction-status { grid-column: 1 / -1; }
+    .transaction-status { width: 100%; }
     main.game-stage-open { padding-bottom: 0; }
     main.game-stage-open > header { margin-bottom: 12px; }
     .game-stage-content { padding-bottom: 12px; }
