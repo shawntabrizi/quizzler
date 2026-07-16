@@ -217,6 +217,7 @@ main.game-stage-open > section.game-stage.active {
 #answer-form.game-action-dock > .error-text { grid-column: 1 / -1; }
 #answer-form.game-action-dock > #btn-submit-answer { min-width: 148px; }
 .review-action-dock { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+.review-action-buttons { display: inline-flex; flex: 0 0 auto; gap: 8px; align-items: center; }
 .review-action-dock .error-text { grid-column: 1 / -1; }
 .vote-action-dock .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .final-wager-action-dock { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
@@ -1109,6 +1110,18 @@ ul.pack-grid li { position: relative; min-width: 0; }
     gap: 12px;
 }
 .final-wager-heading h2 { margin: 3px 0 0; }
+.final-wager-difficulty {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--bg-selection-container-active);
+    border: 1px solid var(--border-divider);
+    border-radius: var(--radius-nested);
+}
+.final-wager-difficulty span { color: var(--fg-secondary); font-size: 0.85rem; }
+.final-wager-difficulty strong { font-size: 1rem; }
 .final-wager-score {
     display: flex;
     align-items: baseline;
@@ -1129,11 +1142,18 @@ ul.pack-grid li { position: relative; min-width: 0; }
     line-height: 1;
 }
 .final-wager-input-wrap { display: grid; gap: 6px; }
+.final-wager-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: stretch;
+}
 .final-wager-input-wrap input {
     min-height: 54px;
     font-size: 1.2rem;
     font-variant-numeric: tabular-nums;
 }
+.final-wager-input-row .quiet { min-height: 54px; white-space: nowrap; }
 .final-wager-note { color: var(--fg-secondary); font-size: 0.82rem; }
 #final-wager-status {
     min-height: 1.25em;
@@ -1215,6 +1235,21 @@ ul.pack-grid li { position: relative; min-width: 0; }
     background: var(--bg-action-primary);
 }
 
+.decision-leaderboard .list li { padding: 8px 10px; margin-bottom: 4px; font-size: 0.9rem; }
+.decision-leaderboard .list li:last-child { margin-bottom: 0; }
+.vote-choice {
+    flex: 0 0 auto;
+    padding: 3px 7px;
+    border-radius: var(--radius-full);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.vote-choice.is-waiting { color: var(--fg-secondary); background: var(--bg-selection-container-active); }
+.vote-choice.difficulty-0 { color: #86efac; background: rgba(34, 197, 94, 0.2); }
+.vote-choice.difficulty-1 { color: #fde047; background: rgba(234, 179, 8, 0.2); }
+.vote-choice.difficulty-2 { color: #fca5a5; background: rgba(239, 68, 68, 0.2); }
+
 /* Review: the canonical answer, revealed */
 .answer-panel {
     background: var(--bg-surface-nested);
@@ -1225,9 +1260,23 @@ ul.pack-grid li { position: relative; min-width: 0; }
 }
 .answer-panel .answer-text { font-size: 1.35rem; font-weight: 600; line-height: 1.3; }
 .answer-panel .answer-sub { color: var(--fg-secondary); font-size: 0.85rem; margin-top: 6px; }
+.review-ready-legend { margin: 12px 0 0 !important; }
 
 .answer-row-identity { display: inline-flex; min-width: 0; align-items: center; gap: 6px; }
 .answer-row-player { min-width: 0; overflow-wrap: anywhere; }
+.answer-row-ready {
+    display: inline-grid;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    place-items: center;
+    border-radius: var(--radius-full);
+    color: var(--fg-primary-inverted);
+    background: var(--fg-success);
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+}
 .live-answer-text {
     min-width: 0;
     margin-left: auto;
@@ -1281,6 +1330,17 @@ ul.pack-grid li { position: relative; min-width: 0; }
     padding: 14px 0 22px;
     border-bottom: 1px solid var(--border-divider);
 }
+.results-preview-controls {
+    display: grid;
+    gap: 10px;
+    margin: 18px 0 4px;
+    padding: 14px;
+    background: var(--bg-surface-nested);
+    border: 1px solid var(--border-divider);
+    border-radius: var(--radius-nested);
+}
+.results-preview-controls .hint { margin: 0; }
+.results-preview-controls .quiet { justify-self: start; }
 .results-final-summary {
     display: grid;
     gap: 14px;
@@ -1520,7 +1580,8 @@ ul.pack-grid li { position: relative; min-width: 0; }
         padding-inline: 12px;
     }
     .review-action-dock { grid-template-columns: 1fr; align-items: stretch; }
-    .review-action-dock #btn-continue { width: 100%; }
+    .review-action-buttons { display: grid; grid-template-columns: 1fr; }
+    .review-action-buttons button { width: 100%; }
     .review-action-dock #continue-status { text-align: center; }
     .vote-action-dock .row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
     .vote-action-dock .btn-difficulty { min-width: 0; padding-inline: 8px; font-size: 0.78rem; }

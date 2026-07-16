@@ -525,6 +525,11 @@ let selectedWager: number | null = null;
 let selectedDifficulty: number | null = null;
 let activeAnswerKey = "";
 let activeFinalWagerKey = "";
+// Final scoring is already settled during final review, even though the
+// contract keeps the room there until everyone has acknowledged it. This is
+// a local route only: it lets players see the trophy page immediately while
+// polling continues until the terminal on-chain stage arrives.
+let finalResultsPreviewOpen = false;
 // Optimistic local echo of my in-flight answer, shown until the chain
 // confirms it (rolled back if the tx fails).
 let optimisticAnswer: { qkey: number; answer: string; wager: number } | null = null;
@@ -4656,6 +4661,7 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     selectedDifficulty = null;
     activeAnswerKey = "";
     activeFinalWagerKey = "";
+    finalResultsPreviewOpen = false;
     optimisticAnswer = null;
     lastRank = -1;
     behindPhaseCandidate = null;
@@ -4689,6 +4695,7 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     selectedDifficulty = null;
     activeAnswerKey = "";
     activeFinalWagerKey = "";
+    finalResultsPreviewOpen = false;
     optimisticAnswer = null;
     latestObservedAt = 0;
     gameEntryMark = null;
@@ -4716,7 +4723,13 @@ function recordFirstGameSnapshot(): void {
     gameEntryMark = null;
 }
 
-getEl("btn-back-home").addEventListener("click", () => leaveGame());
+getEl("btn-back-home").addEventListener("click", () => {
+    // A locally opened final scorecard is not yet a finished game. Preserve
+    // it in the return list if the player heads home before everyone marks
+    // ready, rather than making the preview a one-way exit.
+    const preserveSavedGame = finalResultsPreviewOpen && latest?.phase.stage === STAGE_FINAL_REVIEW;
+    leaveGame({ preserveSavedGame });
+});
 getEl("btn-abandoned-home").addEventListener("click", () => leaveGame());
 
 function returnToCurrentGame(): void {
@@ -5079,6 +5092,7 @@ async function poll(): Promise<void> {
             actionSentAt.clear();
             optimisticAnswer = null;
             selectedDifficulty = null;
+            finalResultsPreviewOpen = false;
         }
         const isAnswerStage =
             latest.phase.stage === STAGE_ANSWER || latest.phase.stage === STAGE_FINAL_ANSWER;
@@ -5151,8 +5165,14 @@ function render(snap: Snapshot): void {
             renderQuestion(snap);
             break;
         case STAGE_REVIEW:
-        case STAGE_FINAL_REVIEW:
             renderReview(snap);
+            break;
+        case STAGE_FINAL_REVIEW:
+            if (finalResultsPreviewOpen) {
+                renderResults(snap, true);
+            } else {
+                renderReview(snap);
+            }
             break;
         case STAGE_VOTE:
             renderVote(snap);
@@ -5632,11 +5652,16 @@ function renderFinalWager(snap: Snapshot): void {
     const locked = myIndex >= 0 && Boolean(snap.finalWagerLocked[myIndex]);
     const $input = getEl<HTMLInputElement>("final-wager-input");
     const $button = getEl<HTMLButtonElement>("btn-confirm-final-wager");
+    const $maxButton = getEl<HTMLButtonElement>("btn-max-final-wager");
 
+    getEl("final-wager-difficulty-value").textContent =
+        DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? "—";
     getEl("final-wager-score").textContent = String(score);
     getEl("final-wager-max").textContent = String(score);
     $input.max = String(score);
     $input.disabled = locked || !amActive || busy;
+    $maxButton.disabled = locked || !amActive || busy || actionsSent.has("final-wager");
+    $maxButton.setAttribute("aria-label", `Set wager to the maximum: ${score} points`);
     if (locked) $input.value = String(wager);
 
     const waiting = `${snap.phase.final_wager_count}/${snap.phase.active_player_count} active players locked in`;
@@ -5661,6 +5686,7 @@ function renderFinalWager(snap: Snapshot): void {
         });
     }
 
+    renderLeaderboard(getEl("final-wager-leaderboard"), snap);
     setGameControls("active");
     updateGameStageTimer(snap);
     showScreen("final-wager");
@@ -5697,6 +5723,16 @@ getEl("btn-confirm-final-wager").addEventListener("click", async () => {
     }
 });
 
+getEl("btn-max-final-wager").addEventListener("click", () => {
+    if (!latest || latest.phase.stage !== STAGE_FINAL_WAGER || busy) return;
+    if (!mySubmission(latest)?.active) return;
+    const myIndex = latest.players.indexOf(myAddress);
+    if (myIndex < 0 || latest.finalWagerLocked[myIndex]) return;
+    const max = Math.max(0, latest.scores[myIndex] ?? 0);
+    getEl<HTMLInputElement>("final-wager-input").value = String(max);
+    getEl("final-wager-error").textContent = "";
+});
+
 // ── Review screen ────────────────────────────────────────────────────
 
 function renderReview(snap: Snapshot): void {
@@ -5724,6 +5760,14 @@ function renderReview(snap: Snapshot): void {
             const identity = document.createElement("span");
             identity.className = "answer-row-identity";
             identity.append(span("answer-row-player", fmtPlayer(snap, s.player)));
+            const ready = s.active && (s.continue_ready || (isMe && actionsSent.has("continue")));
+            if (ready) {
+                const marker = span("answer-row-ready", "✓");
+                marker.dataset.testid = `review-ready-${s.player.toLowerCase()}`;
+                marker.setAttribute("aria-label", "Ready for the next question");
+                marker.setAttribute("title", "Ready for the next question");
+                identity.append(marker);
+            }
             if (!s.active) identity.append(span("sub", "left quiz"));
             const row = li(identity);
             row.className = "answer-row";
@@ -5758,12 +5802,21 @@ function renderReview(snap: Snapshot): void {
 
     const continued = (mine?.continue_ready ?? false) || actionsSent.has("continue");
     const $btn = getEl<HTMLButtonElement>("btn-continue");
+    const $viewResults = getEl<HTMLButtonElement>("btn-view-final-results");
     $btn.disabled = continued || !amActive;
     $btn.textContent = !amActive
         ? "You left this quiz"
         : continued
           ? "Waiting for others…"
-          : reviewContinueLabel(snap.phase.stage, snap.phase.cursor, snap.game.num_questions);
+          : isFinal
+            ? "Mark ready"
+            : reviewContinueLabel(snap.phase.stage, snap.phase.cursor, snap.game.num_questions);
+    $btn.classList.toggle("primary", !isFinal);
+    $btn.classList.toggle("quiet", isFinal);
+    $viewResults.style.display = isFinal ? "" : "none";
+    $viewResults.disabled = !isFinal;
+    $viewResults.classList.toggle("primary", isFinal);
+    $viewResults.classList.toggle("quiet", !isFinal);
     getEl("continue-status").textContent =
         `${snap.phase.continue_count}/${snap.phase.active_player_count} active players ready`;
 
@@ -5820,6 +5873,18 @@ getEl("btn-continue").addEventListener("click", async () => {
     }
 });
 
+getEl("btn-view-final-results").addEventListener("click", () => {
+    if (!latest || latest.phase.stage !== STAGE_FINAL_REVIEW) return;
+    finalResultsPreviewOpen = true;
+    render(latest);
+});
+
+getEl("btn-results-back-to-final-review").addEventListener("click", () => {
+    if (!latest || latest.phase.stage !== STAGE_FINAL_REVIEW) return;
+    finalResultsPreviewOpen = false;
+    render(latest);
+});
+
 // ── Difficulty vote ──────────────────────────────────────────────────
 
 function renderVote(snap: Snapshot): void {
@@ -5862,6 +5927,7 @@ function renderVote(snap: Snapshot): void {
     // Keep the final prompt out of the client until the wager phase is over.
     // The normal final-answer snapshot fetches its chosen question just in
     // time, preserving the intended "wager before prompt" party flow.
+    renderLeaderboard(getEl("vote-leaderboard"), snap, { showDifficultyChoices: true });
     setGameControls("active");
     updateGameStageTimer(snap);
     showScreen("vote");
@@ -5900,10 +5966,15 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
 
 // ── Results ──────────────────────────────────────────────────────────
 
-function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
+function renderLeaderboard(
+    list: HTMLElement,
+    snap: Snapshot,
+    options: { showDifficultyChoices?: boolean } = {},
+): void {
     const ranked = snap.players
         .map((p, i) => ({
             player: p,
+            index: i,
             score: snap.scores[i],
             active: snap.submissions.find((submission) => submission.player.toLowerCase() === p.toLowerCase())?.active ?? true,
         }))
@@ -5912,14 +5983,37 @@ function renderLeaderboard(list: HTMLElement, snap: Snapshot): void {
         .sort((a, b) => Number(b.active) - Number(a.active) || b.score - a.score);
     renderList(
         list,
-        ranked.map((r, i) =>
-            li(
+        ranked.map((r, i) => {
+            const children: Node[] = [
                 span("sub", `#${i + 1}`),
                 span("", fmtPlayer(snap, r.player)),
                 span("sub", r.active ? "" : "left quiz"),
-                span("right pts", `${r.score}`),
-            ),
-        ),
+            ];
+            if (options.showDifficultyChoices && r.active) {
+                const isMe = r.player.toLowerCase() === myAddress;
+                const optimisticChoice = isMe && actionsSent.has("difficulty")
+                    ? selectedDifficulty
+                    : null;
+                const choice = r.active && (snap.difficultyVoteLocked[r.index] || optimisticChoice !== null)
+                    ? (snap.difficultyVoteLocked[r.index]
+                        ? snap.difficultyChoices[r.index]
+                        : optimisticChoice)
+                    : null;
+                const label = choice === null ? "Waiting" : DIFFICULTY_NAMES[choice] ?? "Waiting";
+                const choiceBadge = span(
+                    `vote-choice${choice === null ? " is-waiting" : ` difficulty-${choice}`}`,
+                    label,
+                );
+                choiceBadge.setAttribute("aria-label", choice === null
+                    ? `${fmtPlayer(snap, r.player)} has not voted yet`
+                    : `${fmtPlayer(snap, r.player)} voted ${label}`);
+                children.push(choiceBadge);
+            }
+            children.push(span("right pts", `${r.score}`));
+            const row = li(...children);
+            if (options.showDifficultyChoices && r.active) row.classList.add("vote-standing-row");
+            return row;
+        }),
     );
 }
 
@@ -5987,7 +6081,7 @@ function renderFinalStandings(standings: readonly FinalStanding[], snap: Snapsho
     );
 }
 
-function renderResults(snap: Snapshot): void {
+function renderResults(snap: Snapshot, preview = false): void {
     const standings = rankFinalStandings({
         players: snap.players,
         scores: snap.scores,
@@ -5998,6 +6092,9 @@ function renderResults(snap: Snapshot): void {
     getEl("results-winner").textContent = winners.length > 0
         ? winners.map((standing) => fmtPlayer(snap, standing.player)).join(" & ")
         : "No active players";
+    getEl("results-page-eyebrow").textContent = preview ? "Final standings" : "Quiz complete";
+    getEl("results-winner-label").textContent = preview ? "Current winner" : "Winner";
+    getEl("results-preview-controls").style.display = preview ? "" : "none";
 
     const mine = standings.find((standing) => standing.player.toLowerCase() === myAddress);
     const myFinalSubmission = snap.submissions.find((submission) => submission.player.toLowerCase() === myAddress);
@@ -6017,6 +6114,12 @@ function renderResults(snap: Snapshot): void {
     getEl("results-final-question").textContent = snap.questionText || "Final question";
     getEl("results-final-correct-answer").textContent = snap.answerText || "—";
     renderFinalStandings(standings, snap);
+    if (preview) {
+        gameSettingsOpen = false;
+        setGameControls("hidden");
+        showScreen("results");
+        return;
+    }
     stopGamePolling();
     // A finished quiz is a scorecard, not a room a player can return to.
     // Keep it visible here, but remove it from future recovery choices.

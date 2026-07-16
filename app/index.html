@@ -369,6 +369,7 @@
                         <div class="answer-sub" id="review-difficulty" data-testid="review-difficulty"></div>
                     </div>
                     <ul class="list" id="review-rows" data-testid="review-rows" style="margin-top: 12px;"></ul>
+                    <p class="hint review-ready-legend">A green check means that player is ready to continue.</p>
                 </div>
                 <div class="card">
                     <h2>Leaderboard</h2>
@@ -376,7 +377,10 @@
                 </div>
             </div>
             <div class="game-action-dock review-action-dock">
-                <button id="btn-continue" class="primary" data-testid="btn-continue">Ready for next question</button>
+                <div class="review-action-buttons">
+                    <button id="btn-continue" class="primary" data-testid="btn-continue">Ready for next question</button>
+                    <button id="btn-view-final-results" class="quiet" data-testid="btn-view-final-results" type="button" style="display: none;">View trophy results</button>
+                </div>
                 <span class="muted" id="continue-status" data-testid="continue-status"></span>
                 <div class="error-text" id="review-error" role="alert"></div>
             </div>
@@ -416,6 +420,11 @@
                     <p class="hint" id="vote-status" data-testid="vote-status" style="margin-top: 12px;"></p>
                     <div class="error-text" id="vote-error" role="alert"></div>
                 </div>
+                <div class="card decision-leaderboard">
+                    <h2>Standings</h2>
+                    <p class="hint">See the scores before you choose.</p>
+                    <ul class="list" id="vote-leaderboard" data-testid="vote-leaderboard"></ul>
+                </div>
             </div>
             <div class="game-action-dock vote-action-dock">
                 <div class="row" role="group" aria-label="Final question difficulty">
@@ -437,15 +446,27 @@
                         </div>
                     </div>
                     <p class="hint">Choose your stake before the final question is revealed.</p>
+                    <div class="final-wager-difficulty" data-testid="final-wager-difficulty">
+                        <span>Final question difficulty</span>
+                        <strong id="final-wager-difficulty-value" data-testid="final-wager-difficulty-value">—</strong>
+                    </div>
                     <div class="final-wager-score">
                         <span>Your score</span>
                         <strong id="final-wager-score" data-testid="final-wager-score">—</strong>
                     </div>
                     <div class="final-wager-input-wrap">
                         <label for="final-wager-input">Wager points (0–<span id="final-wager-max" data-testid="final-wager-max">0</span>)</label>
-                        <input type="number" id="final-wager-input" data-testid="final-wager-input" min="0" value="0" inputmode="numeric" autocomplete="off" />
+                        <div class="final-wager-input-row">
+                            <input type="number" id="final-wager-input" data-testid="final-wager-input" min="0" value="0" inputmode="numeric" autocomplete="off" />
+                            <button id="btn-max-final-wager" class="quiet" data-testid="btn-max-final-wager" type="button">Max bet</button>
+                        </div>
                         <p class="final-wager-note">Your wager will be locked in before the final question appears.</p>
                     </div>
+                </div>
+                <div class="card decision-leaderboard">
+                    <h2>Standings</h2>
+                    <p class="hint">See the scores before you lock in your wager.</p>
+                    <ul class="list" id="final-wager-leaderboard" data-testid="final-wager-leaderboard"></ul>
                 </div>
             </div>
             <div class="game-action-dock final-wager-action-dock">
@@ -458,10 +479,14 @@
         <!-- Results -->
         <section id="screen-results" class="screen" data-testid="screen-results">
             <div class="card results-hero">
-                <p class="results-eyebrow">Quiz complete</p>
+                <p id="results-page-eyebrow" class="results-eyebrow">Quiz complete</p>
                 <div class="banner results-winner-banner">
-                    <div class="muted">Winner</div>
+                    <div id="results-winner-label" class="muted">Winner</div>
                     <div class="winner" id="results-winner" data-testid="results-winner"></div>
+                </div>
+                <div id="results-preview-controls" class="results-preview-controls" data-testid="results-preview-controls" style="display: none;">
+                    <p class="hint">You can check the final standings now. Return to the answers whenever you want to mark ready.</p>
+                    <button id="btn-results-back-to-final-review" class="quiet" data-testid="btn-results-back-to-final-review" type="button">Back to final answer</button>
                 </div>
                 <div id="results-final-summary" class="results-final-summary" data-testid="results-final-summary">
                     <div class="results-final-summary-heading">
