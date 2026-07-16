@@ -21,4 +21,5 @@ test("boots inside the host and reaches the home screen", async ({ testHost }) =
     await expect(frame.getByTestId("screen-home")).toBeVisible();
     await expect(frame.getByTestId("btn-join-game")).toBeVisible();
     await expect(frame.getByTestId("btn-new-pack")).toBeVisible();
+    await expect(frame.getByTestId("btn-game-settings")).toBeHidden();
 });

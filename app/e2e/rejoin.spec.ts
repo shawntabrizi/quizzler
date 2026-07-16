@@ -50,10 +50,12 @@ test("reopens an active joined quiz after refresh", async ({ testHost }) => {
         await frame.getByTestId("btn-settings-back-home").click();
         await expect(frame.getByTestId("screen-home")).toBeVisible();
         await expect(frame.getByTestId("your-games")).toBeVisible();
+        await expect(frame.getByTestId("btn-game-settings")).toBeHidden();
         const rejoin = frame.locator(`[data-testid="btn-rejoin-game"][data-game-id="${gameId}"]`);
         await expect(rejoin).toBeEnabled({ timeout: 120_000 });
         await rejoin.click();
         await expect(frame.getByTestId("screen-question")).toBeVisible({ timeout: 120_000 });
+        await expect(frame.getByTestId("btn-game-settings")).toBeVisible();
 
         // The host page owns the product iframe, so both must be reacquired
         // after reload. No UI signing follows this point: only chain reads are

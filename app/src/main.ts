@@ -558,6 +558,15 @@ function showScreen(name: Screen): void {
     }
     const isPackPicker = name === "pack-select";
     const isGameStage = name === "question" || name === "review" || name === "vote" || name === "final-wager";
+    // The header gear only opens a current game's settings. Make route changes
+    // authoritative so it can never remain as a dead control on setup, home,
+    // or results screens after a game transition.
+    const gameControlMode = name === "lobby"
+        ? "lobby"
+        : isGameStage
+          ? "active"
+          : "hidden";
+    setGameControls(gameControlMode);
     document.body.classList.toggle("pack-picker-open", isPackPicker);
     document.body.classList.toggle("game-stage-open", isGameStage);
     $appShell?.classList.toggle("pack-picker-open", isPackPicker);
