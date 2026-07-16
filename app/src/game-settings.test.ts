@@ -30,9 +30,8 @@ describe("game settings labels", () => {
         expect(playerCountLabel(2, 3)).toBe("2 active players of 3 total");
     });
 
-    it("names the final-round transitions instead of calling each one next", () => {
+    it("names the regular-review transition into the final round", () => {
         expect(reviewContinueLabel(2, 3, 5)).toBe("Ready for next question");
         expect(reviewContinueLabel(2, 4, 5)).toBe("Choose final difficulty");
-        expect(reviewContinueLabel(6, 0, 5)).toBe("See final results");
     });
 });

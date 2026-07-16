@@ -38,48 +38,65 @@
 
         <!-- Home -->
         <section id="screen-home" class="screen" data-testid="screen-home">
-            <div class="card">
-                <h2>Play</h2>
-                <div class="row">
-                    <div class="grow">
-                        <label for="join-game-id">Game code</label>
-                        <!-- Not type="number": codes are digit strings, and the
-                             numeric type strips leading zeros and accepts e/-. -->
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" id="join-game-id" data-testid="join-game-id" placeholder="6-digit code" />
+            <section id="display-name-card" class="card player-welcome-card" data-testid="display-name-card" aria-labelledby="home-name-heading">
+                <div class="player-welcome-topline">
+                    <div class="player-welcome-copy">
+                        <p class="player-welcome-eyebrow">Your player name</p>
+                        <h1 id="home-name-heading">
+                            <button id="btn-edit-display-name" class="player-welcome-name-trigger" data-testid="home-name-action" type="button" aria-label="Edit your player name" aria-controls="display-name-editor" aria-expanded="false">
+                                <span id="home-name-greeting" data-testid="home-name-greeting">Welcome, Player</span>
+                                <svg class="player-welcome-name-edit-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            </button>
+                        </h1>
+                        <p id="home-name-description" class="player-welcome-description">This is how friends will see you in every quiz.</p>
                     </div>
-                    <button id="btn-join-game" class="primary" data-testid="btn-join-game" style="align-self: end;">Join game</button>
                 </div>
-                <div class="error-text" id="home-error" data-testid="home-error" role="alert"></div>
-                <section id="your-games" class="your-games" data-testid="your-games" style="display: none;" aria-labelledby="your-games-title">
-                    <div class="your-games-heading">
-                        <div>
-                            <h3 id="your-games-title">Your games</h3>
-                            <p class="hint">Pick up where you left off.</p>
-                        </div>
-                    </div>
-                    <ul class="list your-games-list" id="your-games-list" data-testid="your-games-list"></ul>
-                </section>
-            </div>
-
-            <div class="card">
-                <h2>Host a game</h2>
-                <p class="hint">Choose a pack first, then set the pace for your group.</p>
-                <div class="row">
-                    <button id="btn-host-game" class="primary" data-testid="btn-host-game">Choose a pack</button>
-                </div>
-            </div>
-            <div id="display-name-card" class="card" data-testid="display-name-card">
-                <h2>Your name</h2>
-                <p class="hint">Choose the name everyone sees in your lobbies and scorecards. Leave it blank and we’ll give you a friendly name.</p>
-                <div class="row">
-                    <div class="grow">
-                        <label for="display-name">Name</label>
+                <div id="display-name-editor" class="player-name-editor" data-testid="home-name-editor" hidden>
+                    <div>
+                        <label for="display-name">Your name</label>
                         <input id="display-name" data-testid="display-name" type="text" maxlength="24" autocomplete="nickname" enterkeyhint="done" aria-describedby="display-name-status" placeholder="Alex" />
+                        <p class="field-hint">Choose the name friends will see in lobbies, answers, and scorecards.</p>
                     </div>
-                    <button id="btn-save-display-name" class="primary" data-testid="btn-save-display-name" style="align-self: end;">Save name</button>
+                    <div class="row player-name-editor-actions">
+                        <button id="btn-save-display-name" class="primary" data-testid="btn-save-display-name" type="button">Save name</button>
+                        <button id="btn-cancel-display-name" class="quiet" data-testid="btn-cancel-display-name" type="button">Cancel</button>
+                    </div>
                 </div>
-                <div id="display-name-status" class="draft-save-status" data-testid="display-name-status" role="status" aria-live="polite"></div>
-            </div>
+                <div id="display-name-status" class="draft-save-status player-welcome-status" data-testid="display-name-status" role="status" aria-live="polite"></div>
+            </section>
+            <section class="home-action-card home-join-card" data-testid="home-join-card" aria-labelledby="home-join-title">
+                <div class="home-action-card-copy">
+                    <span class="home-action-eyebrow">Play together</span>
+                    <h2 id="home-join-title" class="home-action-title">Join a game</h2>
+                    <span class="home-action-description">Enter the game code your host shared with you.</span>
+                </div>
+                <div class="home-join-control">
+                    <label class="sr-only" for="join-game-id">Game code</label>
+                    <!-- Not type="number": codes are digit strings, and the
+                         numeric type strips leading zeros and accepts e/-. -->
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" id="join-game-id" data-testid="join-game-id" placeholder="6-digit code" />
+                    <button id="btn-join-game" class="primary home-join-submit" data-testid="btn-join-game" type="button">Join</button>
+                </div>
+            </section>
+
+            <button id="btn-host-game" class="home-action-card home-host-card" data-testid="btn-host-game" type="button">
+                <span class="home-action-card-copy">
+                    <span class="home-action-eyebrow">Start a quiz</span>
+                    <span class="home-action-title">Host a game</span>
+                    <span class="home-action-description">Choose a pack, set the pace, and invite your group.</span>
+                </span>
+                <span class="home-action-arrow" aria-hidden="true">→</span>
+            </button>
+            <div class="error-text home-error" id="home-error" data-testid="home-error" role="alert"></div>
+            <section id="your-games" class="card your-games your-games-card" data-testid="your-games" style="display: none;" aria-labelledby="your-games-title">
+                <div class="your-games-heading">
+                    <div>
+                        <h3 id="your-games-title">Your games</h3>
+                        <p class="hint">Pick up where you left off.</p>
+                    </div>
+                </div>
+                <ul class="list your-games-list" id="your-games-list" data-testid="your-games-list"></ul>
+            </section>
             <div id="instant-play-card" class="card" data-testid="instant-play-card" style="display: none;">
                 <h2>Instant actions</h2>
                 <p class="hint" id="instant-play-status" data-testid="instant-play-status" role="status" aria-live="polite"></p>
@@ -369,7 +386,7 @@
                         <div class="answer-sub" id="review-difficulty" data-testid="review-difficulty"></div>
                     </div>
                     <ul class="list" id="review-rows" data-testid="review-rows" style="margin-top: 12px;"></ul>
-                    <p class="hint review-ready-legend">A green check means that player is ready to continue.</p>
+                    <p class="hint review-ready-legend" id="review-ready-legend">A green check means that player is ready to continue.</p>
                 </div>
                 <div class="card">
                     <h2>Leaderboard</h2>
@@ -379,7 +396,7 @@
             <div class="game-action-dock review-action-dock">
                 <div class="review-action-buttons">
                     <button id="btn-continue" class="primary" data-testid="btn-continue">Ready for next question</button>
-                    <button id="btn-view-final-results" class="quiet" data-testid="btn-view-final-results" type="button" style="display: none;">View trophy results</button>
+                    <button id="btn-view-final-results" class="quiet" data-testid="btn-view-final-results" type="button" style="display: none;">View results</button>
                 </div>
                 <span class="muted" id="continue-status" data-testid="continue-status"></span>
                 <div class="error-text" id="review-error" role="alert"></div>

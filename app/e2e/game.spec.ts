@@ -5,7 +5,7 @@ import { ScriptedPlayer } from "./scripted-player";
  * Full two-player game: bob plays through the UI, charlie is scripted
  * against the contract. Covers the whole loop — lobby, answer + wager,
  * live answers, review with an overturn vote, continue collapse, the
- * difficulty vote, the final wager round, and the results screen.
+ * difficulty vote, the final wager round, and the results preview.
  *
  * Scoring walkthrough (charlie answers wrong on purpose, both wager 1):
  *   Q1: bob correct +1 → 1; charlie wrong 0, bob votes "mark correct" —
@@ -13,7 +13,7 @@ import { ScriptedPlayer } from "./scripted-player";
  *   Final (both vote easy → "what is 2 plus 2"): bob wagers 1 → 2,
  *       charlie wagers 1 and misses → 0. Winner: bob at 2.
  */
-test("plays a full two-player game to the results screen", async ({ testHost }) => {
+test("plays a full two-player game to the final-results preview", async ({ testHost }) => {
     test.setTimeout(600_000);
 
     // Boot the UI player first — charlie's pack setup is slow, and the home
@@ -77,6 +77,7 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
             finalWager: 1,
             difficultyVote: 0,
             beforeDifficultyVote: () => charlieDifficultyVoteGate,
+            stopAtFinalReview: true,
         });
 
         // ── question 1: bob answers correctly with wager 1 ───────
@@ -154,11 +155,13 @@ test("plays a full two-player game to the results screen", async ({ testHost }) 
         await frame.getByTestId("answer-input").fill("4");
         await frame.getByTestId("btn-submit-answer").click();
 
-        // ── final review → results ───────────────────────────────
+        // ── final review → results preview ───────────────────────
         await expect(frame.getByTestId("screen-review")).toBeVisible({ timeout: 120_000 });
-        await frame.getByTestId("btn-continue").click();
+        await expect(frame.getByTestId("btn-continue")).toBeHidden();
+        await expect(frame.getByTestId("continue-status")).toBeHidden();
+        await frame.getByTestId("btn-view-final-results").click();
 
-        await expect(frame.getByTestId("screen-results")).toBeVisible({ timeout: 180_000 });
+        await expect(frame.getByTestId("screen-results")).toBeVisible({ timeout: 60_000 });
         await expect(frame.getByTestId("results-winner")).toHaveText("You");
         await expect(frame.getByTestId("results-final-placement")).toContainText("1st place");
         await expect(frame.getByTestId("results-final-wager")).toHaveText("+1");

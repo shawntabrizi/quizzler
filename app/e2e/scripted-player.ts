@@ -434,6 +434,8 @@ export class ScriptedPlayer {
      * Play the whole game with a fixed strategy, polling the chain. Resolves
      * when the game reaches Finished. `answer` is what we submit for every
      * regular/final question (pass a wrong answer to exercise overturns).
+     * A UI test that only needs the final-results preview can stop at final
+     * review, which deliberately has no player-ready action.
      * A test can hold its difficulty vote briefly to inspect the live
      * distribution after the UI player has voted.
      */
@@ -446,6 +448,7 @@ export class ScriptedPlayer {
             difficultyVote?: number;
             onStage?: (phase: PhaseView) => void;
             beforeDifficultyVote?: () => Promise<void>;
+            stopAtFinalReview?: boolean;
         },
     ): Promise<void> {
         const done = new Set<string>();
@@ -479,7 +482,13 @@ export class ScriptedPlayer {
                         }
                         break;
                     case STAGE.REVIEW:
+                        if (!done.has(key)) {
+                            await this.tx("readyContinue", [gameId]);
+                            done.add(key);
+                        }
+                        break;
                     case STAGE.FINAL_REVIEW:
+                        if (opts.stopAtFinalReview) return;
                         if (!done.has(key)) {
                             await this.tx("readyContinue", [gameId]);
                             done.add(key);

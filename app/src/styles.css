@@ -234,6 +234,224 @@ main.game-stage-open > section.game-stage.active {
 .card h2 { font-size: 1.1rem; font-weight: 600; line-height: 1.25; margin-bottom: 12px; }
 .card .hint { color: var(--fg-secondary); font-size: 0.85rem; margin-bottom: 12px; }
 
+/* Home identity is an invitation into the party rather than a buried account
+   setting. The compact editor stays behind the one clear action, while the
+   game-settings version remains deliberately utilitarian during a quiz. */
+.player-welcome-card {
+    position: relative;
+    overflow: hidden;
+    padding: 28px;
+    color: #fff;
+    background:
+        radial-gradient(circle at 88% 8%, rgba(196, 181, 253, 0.34), transparent 33%),
+        radial-gradient(circle at 8% 105%, rgba(109, 40, 217, 0.32), transparent 42%),
+        linear-gradient(135deg, #312e81, #1d1b4b 56%, #18181b);
+    border: 1px solid rgba(196, 181, 253, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), var(--shadow-2);
+}
+.player-welcome-topline {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+.player-welcome-copy { min-width: 0; }
+.player-welcome-eyebrow {
+    margin-bottom: 5px;
+    color: #ddd6fe;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+.player-welcome-card h1 { margin: 0; }
+.player-welcome-name-trigger {
+    display: inline-flex;
+    min-height: 44px;
+    max-width: 100%;
+    align-items: center;
+    gap: 9px;
+    padding: 0;
+    color: #fff;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-small);
+    font-family: inherit;
+    font-size: clamp(1.75rem, 6vw, 2.55rem);
+    font-weight: 750;
+    letter-spacing: -0.035em;
+    line-height: 1.06;
+    text-align: left;
+}
+.player-welcome-name-trigger:hover { color: #fff; background: rgba(255, 255, 255, 0.09); }
+.player-welcome-name-trigger > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.player-welcome-name-edit-icon {
+    width: 0.72em;
+    height: 0.72em;
+    flex: 0 0 auto;
+    opacity: 0.58;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.player-welcome-name-trigger:hover .player-welcome-name-edit-icon,
+.player-welcome-name-trigger:focus-visible .player-welcome-name-edit-icon { opacity: 1; transform: translateY(-1px); }
+.player-welcome-description {
+    max-width: 440px;
+    margin: 10px 0 0;
+    color: #ddd6fe;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+.player-name-editor {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(221, 214, 254, 0.3);
+}
+.player-name-editor[hidden] { display: none; }
+.player-name-editor label { color: #ede9fe; }
+.player-name-editor input {
+    color: #fff;
+    background: rgba(10, 10, 10, 0.42);
+    border-color: rgba(221, 214, 254, 0.46);
+}
+.player-name-editor input::placeholder { color: #c4b5fd; }
+.player-name-editor .field-hint { color: #ddd6fe; }
+.player-name-editor-actions { gap: 8px; }
+.player-name-editor-actions .quiet {
+    color: #f5f3ff;
+    border-color: rgba(221, 214, 254, 0.46);
+}
+.player-name-editor-actions .quiet:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+.player-welcome-status {
+    position: relative;
+    z-index: 1;
+    min-height: 1.25em;
+    margin-top: 10px;
+    color: #ddd6fe;
+}
+.player-welcome-status:empty { display: none; }
+.player-welcome-status.is-error { color: #fecaca; }
+
+/* The three Home decisions deliberately use distinct colors: violet for the
+   player's identity, blue for joining someone else's table, and warm amber
+   for starting a new one. Join stays direct: the familiar code field is part
+   of the same large action card rather than a separate detour. */
+.home-action-eyebrow {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--fg-tertiary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+.home-action-card {
+    display: grid;
+    width: 100%;
+    min-height: 136px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 16px;
+    padding: 24px;
+    overflow: hidden;
+    color: #fff;
+    border-radius: var(--radius-container);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-2);
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.home-action-card.home-join-card {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 15px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(103, 232, 249, 0.25), transparent 42%),
+        linear-gradient(135deg, #0c4a6e, #172554 68%, #171717);
+    border: 1px solid rgba(103, 232, 249, 0.42);
+}
+.home-action-card.home-join-card:focus-within { border-color: rgba(165, 243, 252, 0.78); }
+.home-action-card.home-host-card {
+    background:
+        radial-gradient(circle at 100% 0, rgba(253, 186, 116, 0.32), transparent 40%),
+        linear-gradient(135deg, #7c2d12, #431407 63%, #171717);
+    border: 1px solid rgba(251, 146, 60, 0.52);
+}
+.home-action-card.home-host-card:hover {
+    color: #fff;
+    background:
+        radial-gradient(circle at 100% 0, rgba(254, 215, 170, 0.45), transparent 42%),
+        linear-gradient(135deg, #9a3412, #5a1b09 63%, #1d1d1d);
+    border-color: rgba(253, 186, 116, 0.78);
+    transform: translateY(-1px);
+}
+.home-action-card-copy { display: grid; min-width: 0; }
+.home-action-card.home-join-card .home-action-eyebrow { color: #a5f3fc; }
+.home-action-card.home-host-card .home-action-eyebrow { color: #fed7aa; }
+.home-action-title {
+    overflow-wrap: anywhere;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+}
+.home-action-description {
+    max-width: 430px;
+    margin-top: 7px;
+    color: #e5e7eb;
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.38;
+    white-space: normal;
+}
+.home-action-arrow {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    place-items: center;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3);
+    font-size: 1.45rem;
+    font-weight: 800;
+    transition: transform 0.15s ease;
+}
+.home-action-card.home-join-card .home-action-description { color: #bae6fd; }
+.home-action-card.home-host-card .home-action-description { color: #fed7aa; }
+.home-action-card.home-host-card .home-action-arrow { color: #7c2d12; background: #fff7ed; }
+.home-host-card:hover .home-action-arrow { transform: translateX(3px); }
+.home-join-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+}
+.home-join-control input {
+    min-width: 0;
+    color: #fff;
+    background: rgba(8, 47, 73, 0.55);
+    border-color: rgba(165, 243, 252, 0.45);
+    border-radius: var(--radius-nested) 0 0 var(--radius-nested);
+    border-right: 0;
+}
+.home-join-control input::placeholder { color: #a5f3fc; }
+button.home-join-submit {
+    min-width: 112px;
+    color: #082f49;
+    background: #a5f3fc;
+    border-radius: 0 var(--radius-nested) var(--radius-nested) 0;
+}
+button.home-join-submit:hover { background: #cffafe; }
+.home-error { min-height: 0; margin: 0; }
+.home-error:not(:empty) { min-height: 1.2em; margin: -8px 0 16px; }
+
 /* Lobby: the join code is the job-to-be-done, so it gets its own
    high-contrast panel instead of hiding in body copy. */
 .lobby-card { padding: 28px; }
@@ -426,6 +644,11 @@ main.game-stage-open > section.game-stage.active {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--border-divider);
+}
+.your-games-card {
+    margin-top: 0;
+    padding-top: 18px;
+    border-top: 0;
 }
 .your-games-heading { margin-bottom: 10px; }
 .your-games-heading h3 { font-size: 0.95rem; }
@@ -1588,6 +1811,11 @@ ul.pack-grid li { position: relative; min-width: 0; }
     .final-wager-action-dock { grid-template-columns: 1fr; }
     .final-wager-action-dock #btn-confirm-final-wager { width: 100%; }
     .card { padding: 18px; }
+    .player-welcome-card { padding: 22px 18px; }
+    .player-name-editor-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .player-name-editor-actions button { width: 100%; }
+    .home-action-card { min-height: 124px; margin-bottom: 16px; padding: 20px 18px; gap: 12px; }
+    .home-action-arrow { width: 42px; height: 42px; font-size: 1.3rem; }
     .lobby-card { padding: 20px 18px; }
     .lobby-code-panel { margin: 16px 0 20px; padding: 22px 12px 18px; }
     #lobby-game-id { font-size: clamp(3.15rem, 16vw, 4.5rem); }

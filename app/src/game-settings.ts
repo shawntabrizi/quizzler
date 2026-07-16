@@ -35,9 +35,8 @@ export function gameProgressLabel(stage: number, cursor: number, questionCount: 
     }
 }
 
-/** The review acknowledgement should explain the next distinct party step. */
+/** The regular-review acknowledgement should explain the next party step. */
 export function reviewContinueLabel(stage: number, cursor: number, questionCount: number): string {
-    if (stage === STAGE_FINAL_REVIEW) return "See final results";
     if (stage === STAGE_REVIEW && cursor + 1 >= questionCount) return "Choose final difficulty";
     return "Ready for next question";
 }

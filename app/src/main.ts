@@ -2284,7 +2284,7 @@ async function init(): Promise<void> {
         if (sharedLobbyInvite.gameId === null) {
             inviteError = "This invite link doesn’t contain a valid six-digit game code.";
         } else if (knownGames.length === 0) {
-            getEl<HTMLInputElement>("join-game-id").value = sharedLobbyInvite.gameId.toString();
+            $joinGameId.value = sharedLobbyInvite.gameId.toString();
             bootLog(`Joining shared lobby ${sharedLobbyInvite.gameId}…`);
             if (await joinGameById(sharedLobbyInvite.gameId, $homeError)) return;
             // Catalog refreshes run in parallel and may clear the home error.
@@ -2311,6 +2311,7 @@ const $packSearch = getEl<HTMLInputElement>("pack-search");
 const $packCatalogStatus = getEl("pack-catalog-status");
 const $selectedPackSummary = getEl("selected-pack-summary");
 const $homeError = getEl("home-error");
+const $joinGameId = getEl<HTMLInputElement>("join-game-id");
 const $packSelectionError = getEl("pack-selection-error");
 const $configError = getEl("config-error");
 const $btnCreateGame = getEl<HTMLButtonElement>("btn-create-game");
@@ -2323,8 +2324,14 @@ const $configPackTitle = getEl("config-pack-title");
 const $configPackMeta = getEl("config-pack-meta");
 const $yourGames = getEl("your-games");
 const $yourGamesList = getEl("your-games-list");
+const $displayNameCard = getEl("display-name-card");
+const $homeNameGreeting = getEl("home-name-greeting");
+const $homeNameDescription = getEl("home-name-description");
+const $homeDisplayNameEditor = getEl("display-name-editor");
 const $displayName = getEl<HTMLInputElement>("display-name");
 const $displayNameStatus = getEl("display-name-status");
+const $btnEditDisplayName = getEl<HTMLButtonElement>("btn-edit-display-name");
+const $btnCancelDisplayName = getEl<HTMLButtonElement>("btn-cancel-display-name");
 const $settingsDisplayName = getEl<HTMLInputElement>("settings-display-name");
 const $settingsDisplayNameStatus = getEl("settings-display-name-status");
 const $instantPlayCard = getEl("instant-play-card");
@@ -2342,11 +2349,12 @@ const $btnSettingsRetryInstantPlay = getEl<HTMLButtonElement>("btn-settings-retr
 const $btnSettingsTurnOffInstantPlay = getEl<HTMLButtonElement>("btn-settings-turn-off-instant-play");
 const displayNameDraftInputs = new Set<HTMLInputElement>();
 let displayNameFeedback: { message: string; error: boolean } | null = null;
+let homeDisplayNameEditorOpen = false;
 
-function displayNameDefaultStatus(fallback: string): string {
-    return myDisplayName
-        ? `You’ll appear as ${myDisplayName}.`
-        : `You’ll appear as ${fallback}.`;
+function displayNameDefaultStatus(_fallback: string): string {
+    // The welcome card already shows the generated or saved name. Reserve the
+    // status line for useful feedback such as saving and validation errors.
+    return "";
 }
 
 function setDisplayNameStatus(message: string, error = false): void {
@@ -2365,6 +2373,19 @@ function setDisplayNameFeedback(message: string, error = false): void {
 function syncDisplayNameProfile(): void {
     if (!myAddress) return;
     const fallback = generatedPlayerName(myAddress);
+    const hasCustomName = myDisplayName.length > 0;
+    const visibleName = playerName(myAddress, myDisplayName);
+
+    $homeNameGreeting.textContent = `Welcome, ${visibleName}`;
+    $homeNameDescription.textContent = hasCustomName
+        ? "Tap your name whenever you want to change it."
+        : "This is your name in the game. Tap it to edit.";
+    $displayNameCard.classList.toggle("has-custom-name", hasCustomName);
+    $displayNameCard.classList.toggle("uses-generated-name", !hasCustomName);
+    $btnEditDisplayName.setAttribute("aria-label", `Edit your player name: ${visibleName}`);
+    $btnEditDisplayName.title = "Edit your player name";
+    $btnEditDisplayName.setAttribute("aria-expanded", String(homeDisplayNameEditorOpen));
+    $homeDisplayNameEditor.hidden = !homeDisplayNameEditorOpen;
 
     for (const input of [$displayName, $settingsDisplayName]) {
         input.placeholder = fallback;
@@ -2378,6 +2399,19 @@ function syncDisplayNameProfile(): void {
         feedback?.message ?? displayNameDefaultStatus(fallback),
         feedback?.error ?? false,
     );
+}
+
+function openHomeDisplayNameEditor(): void {
+    homeDisplayNameEditorOpen = true;
+    syncDisplayNameProfile();
+    requestAnimationFrame(() => $displayName.focus());
+}
+
+function closeHomeDisplayNameEditor(): void {
+    homeDisplayNameEditorOpen = false;
+    displayNameDraftInputs.delete($displayName);
+    displayNameFeedback = null;
+    syncDisplayNameProfile();
 }
 
 function applyOnChainDisplayName(name: string, observedRevision: number): void {
@@ -2541,6 +2575,7 @@ async function saveDisplayName(input: HTMLInputElement): Promise<void> {
         pendingDisplayName = name;
         displayNameRevision += 1;
         displayNameDraftInputs.delete(input);
+        if (input === $displayName) homeDisplayNameEditorOpen = false;
         setDisplayNameFeedback(name
             ? `Saved as ${name}. Everyone in your games will see it.`
             : `Name cleared. You’ll appear as ${generatedPlayerName(myAddress)}.`);
@@ -2560,6 +2595,8 @@ async function saveDisplayName(input: HTMLInputElement): Promise<void> {
 getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", () => {
     void saveDisplayName($displayName);
 });
+$btnEditDisplayName.addEventListener("click", openHomeDisplayNameEditor);
+$btnCancelDisplayName.addEventListener("click", closeHomeDisplayNameEditor);
 getEl<HTMLButtonElement>("btn-settings-save-display-name").addEventListener("click", () => {
     void saveDisplayName($settingsDisplayName);
 });
@@ -2569,6 +2606,11 @@ for (const input of [$displayName, $settingsDisplayName]) {
         setDisplayNameFeedback("Save to use this name in your games.");
     });
     input.addEventListener("keydown", (event) => {
+        if (input === $displayName && homeDisplayNameEditorOpen && event.key === "Escape") {
+            event.preventDefault();
+            closeHomeDisplayNameEditor();
+            return;
+        }
         if (event.key !== "Enter" || event.isComposing) return;
         event.preventDefault();
         void saveDisplayName(input);
@@ -4038,10 +4080,10 @@ getEl("btn-create-game").addEventListener("click", async () => {
     }
 });
 
-getEl("btn-join-game").addEventListener("click", async () => {
+async function submitJoinGame(): Promise<void> {
     if (busy || !productAccount) return;
     $homeError.textContent = "";
-    const raw = getEl<HTMLInputElement>("join-game-id").value;
+    const raw = $joinGameId.value;
     if (raw === "") {
         $homeError.textContent = "Enter a game code.";
         return;
@@ -4057,12 +4099,14 @@ getEl("btn-join-game").addEventListener("click", async () => {
     } finally {
         setLoading("btn-join-game", false);
     }
-});
+}
 
-getEl<HTMLInputElement>("join-game-id").addEventListener("keydown", (event) => {
+getEl("btn-join-game").addEventListener("click", () => void submitJoinGame());
+
+$joinGameId.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
         event.preventDefault();
-        getEl<HTMLButtonElement>("btn-join-game").click();
+        void submitJoinGame();
     }
 });
 
@@ -5803,22 +5847,27 @@ function renderReview(snap: Snapshot): void {
     const continued = (mine?.continue_ready ?? false) || actionsSent.has("continue");
     const $btn = getEl<HTMLButtonElement>("btn-continue");
     const $viewResults = getEl<HTMLButtonElement>("btn-view-final-results");
-    $btn.disabled = continued || !amActive;
+    // The final answer has already settled everyone's score. Unlike a regular
+    // review, it has no next party action to coordinate, so people can open
+    // the results immediately rather than marking themselves ready first.
+    $btn.style.display = isFinal ? "none" : "";
+    $btn.disabled = isFinal || continued || !amActive;
     $btn.textContent = !amActive
         ? "You left this quiz"
         : continued
           ? "Waiting for others…"
-          : isFinal
-            ? "Mark ready"
-            : reviewContinueLabel(snap.phase.stage, snap.phase.cursor, snap.game.num_questions);
+          : reviewContinueLabel(snap.phase.stage, snap.phase.cursor, snap.game.num_questions);
     $btn.classList.toggle("primary", !isFinal);
     $btn.classList.toggle("quiet", isFinal);
     $viewResults.style.display = isFinal ? "" : "none";
     $viewResults.disabled = !isFinal;
     $viewResults.classList.toggle("primary", isFinal);
     $viewResults.classList.toggle("quiet", !isFinal);
-    getEl("continue-status").textContent =
-        `${snap.phase.continue_count}/${snap.phase.active_player_count} active players ready`;
+    getEl("continue-status").style.display = isFinal ? "none" : "";
+    getEl("continue-status").textContent = isFinal
+        ? ""
+        : `${snap.phase.continue_count}/${snap.phase.active_player_count} active players ready`;
+    getEl("review-ready-legend").style.display = isFinal ? "none" : "";
 
     renderLeaderboard(getEl("review-leaderboard"), snap);
     setGameControls("active");
