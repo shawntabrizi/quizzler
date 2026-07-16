@@ -12,14 +12,12 @@
 </head>
 <body>
     <main>
-        <header>
+        <!-- The game header only appears when it has an in-game control or
+             transaction feedback to show. Connection state remains available
+             to assistive tech below, without taking player-facing space. -->
+        <span id="conn-pill" class="sr-only" data-testid="conn-pill" role="status" aria-live="polite">connecting…</span>
+        <header id="app-header" hidden>
             <span id="game-stage-timer" class="game-stage-timer" data-testid="game-stage-timer" hidden></span>
-            <div id="chain-status" data-testid="chain-status">
-                <span class="chain-status-dot" aria-hidden="true"></span>
-                <span id="conn-pill" data-testid="conn-pill" role="status">connecting…</span>
-                <span class="chain-status-divider" aria-hidden="true"></span>
-                <span id="chain-account" data-testid="chain-account" title="Your player name">—</span>
-            </div>
             <button id="btn-game-settings" class="game-settings-trigger" data-testid="btn-game-settings" type="button" aria-label="Game settings" title="Game settings" hidden><span aria-hidden="true">⚙</span></button>
             <span id="transaction-status" class="transaction-status" data-testid="transaction-status" role="status" aria-live="polite" hidden></span>
         </header>
@@ -68,7 +66,6 @@
                 <p class="hint">Choose a pack first, then set the pace for your group.</p>
                 <div class="row">
                     <button id="btn-host-game" class="primary" data-testid="btn-host-game">Choose a pack</button>
-                    <button id="btn-new-pack" data-testid="btn-new-pack">Make a pack</button>
                 </div>
             </div>
             <div id="display-name-card" class="card" data-testid="display-name-card">
@@ -91,6 +88,9 @@
                 </div>
                 <div id="instant-play-error" class="error-text" data-testid="instant-play-error" role="alert"></div>
             </div>
+            <p class="home-secondary-action">
+                <button id="btn-new-pack" class="text-link" data-testid="btn-new-pack" type="button">Create a pack</button>
+            </p>
         </section>
 
         <!-- Host setup: pack selection -->
@@ -109,12 +109,11 @@
                         <div id="pack-list" data-testid="pack-list"></div>
                     </div>
                 </div>
-                <div class="pack-selection-footer">
+                <div class="pack-selection-footer setup-bottom-nav" data-testid="pack-bottom-nav">
                     <p class="pack-selection-summary" id="selected-pack-summary" role="status" aria-live="polite">Choose a pack to continue.</p>
                     <div class="error-text" id="pack-selection-error" data-testid="pack-selection-error" role="alert"></div>
                     <div class="setup-actions pack-picker-actions">
                         <button id="btn-pack-back" class="quiet" data-testid="btn-pack-back">Back home</button>
-                        <button id="btn-new-pack-from-picker" data-testid="btn-new-pack-from-picker">New pack</button>
                         <button id="btn-pack-continue" class="primary" data-testid="btn-pack-continue" disabled>Continue</button>
                     </div>
                 </div>
@@ -123,42 +122,45 @@
 
         <!-- Host setup: game options -->
         <section id="screen-configure" class="screen" data-testid="screen-configure">
-            <div class="setup-heading">
-                <p class="setup-step">Step 2 of 2</p>
-                <h2>Set up your game</h2>
-                <p class="hint">Choose a comfortable pace, then share the code with your group.</p>
+            <div class="setup-scroll">
+                <div class="setup-heading">
+                    <p class="setup-step">Step 2 of 2</p>
+                    <h2>Set up your game</h2>
+                    <p class="hint">Choose a comfortable pace, then share the code with your group.</p>
+                </div>
+                <div class="config-layout">
+                    <aside class="selected-pack-card" aria-label="Selected pack">
+                        <div id="config-pack-art" class="config-pack-art" aria-hidden="true">✨</div>
+                        <div class="config-pack-copy">
+                            <p class="setup-step">Selected pack</p>
+                            <h3 id="config-pack-title" data-testid="config-pack-title">Choose a pack</h3>
+                            <p id="config-pack-meta" class="hint">Select a pack to configure a game.</p>
+                        </div>
+                    </aside>
+                    <div class="card config-card">
+                        <div class="config-fields">
+                            <fieldset class="config-choice-field">
+                                <legend>Questions</legend>
+                                <div id="cfg-questions" class="config-choice-group config-question-choices" data-testid="cfg-questions" aria-describedby="cfg-questions-hint"></div>
+                                <p id="cfg-questions-hint" class="field-hint">Choose how many regular questions to play from this pack.</p>
+                            </fieldset>
+                            <fieldset class="config-choice-field">
+                                <legend>Answer time</legend>
+                                <div id="cfg-answer-blocks" class="config-choice-group" data-testid="cfg-answer-blocks"></div>
+                            </fieldset>
+                            <fieldset class="config-choice-field">
+                                <legend>Review time</legend>
+                                <div id="cfg-review-blocks" class="config-choice-group" data-testid="cfg-review-blocks"></div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="config-layout">
-                <aside class="selected-pack-card" aria-label="Selected pack">
-                    <div id="config-pack-art" class="config-pack-art" aria-hidden="true">✨</div>
-                    <div class="config-pack-copy">
-                        <p class="setup-step">Selected pack</p>
-                        <h3 id="config-pack-title" data-testid="config-pack-title">Choose a pack</h3>
-                        <p id="config-pack-meta" class="hint">Select a pack to configure a game.</p>
-                        <button id="btn-config-back" class="quiet" data-testid="btn-config-back">Change pack</button>
-                    </div>
-                </aside>
-                <div class="card config-card">
-                    <div class="config-fields">
-                        <fieldset class="config-choice-field">
-                            <legend>Questions</legend>
-                            <div id="cfg-questions" class="config-choice-group config-question-choices" data-testid="cfg-questions" aria-describedby="cfg-questions-hint"></div>
-                            <p id="cfg-questions-hint" class="field-hint">Choose how many regular questions to play from this pack.</p>
-                        </fieldset>
-                        <fieldset class="config-choice-field">
-                            <legend>Answer time</legend>
-                            <div id="cfg-answer-blocks" class="config-choice-group" data-testid="cfg-answer-blocks"></div>
-                        </fieldset>
-                        <fieldset class="config-choice-field">
-                            <legend>Review time</legend>
-                            <div id="cfg-review-blocks" class="config-choice-group" data-testid="cfg-review-blocks"></div>
-                        </fieldset>
-                    </div>
-                    <div class="error-text" id="config-error" data-testid="config-error" role="alert"></div>
-                    <div class="setup-actions">
-                        <button id="btn-config-back-bottom" class="quiet" data-testid="btn-config-back-bottom">Back to packs</button>
-                        <button id="btn-create-game" class="primary" data-testid="btn-create-game" disabled>Create game</button>
-                    </div>
+            <div class="setup-bottom-nav config-bottom-nav" data-testid="config-bottom-nav">
+                <div class="error-text" id="config-error" data-testid="config-error" role="alert"></div>
+                <div class="setup-actions">
+                    <button id="btn-config-back-bottom" class="quiet" data-testid="btn-config-back-bottom">Back to packs</button>
+                    <button id="btn-create-game" class="primary" data-testid="btn-create-game" disabled>Create game</button>
                 </div>
             </div>
         </section>

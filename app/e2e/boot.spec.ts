@@ -14,12 +14,18 @@ test("boots inside the host and reaches the home screen", async ({ testHost }) =
     expect(mappingAt).toBeGreaterThanOrEqual(0);
     expect(handlesAt).toBeGreaterThan(mappingAt);
     expect(bootLog).not.toContain("contract mismatch");
-    const playerName = await frame.getByTestId("chain-account").textContent();
-    expect(playerName).toMatch(/\S/);
-    expect(playerName).not.toMatch(/0x|\.\.\./i);
+    // Chain connectivity remains available to assistive technology and tests,
+    // but no longer occupies the player-facing header on every screen.
+    await expect(frame.getByTestId("chain-status")).toHaveCount(0);
+    await expect(frame.getByTestId("chain-account")).toHaveCount(0);
+    await expect(frame.locator("#app-header")).toBeHidden();
     await expect(frame.getByTestId("display-name-card")).toBeVisible();
     await expect(frame.getByTestId("screen-home")).toBeVisible();
     await expect(frame.getByTestId("btn-join-game")).toBeVisible();
-    await expect(frame.getByTestId("btn-new-pack")).toBeVisible();
+    const createPack = frame.getByTestId("btn-new-pack");
+    await expect(createPack).toBeVisible();
+    await expect(createPack).toHaveText("Create a pack");
+    await expect(createPack).toHaveClass(/text-link/);
+    await expect(createPack.locator("xpath=..")).toHaveClass(/home-secondary-action/);
     await expect(frame.getByTestId("btn-game-settings")).toBeHidden();
 });
