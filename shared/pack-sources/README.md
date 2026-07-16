@@ -1,14 +1,29 @@
 # Starter-pack editorial records
 
 This directory is the review trail for Quizzler's built-in packs. It is deliberately
-**not** part of a pack's deployable JSON and is never sent to a contract. Runtime remains
-chain-only: `shared/packs/*.json` contains only the game prompt and accepted answers.
+**not** part of a pack's deployable JSON. Runtime remains chain-only:
+`shared/packs/*.json` contains each prompt, its accepted answers, and its
+`easy`/`medium`/`hard` difficulty. The review record is repository-only.
 
 Each `*.sources.json` file has the same basename as its pack, is versioned with
 `"version": 1`, and is keyed to the pack's exact prompt plus normalized accepted answer
 variants. The separate stable `id` is permanent: retain it when rewriting wording or
 answer variants so editorial history remains traceable. The included
 [`schema.json`](./schema.json) is useful for JSON-editor validation.
+
+## Difficulty is question metadata
+
+Every prompt is labeled `easy`, `medium`, or `hard`. The label is relative to
+the audience for that pack: a difficult specialist pack may reasonably contain
+only `easy` questions for its subject. Do not create separate final questions.
+At game creation, Quizzler reserves one unused prompt and offers only the
+difficulties that remain viable for the players' final-round vote.
+
+For broad starter packs, aim for a useful spread rather than a precise global
+standard. The bundled packs use an 80/80/40 Easy/Medium/Hard split so a game
+can start with confidence, vary its regular rounds, and still have choices for
+the final. A community pack with only one or two tiers remains valid; the UI
+will show only the choices the pack can actually support.
 
 ## Staged workflow
 
@@ -19,7 +34,8 @@ contain only these scaffold fields:
 {
   "id": "qz-geography-q001",
   "question": "Which city is the capital of France?",
-  "answers": ["Paris"]
+  "answers": ["Paris"],
+  "difficulty": "easy"
 }
 ```
 
@@ -32,7 +48,7 @@ pnpm scaffold:editorial -- 05-geography.json
 pnpm validate:editorial
 ```
 
-The scaffold writes permanent IDs for all 200 regular prompts and three finals. It refuses
+The scaffold writes permanent IDs and preserves the assigned difficulty for every prompt. It refuses
 to overwrite a manifest that already has entries, so manually preserve IDs once review has
 begun.
 
@@ -88,7 +104,7 @@ passes any still-draft packs untouched. Once the whole library is curated, use
 
 The strict audit requires all of the following:
 
-- A unique stable ID across every supplied manifest; exact prompt/answer alignment with
+- A unique stable ID across every supplied manifest; exact prompt/answer/difficulty alignment with
   the pack; and no likely duplicate normalized prompt among release-ready packs.
 - At least one HTTPS source, an explicit source-rights classification, and a declaration that
   it was used for fact verification rather than copied wording. Allowed `rights` values are
@@ -97,7 +113,8 @@ The strict audit requires all of the following:
   concise attribution. The required `use: "fact-verification"` declaration means the team
   checked factual claims but wrote original trivia wording rather than copying expression.
 - A real `verified_on` date, a `stable` or `dynamic` classification, and an
-  `easy`/`medium`/`hard` difficulty. Final entries must use their final-round difficulty.
+  `easy`/`medium`/`hard` difficulty. The final round draws from unused pack questions
+  in the difficulty selected by players; there is no separate final-question set.
 - Separate approved `fact-check` and `editorial` reviewers, from different handles.
 - A `scope` for a superlative or record claim (for example, “above sea level” or “by
   land area”). This keeps facts with contested definitions defensible.

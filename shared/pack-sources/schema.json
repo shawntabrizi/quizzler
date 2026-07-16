@@ -3,7 +3,7 @@
   "title": "Quizzler starter-pack editorial manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "status", "pack", "questions", "finals"],
+  "required": ["version", "status", "pack", "questions"],
   "properties": {
     "version": { "const": 1 },
     "status": { "enum": ["draft", "release-ready"] },
@@ -19,15 +19,6 @@
     "questions": {
       "type": "array",
       "items": { "$ref": "#/$defs/draftEntry" }
-    },
-    "finals": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "easy": { "$ref": "#/$defs/draftEntry" },
-        "medium": { "$ref": "#/$defs/draftEntry" },
-        "hard": { "$ref": "#/$defs/draftEntry" }
-      }
     }
   },
   "allOf": [
@@ -37,14 +28,6 @@
         "properties": {
           "questions": {
             "items": { "$ref": "#/$defs/releaseEntry" }
-          },
-          "finals": {
-            "required": ["easy", "medium", "hard"],
-            "properties": {
-              "easy": { "$ref": "#/$defs/releaseEntry" },
-              "medium": { "$ref": "#/$defs/releaseEntry" },
-              "hard": { "$ref": "#/$defs/releaseEntry" }
-            }
           }
         }
       }
@@ -54,7 +37,7 @@
     "draftEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "question", "answers"],
+      "required": ["id", "question", "answers", "difficulty"],
       "properties": {
         "id": {
           "type": "string",

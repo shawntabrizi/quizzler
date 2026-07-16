@@ -9,597 +9,716 @@
     {
       "id": "qz-geography-q001",
       "question": "What is the capital city of France?",
-      "answers": ["Paris"]
+      "answers": ["Paris"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q002",
       "question": "What is the largest ocean on Earth?",
-      "answers": ["Pacific Ocean", "Pacific", "The Pacific"]
+      "answers": ["Pacific Ocean", "Pacific", "The Pacific"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q003",
       "question": "What is the capital city of Japan?",
-      "answers": ["Tokyo"]
+      "answers": ["Tokyo"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q004",
       "question": "Which European country is shaped like a boot?",
-      "answers": ["Italy"]
+      "answers": ["Italy"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q005",
       "question": "What is the longest river in Africa?",
-      "answers": ["Nile", "The Nile", "Nile River", "River Nile"]
+      "answers": ["Nile", "The Nile", "Nile River", "River Nile"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q006",
       "question": "What is the highest mountain in the world?",
-      "answers": ["Mount Everest", "Everest", "Mt Everest"]
+      "answers": ["Mount Everest", "Everest", "Mt Everest"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q007",
       "question": "What is the capital city of Italy?",
-      "answers": ["Rome"]
+      "answers": ["Rome"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q008",
       "question": "The Sahara Desert is located on which continent?",
-      "answers": ["Africa"]
+      "answers": ["Africa"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q009",
       "question": "What is the capital city of the United Kingdom?",
-      "answers": ["London"]
+      "answers": ["London"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q010",
       "question": "Which country's flag features a red maple leaf?",
-      "answers": ["Canada"]
+      "answers": ["Canada"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q011",
       "question": "What is the capital city of Spain?",
-      "answers": ["Madrid"]
+      "answers": ["Madrid"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q012",
       "question": "What is the largest country in the world by area?",
-      "answers": ["Russia", "Russian Federation"]
+      "answers": ["Russia", "Russian Federation"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q013",
       "question": "What is the capital city of Germany?",
-      "answers": ["Berlin"]
+      "answers": ["Berlin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q014",
       "question": "Which continent is home to the Andes, the world's longest continental mountain range?",
-      "answers": ["South America"]
+      "answers": ["South America"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q015",
       "question": "The Statue of Liberty stands in which US city?",
-      "answers": ["New York City", "New York", "NYC"]
+      "answers": ["New York City", "New York", "NYC"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q016",
       "question": "What is the capital city of Russia?",
-      "answers": ["Moscow"]
+      "answers": ["Moscow"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q017",
       "question": "The Great Wall is located in which country?",
-      "answers": ["China"]
+      "answers": ["China"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q018",
       "question": "What is the capital city of the United States?",
-      "answers": ["Washington DC", "Washington D.C.", "Washington"]
+      "answers": ["Washington DC", "Washington D.C.", "Washington"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q019",
       "question": "Which ocean lies between the Americas and Europe?",
-      "answers": ["Atlantic Ocean", "Atlantic", "The Atlantic"]
+      "answers": ["Atlantic Ocean", "Atlantic", "The Atlantic"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q020",
       "question": "What is the capital city of China?",
-      "answers": ["Beijing", "Peking"]
+      "answers": ["Beijing", "Peking"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q021",
       "question": "Which country's flag is a red circle on a white background?",
-      "answers": ["Japan"]
+      "answers": ["Japan"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q022",
       "question": "What is the capital city of Egypt?",
-      "answers": ["Cairo"]
+      "answers": ["Cairo"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q023",
       "question": "What is the largest hot desert in the world?",
-      "answers": ["Sahara", "Sahara Desert", "The Sahara"]
+      "answers": ["Sahara", "Sahara Desert", "The Sahara"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q024",
       "question": "What is the capital city of Canada?",
-      "answers": ["Ottawa"]
+      "answers": ["Ottawa"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q025",
       "question": "The Grand Canyon is located in which US state?",
-      "answers": ["Arizona"]
+      "answers": ["Arizona"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q026",
       "question": "What is the capital city of Australia?",
-      "answers": ["Canberra"]
+      "answers": ["Canberra"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q027",
       "question": "The Sydney Opera House is in which country?",
-      "answers": ["Australia"]
+      "answers": ["Australia"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q028",
       "question": "What is the capital city of India?",
-      "answers": ["New Delhi", "Delhi"]
+      "answers": ["New Delhi", "Delhi"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q029",
       "question": "The famous Leaning Tower is in which Italian city?",
-      "answers": ["Pisa"]
+      "answers": ["Pisa"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q030",
       "question": "What is the capital city of Greece?",
-      "answers": ["Athens"]
+      "answers": ["Athens"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q031",
       "question": "Brazil is located on which continent?",
-      "answers": ["South America"]
+      "answers": ["South America"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q032",
       "question": "What is the capital city of Brazil?",
-      "answers": ["Brasilia"]
+      "answers": ["Brasilia"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q033",
       "question": "What is the longest river in South America?",
-      "answers": ["Amazon", "Amazon River", "The Amazon"]
+      "answers": ["Amazon", "Amazon River", "The Amazon"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q034",
       "question": "What is the capital city of Mexico?",
-      "answers": ["Mexico City"]
+      "answers": ["Mexico City"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q035",
       "question": "The Pyramids of Giza are located in which country?",
-      "answers": ["Egypt"]
+      "answers": ["Egypt"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q036",
       "question": "What is the capital city of Ireland?",
-      "answers": ["Dublin"]
+      "answers": ["Dublin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q037",
       "question": "What is the capital city of Norway?",
-      "answers": ["Oslo"]
+      "answers": ["Oslo"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q038",
       "question": "What is the largest continent in the world?",
-      "answers": ["Asia"]
+      "answers": ["Asia"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q039",
       "question": "What is the capital city of Portugal?",
-      "answers": ["Lisbon"]
+      "answers": ["Lisbon"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q040",
       "question": "The Taj Mahal is located in which country?",
-      "answers": ["India"]
+      "answers": ["India"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q041",
       "question": "Honolulu is the capital of which US state?",
-      "answers": ["Hawaii"]
+      "answers": ["Hawaii"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q042",
       "question": "What is the capital city of South Korea?",
-      "answers": ["Seoul"]
+      "answers": ["Seoul"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q043",
       "question": "Which US state is nicknamed the Sunshine State?",
-      "answers": ["Florida"]
+      "answers": ["Florida"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q044",
       "question": "What is the capital city of Poland?",
-      "answers": ["Warsaw"]
+      "answers": ["Warsaw"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q045",
       "question": "Mount Everest is part of which mountain range?",
-      "answers": ["Himalayas", "Himalaya", "The Himalayas"]
+      "answers": ["Himalayas", "Himalaya", "The Himalayas"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q046",
       "question": "What is the capital city of Argentina?",
-      "answers": ["Buenos Aires"]
+      "answers": ["Buenos Aires"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q047",
       "question": "What is the smallest country in the world?",
-      "answers": ["Vatican City", "Vatican", "The Vatican"]
+      "answers": ["Vatican City", "Vatican", "The Vatican"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q048",
       "question": "What is the capital city of Austria?",
-      "answers": ["Vienna"]
+      "answers": ["Vienna"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q049",
       "question": "Which sea separates southern Europe from northern Africa?",
-      "answers": ["Mediterranean Sea", "Mediterranean", "The Mediterranean"]
+      "answers": ["Mediterranean Sea", "Mediterranean", "The Mediterranean"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q050",
       "question": "What is the capital city of the Netherlands?",
-      "answers": ["Amsterdam"]
+      "answers": ["Amsterdam"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q051",
       "question": "Wellington is the capital of which country?",
-      "answers": ["New Zealand", "NZ"]
+      "answers": ["New Zealand", "NZ"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q052",
       "question": "What is the capital city of Sweden?",
-      "answers": ["Stockholm"]
+      "answers": ["Stockholm"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q053",
       "question": "Nairobi is the capital of which African country?",
-      "answers": ["Kenya"]
+      "answers": ["Kenya"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q054",
       "question": "Which river flows through the city of London?",
-      "answers": ["Thames", "River Thames", "The Thames"]
+      "answers": ["Thames", "River Thames", "The Thames"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q055",
       "question": "What is the largest US state by area?",
-      "answers": ["Alaska"]
+      "answers": ["Alaska"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q056",
       "question": "What is the capital city of Scotland?",
-      "answers": ["Edinburgh"]
+      "answers": ["Edinburgh"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q057",
       "question": "What is the coldest continent on Earth?",
-      "answers": ["Antarctica"]
+      "answers": ["Antarctica"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q058",
       "question": "What is the capital city of Denmark?",
-      "answers": ["Copenhagen"]
+      "answers": ["Copenhagen"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q059",
       "question": "The ancient ruins of Machu Picchu are in which country?",
-      "answers": ["Peru"]
+      "answers": ["Peru"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q060",
       "question": "What is the capital city of Finland?",
-      "answers": ["Helsinki"]
+      "answers": ["Helsinki"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q061",
       "question": "Which river flows through the city of Paris?",
-      "answers": ["Seine", "River Seine", "The Seine"]
+      "answers": ["Seine", "River Seine", "The Seine"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q062",
       "question": "What is the capital city of Belgium?",
-      "answers": ["Brussels"]
+      "answers": ["Brussels"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q063",
       "question": "Which US state is nicknamed the Golden State?",
-      "answers": ["California"]
+      "answers": ["California"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q064",
       "question": "What is the capital city of Thailand?",
-      "answers": ["Bangkok"]
+      "answers": ["Bangkok"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q065",
       "question": "What is the smallest ocean in the world?",
-      "answers": ["Arctic Ocean", "Arctic", "The Arctic"]
+      "answers": ["Arctic Ocean", "Arctic", "The Arctic"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q066",
       "question": "What is the capital city of the Czech Republic?",
-      "answers": ["Prague"]
+      "answers": ["Prague"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q067",
       "question": "The Golden Gate Bridge is in which US city?",
-      "answers": ["San Francisco"]
+      "answers": ["San Francisco"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q068",
       "question": "What is the capital city of Hungary?",
-      "answers": ["Budapest"]
+      "answers": ["Budapest"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q069",
       "question": "Which island country lies about 90 miles south of Florida?",
-      "answers": ["Cuba"]
+      "answers": ["Cuba"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q070",
       "question": "What is the capital city of Switzerland?",
-      "answers": ["Bern", "Berne"]
+      "answers": ["Bern", "Berne"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q071",
       "question": "What is the capital city of Morocco?",
-      "answers": ["Rabat"]
+      "answers": ["Rabat"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q072",
       "question": "What is the capital city of Vietnam?",
-      "answers": ["Hanoi"]
+      "answers": ["Hanoi"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q073",
       "question": "What is the capital city of Iran?",
-      "answers": ["Tehran"]
+      "answers": ["Tehran"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q074",
       "question": "What is the capital city of Iraq?",
-      "answers": ["Baghdad"]
+      "answers": ["Baghdad"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q075",
       "question": "What is the capital city of Saudi Arabia?",
-      "answers": ["Riyadh"]
+      "answers": ["Riyadh"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q076",
       "question": "What is the capital city of Indonesia?",
-      "answers": ["Jakarta"]
+      "answers": ["Jakarta"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q077",
       "question": "What is the capital city of the Philippines?",
-      "answers": ["Manila"]
+      "answers": ["Manila"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q078",
       "question": "What is the capital city of Malaysia?",
-      "answers": ["Kuala Lumpur", "KL"]
+      "answers": ["Kuala Lumpur", "KL"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q079",
       "question": "What is the capital city of Chile?",
-      "answers": ["Santiago"]
+      "answers": ["Santiago"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q080",
       "question": "What is the capital city of Colombia?",
-      "answers": ["Bogota"]
+      "answers": ["Bogota"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-geography-q081",
       "question": "What is the capital city of Peru?",
-      "answers": ["Lima"]
+      "answers": ["Lima"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q082",
       "question": "What is the capital city of Ukraine?",
-      "answers": ["Kyiv", "Kiev"]
+      "answers": ["Kyiv", "Kiev"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q083",
       "question": "What is the capital city of Romania?",
-      "answers": ["Bucharest"]
+      "answers": ["Bucharest"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q084",
       "question": "What is the capital city of Bulgaria?",
-      "answers": ["Sofia"]
+      "answers": ["Sofia"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q085",
       "question": "What is the capital city of Croatia?",
-      "answers": ["Zagreb"]
+      "answers": ["Zagreb"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q086",
       "question": "What is the capital city of Serbia?",
-      "answers": ["Belgrade"]
+      "answers": ["Belgrade"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q087",
       "question": "What is the capital city of Iceland?",
-      "answers": ["Reykjavik"]
+      "answers": ["Reykjavik"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q088",
       "question": "What is the capital city of Ethiopia?",
-      "answers": ["Addis Ababa"]
+      "answers": ["Addis Ababa"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q089",
       "question": "What is the capital city of Nigeria?",
-      "answers": ["Abuja"]
+      "answers": ["Abuja"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q090",
       "question": "What is the capital city of Ghana?",
-      "answers": ["Accra"]
+      "answers": ["Accra"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q091",
       "question": "What is the capital city of Cuba?",
-      "answers": ["Havana"]
+      "answers": ["Havana"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q092",
       "question": "What is the capital city of Jordan?",
-      "answers": ["Amman"]
+      "answers": ["Amman"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q093",
       "question": "What is the capital city of Lebanon?",
-      "answers": ["Beirut"]
+      "answers": ["Beirut"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q094",
       "question": "What is the capital city of Pakistan?",
-      "answers": ["Islamabad"]
+      "answers": ["Islamabad"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q095",
       "question": "What is the capital city of Bangladesh?",
-      "answers": ["Dhaka", "Dacca"]
+      "answers": ["Dhaka", "Dacca"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q096",
       "question": "What is the capital city of Afghanistan?",
-      "answers": ["Kabul"]
+      "answers": ["Kabul"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q097",
       "question": "What is the capital city of Nepal?",
-      "answers": ["Kathmandu", "Katmandu"]
+      "answers": ["Kathmandu", "Katmandu"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q098",
       "question": "What is the capital city of Turkey?",
-      "answers": ["Ankara"]
+      "answers": ["Ankara"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q099",
       "question": "What is the longest river in Asia?",
-      "answers": ["Yangtze", "Yangtze River", "Chang Jiang"]
+      "answers": ["Yangtze", "Yangtze River", "Chang Jiang"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q100",
       "question": "What is the longest river in Europe?",
-      "answers": ["Volga", "Volga River"]
+      "answers": ["Volga", "Volga River"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q101",
       "question": "Which river flows through the city of Rome?",
-      "answers": ["Tiber", "River Tiber", "The Tiber"]
+      "answers": ["Tiber", "River Tiber", "The Tiber"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q102",
       "question": "Which river flows through both Vienna and Budapest?",
-      "answers": ["Danube", "Danube River", "The Danube"]
+      "answers": ["Danube", "Danube River", "The Danube"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q103",
       "question": "Which river flows through the city of Baghdad?",
-      "answers": ["Tigris", "Tigris River", "The Tigris"]
+      "answers": ["Tigris", "Tigris River", "The Tigris"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q104",
       "question": "What is the highest mountain in Africa?",
-      "answers": ["Mount Kilimanjaro", "Kilimanjaro", "Mt Kilimanjaro"]
+      "answers": ["Mount Kilimanjaro", "Kilimanjaro", "Mt Kilimanjaro"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q105",
       "question": "What is the highest mountain in North America?",
-      "answers": ["Denali", "Mount McKinley", "Mount Denali"]
+      "answers": ["Denali", "Mount McKinley", "Mount Denali"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q106",
       "question": "What is the highest mountain in the Alps?",
-      "answers": ["Mont Blanc"]
+      "answers": ["Mont Blanc"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q107",
       "question": "What is the second-highest mountain in the world?",
-      "answers": ["K2", "Mount Godwin-Austen"]
+      "answers": ["K2", "Mount Godwin-Austen"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q108",
       "question": "What is the largest lake in Africa?",
-      "answers": ["Lake Victoria", "Victoria"]
+      "answers": ["Lake Victoria", "Victoria"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q109",
       "question": "What is the deepest lake in the world?",
-      "answers": ["Lake Baikal", "Baikal"]
+      "answers": ["Lake Baikal", "Baikal"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q110",
       "question": "What is the largest freshwater lake in the world by surface area?",
-      "answers": ["Lake Superior", "Superior"]
+      "answers": ["Lake Superior", "Superior"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q111",
       "question": "Which sea lies between Australia and New Zealand?",
-      "answers": ["Tasman Sea", "Tasman", "The Tasman Sea"]
+      "answers": ["Tasman Sea", "Tasman", "The Tasman Sea"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q112",
       "question": "Which strait separates Spain from Morocco?",
-      "answers": ["Strait of Gibraltar", "Gibraltar", "Gibraltar Strait"]
+      "answers": ["Strait of Gibraltar", "Gibraltar", "Gibraltar Strait"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q113",
       "question": "Which desert spans northern China and southern Mongolia?",
-      "answers": ["Gobi", "Gobi Desert", "The Gobi"]
+      "answers": ["Gobi", "Gobi Desert", "The Gobi"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q114",
       "question": "Which Chilean desert is the driest nonpolar desert on Earth?",
-      "answers": ["Atacama", "Atacama Desert", "The Atacama"]
+      "answers": ["Atacama", "Atacama Desert", "The Atacama"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q115",
       "question": "What is the largest island in the world?",
-      "answers": ["Greenland"]
+      "answers": ["Greenland"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q116",
       "question": "What is the largest island in the Mediterranean Sea?",
-      "answers": ["Sicily"]
+      "answers": ["Sicily"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q117",
       "question": "Greenland is an autonomous territory of which country?",
-      "answers": ["Denmark"]
+      "answers": ["Denmark"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q118",
       "question": "Angel Falls, the world's highest waterfall, is in which country?",
-      "answers": ["Venezuela"]
+      "answers": ["Venezuela"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q119",
       "question": "Victoria Falls is located on which African river?",
-      "answers": ["Zambezi", "Zambezi River", "The Zambezi"]
+      "answers": ["Zambezi", "Zambezi River", "The Zambezi"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q120",
@@ -610,152 +729,182 @@
         "US",
         "America",
         "United States of America"
-      ]
+      ],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q121",
       "question": "Which major river flows through New Orleans?",
-      "answers": ["Mississippi", "Mississippi River", "The Mississippi"]
+      "answers": ["Mississippi", "Mississippi River", "The Mississippi"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q122",
       "question": "Mount Everest sits on the border of Nepal and which other country?",
-      "answers": ["China", "Tibet"]
+      "answers": ["China", "Tibet"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q123",
       "question": "Which African country was historically known as Abyssinia?",
-      "answers": ["Ethiopia"]
+      "answers": ["Ethiopia"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q124",
       "question": "Which country was formerly known as Persia?",
-      "answers": ["Iran"]
+      "answers": ["Iran"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q125",
       "question": "Which country was formerly known as Siam?",
-      "answers": ["Thailand"]
+      "answers": ["Thailand"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q126",
       "question": "Which country was formerly known as Burma?",
-      "answers": ["Myanmar"]
+      "answers": ["Myanmar"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q127",
       "question": "Which island country was formerly known as Ceylon?",
-      "answers": ["Sri Lanka"]
+      "answers": ["Sri Lanka"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q128",
       "question": "What is the name of the imaginary line at 0 degrees latitude?",
-      "answers": ["Equator", "The Equator"]
+      "answers": ["Equator", "The Equator"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q129",
       "question": "What is the name of the imaginary line at 0 degrees longitude?",
-      "answers": ["Prime Meridian", "Greenwich Meridian", "The Prime Meridian"]
+      "answers": ["Prime Meridian", "Greenwich Meridian", "The Prime Meridian"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q130",
       "question": "Which canal connects the Mediterranean Sea to the Red Sea?",
-      "answers": ["Suez Canal", "Suez", "The Suez Canal"]
+      "answers": ["Suez Canal", "Suez", "The Suez Canal"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q131",
       "question": "The region of Transylvania is in which country?",
-      "answers": ["Romania"]
+      "answers": ["Romania"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q132",
       "question": "The Rock of Gibraltar is an overseas territory of which country?",
-      "answers": ["United Kingdom", "UK", "Great Britain", "Britain"]
+      "answers": ["United Kingdom", "UK", "Great Britain", "Britain"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q133",
       "question": "The city of Marrakech is in which country?",
-      "answers": ["Morocco"]
+      "answers": ["Morocco"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q134",
       "question": "Which mountain range runs along the western coast of South America?",
-      "answers": ["Andes", "Andes Mountains", "The Andes"]
+      "answers": ["Andes", "Andes Mountains", "The Andes"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q135",
       "question": "Which major mountain range runs through the US state of Colorado?",
-      "answers": ["Rocky Mountains", "Rockies", "The Rockies"]
+      "answers": ["Rocky Mountains", "Rockies", "The Rockies"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q136",
       "question": "The tiny republic of San Marino is completely surrounded by which country?",
-      "answers": ["Italy"]
+      "answers": ["Italy"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q137",
       "question": "The kingdom of Lesotho is completely surrounded by which country?",
-      "answers": ["South Africa"]
+      "answers": ["South Africa"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q138",
       "question": "Which salt lake is the lowest point on Earth's land surface?",
-      "answers": ["Dead Sea", "The Dead Sea"]
+      "answers": ["Dead Sea", "The Dead Sea"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q139",
       "question": "What is the world's largest inland body of water, often called a sea?",
-      "answers": ["Caspian Sea", "Caspian", "The Caspian Sea"]
+      "answers": ["Caspian Sea", "Caspian", "The Caspian Sea"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q140",
       "question": "Which major African river crosses the equator twice?",
-      "answers": ["Congo", "Congo River", "The Congo"]
+      "answers": ["Congo", "Congo River", "The Congo"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q141",
       "question": "Which river forms much of the border between the United States and Mexico?",
-      "answers": ["Rio Grande", "The Rio Grande"]
+      "answers": ["Rio Grande", "The Rio Grande"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q142",
       "question": "Which famous waterfall sits on the border between the United States and Canada?",
-      "answers": ["Niagara Falls", "Niagara"]
+      "answers": ["Niagara Falls", "Niagara"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q143",
       "question": "Which volcano buried the Roman city of Pompeii in 79 AD?",
-      "answers": ["Mount Vesuvius", "Vesuvius", "Mt Vesuvius"]
+      "answers": ["Mount Vesuvius", "Vesuvius", "Mt Vesuvius"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q144",
       "question": "Which strait separates Asia from North America?",
-      "answers": ["Bering Strait", "Bering", "The Bering Strait"]
+      "answers": ["Bering Strait", "Bering", "The Bering Strait"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q145",
       "question": "Which body of water separates England from France?",
-      "answers": ["English Channel", "The Channel", "The English Channel"]
+      "answers": ["English Channel", "The Channel", "The English Channel"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q146",
       "question": "Spain and Portugal share which peninsula?",
-      "answers": ["Iberian Peninsula", "Iberia", "Iberian"]
+      "answers": ["Iberian Peninsula", "Iberia", "Iberian"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q147",
       "question": "Which country sits at the tip of the Horn of Africa, jutting into the Indian Ocean?",
-      "answers": ["Somalia"]
+      "answers": ["Somalia"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q148",
       "question": "Which Australian state has Hobart as its capital city?",
-      "answers": ["Tasmania"]
+      "answers": ["Tasmania"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q149",
       "question": "Salvador is the capital of which Brazilian state?",
-      "answers": ["Bahia"]
+      "answers": ["Bahia"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q150",
@@ -765,217 +914,260 @@
         "Bosphorus",
         "Bosporus Strait",
         "Bosphorus Strait"
-      ]
+      ],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q151",
       "question": "What is the smallest US state by area?",
-      "answers": ["Rhode Island"]
+      "answers": ["Rhode Island"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q152",
       "question": "Which US state is nicknamed the Lone Star State?",
-      "answers": ["Texas"]
+      "answers": ["Texas"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q153",
       "question": "Toronto is located in which Canadian province?",
-      "answers": ["Ontario"]
+      "answers": ["Ontario"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q154",
       "question": "Which country's flag is a white cross on a red background?",
-      "answers": ["Switzerland"]
+      "answers": ["Switzerland"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q155",
       "question": "What is the capital city of Ecuador?",
-      "answers": ["Quito"]
+      "answers": ["Quito"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q156",
       "question": "What is the capital city of Uruguay?",
-      "answers": ["Montevideo"]
+      "answers": ["Montevideo"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q157",
       "question": "Which desert covers much of Botswana in southern Africa?",
-      "answers": ["Kalahari", "Kalahari Desert", "The Kalahari"]
+      "answers": ["Kalahari", "Kalahari Desert", "The Kalahari"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q158",
       "question": "The Galapagos Islands belong to which South American country?",
-      "answers": ["Ecuador"]
+      "answers": ["Ecuador"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q159",
       "question": "Which of the Great Lakes lies entirely within the United States?",
-      "answers": ["Lake Michigan", "Michigan"]
+      "answers": ["Lake Michigan", "Michigan"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q160",
       "question": "Which Turkish city was formerly known as Constantinople?",
-      "answers": ["Istanbul"]
+      "answers": ["Istanbul"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-geography-q161",
       "question": "What is the capital city of Mongolia?",
-      "answers": ["Ulaanbaatar", "Ulan Bator"]
+      "answers": ["Ulaanbaatar", "Ulan Bator"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q162",
       "question": "Astana is the capital city of which Central Asian country?",
-      "answers": ["Kazakhstan"]
+      "answers": ["Kazakhstan"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q163",
       "question": "What is the capital city of Myanmar?",
-      "answers": ["Naypyidaw", "Nay Pyi Taw"]
+      "answers": ["Naypyidaw", "Nay Pyi Taw"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q164",
       "question": "What is the capital city of Burkina Faso?",
-      "answers": ["Ouagadougou"]
+      "answers": ["Ouagadougou"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q165",
       "question": "What is the capital city of Kyrgyzstan?",
-      "answers": ["Bishkek"]
+      "answers": ["Bishkek"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q166",
       "question": "What is the capital city of Uzbekistan?",
-      "answers": ["Tashkent"]
+      "answers": ["Tashkent"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q167",
       "question": "What is the capital city of Azerbaijan?",
-      "answers": ["Baku"]
+      "answers": ["Baku"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q168",
       "question": "What is the capital city of the country of Georgia?",
-      "answers": ["Tbilisi"]
+      "answers": ["Tbilisi"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q169",
       "question": "What is the capital city of Armenia?",
-      "answers": ["Yerevan"]
+      "answers": ["Yerevan"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q170",
       "question": "What is the capital city of Slovenia?",
-      "answers": ["Ljubljana"]
+      "answers": ["Ljubljana"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q171",
       "question": "What is the capital city of Slovakia?",
-      "answers": ["Bratislava"]
+      "answers": ["Bratislava"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q172",
       "question": "What is the capital city of Estonia?",
-      "answers": ["Tallinn"]
+      "answers": ["Tallinn"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q173",
       "question": "What is the capital city of Latvia?",
-      "answers": ["Riga"]
+      "answers": ["Riga"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q174",
       "question": "What is the capital city of Lithuania?",
-      "answers": ["Vilnius"]
+      "answers": ["Vilnius"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q175",
       "question": "What is the capital city of Moldova?",
-      "answers": ["Chisinau"]
+      "answers": ["Chisinau"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q176",
       "question": "What is the capital city of Albania?",
-      "answers": ["Tirana"]
+      "answers": ["Tirana"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q177",
       "question": "What is the capital city of North Macedonia?",
-      "answers": ["Skopje"]
+      "answers": ["Skopje"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q178",
       "question": "What is the official capital city of Tanzania?",
-      "answers": ["Dodoma"]
+      "answers": ["Dodoma"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q179",
       "question": "What is the official capital city of Ivory Coast (Cote d'Ivoire)?",
-      "answers": ["Yamoussoukro"]
+      "answers": ["Yamoussoukro"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q180",
       "question": "What is the capital city of Cambodia?",
-      "answers": ["Phnom Penh"]
+      "answers": ["Phnom Penh"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q181",
       "question": "What is the capital city of Laos?",
-      "answers": ["Vientiane"]
+      "answers": ["Vientiane"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q182",
       "question": "What is the capital city of Bhutan?",
-      "answers": ["Thimphu"]
+      "answers": ["Thimphu"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q183",
       "question": "What is the capital city of Fiji?",
-      "answers": ["Suva"]
+      "answers": ["Suva"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q184",
       "question": "What is the capital city of Papua New Guinea?",
-      "answers": ["Port Moresby"]
+      "answers": ["Port Moresby"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q185",
       "question": "What is the capital city of Madagascar?",
-      "answers": ["Antananarivo"]
+      "answers": ["Antananarivo"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q186",
       "question": "Which sea has no coastline and is bounded only by ocean currents?",
-      "answers": ["Sargasso Sea", "Sargasso", "The Sargasso Sea"]
+      "answers": ["Sargasso Sea", "Sargasso", "The Sargasso Sea"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q187",
       "question": "What is the name of the deepest ocean trench on Earth?",
-      "answers": ["Mariana Trench", "Marianas Trench", "The Mariana Trench"]
+      "answers": ["Mariana Trench", "Marianas Trench", "The Mariana Trench"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q188",
       "question": "Which tiny European country is doubly landlocked, bordered only by landlocked countries?",
-      "answers": ["Liechtenstein"]
+      "answers": ["Liechtenstein"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q189",
       "question": "Which country officially has three capital cities: Pretoria, Cape Town, and Bloemfontein?",
-      "answers": ["South Africa"]
+      "answers": ["South Africa"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q190",
       "question": "Which strait separates Sicily from mainland Italy?",
-      "answers": ["Strait of Messina", "Messina", "Messina Strait"]
+      "answers": ["Strait of Messina", "Messina", "Messina Strait"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q191",
       "question": "Which strait lies between the island of Sumatra and the Malay Peninsula?",
-      "answers": ["Strait of Malacca", "Malacca", "Malacca Strait"]
+      "answers": ["Strait of Malacca", "Malacca", "Malacca Strait"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q192",
       "question": "Which high-altitude lake is shared by Peru and Bolivia?",
-      "answers": ["Lake Titicaca", "Titicaca"]
+      "answers": ["Lake Titicaca", "Titicaca"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q193",
@@ -985,59 +1177,50 @@
         "DRC",
         "DR Congo",
         "Congo-Kinshasa"
-      ]
+      ],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q194",
       "question": "Which African country was formerly known as Southern Rhodesia?",
-      "answers": ["Zimbabwe"]
+      "answers": ["Zimbabwe"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q195",
       "question": "The island of Tenerife belongs to which Spanish archipelago?",
-      "answers": ["Canary Islands", "Canaries", "The Canary Islands"]
+      "answers": ["Canary Islands", "Canaries", "The Canary Islands"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q196",
       "question": "Jakarta is located on which Indonesian island?",
-      "answers": ["Java"]
+      "answers": ["Java"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q197",
       "question": "Tokyo is located on which Japanese island?",
-      "answers": ["Honshu"]
+      "answers": ["Honshu"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q198",
       "question": "Which Russian city was formerly known as Leningrad?",
-      "answers": ["Saint Petersburg", "St Petersburg", "St. Petersburg"]
+      "answers": ["Saint Petersburg", "St Petersburg", "St. Petersburg"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q199",
       "question": "Which volcano towers above the Sicilian city of Catania?",
-      "answers": ["Mount Etna", "Etna", "Mt Etna"]
+      "answers": ["Mount Etna", "Etna", "Mt Etna"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-geography-q200",
       "question": "What is the largest country in Africa by area?",
-      "answers": ["Algeria"]
+      "answers": ["Algeria"],
+      "difficulty": "hard"
     }
-  ],
-  "finals": {
-    "easy": {
-      "id": "qz-geography-final-easy",
-      "question": "In which country is the Eiffel Tower located?",
-      "answers": ["France"]
-    },
-    "medium": {
-      "id": "qz-geography-final-medium",
-      "question": "The ancient temple complex of Angkor Wat is in which country?",
-      "answers": ["Cambodia"]
-    },
-    "hard": {
-      "id": "qz-geography-final-hard",
-      "question": "What is the capital city of Suriname?",
-      "answers": ["Paramaribo"]
-    }
-  }
+  ]
 }

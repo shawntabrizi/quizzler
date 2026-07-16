@@ -9,732 +9,878 @@
     {
       "id": "qz-music-q001",
       "question": "Which composer wrote the opera Carmen?",
-      "answers": ["Georges Bizet", "Bizet"]
+      "answers": ["Georges Bizet", "Bizet"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q002",
       "question": "The Beatles formed in which English city?",
-      "answers": ["Liverpool"]
+      "answers": ["Liverpool"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q003",
       "question": "Which Italian musical direction tells a performer to play softly?",
-      "answers": ["piano"]
+      "answers": ["piano"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q004",
       "question": "Who sang the 2014 hit 'Shake It Off'?",
-      "answers": ["Taylor Swift"]
+      "answers": ["Taylor Swift"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q005",
       "question": "Which ensemble normally contains two violins, a viola, and a cello?",
-      "answers": ["string quartet", "a string quartet"]
+      "answers": ["string quartet", "a string quartet"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q006",
       "question": "Which artist released the album Blue in 1971?",
-      "answers": ["Joni Mitchell", "Mitchell"]
+      "answers": ["Joni Mitchell", "Mitchell"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q007",
       "question": "Which band recorded 'Bohemian Rhapsody'?",
-      "answers": ["Queen"]
+      "answers": ["Queen"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q008",
       "question": "What is the name of Elvis Presley's famous Memphis mansion?",
-      "answers": ["Graceland"]
+      "answers": ["Graceland"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q009",
       "question": "Who sang the 2010 hit 'Rolling in the Deep'?",
-      "answers": ["Adele"]
+      "answers": ["Adele"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q010",
       "question": "Which boy band sang 'I Want It That Way'?",
-      "answers": ["Backstreet Boys", "The Backstreet Boys"]
+      "answers": ["Backstreet Boys", "The Backstreet Boys"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q011",
       "question": "Who was the lead singer of Queen?",
-      "answers": ["Freddie Mercury", "Mercury"]
+      "answers": ["Freddie Mercury", "Mercury"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q012",
       "question": "Who sang the 2010 hit 'Baby' featuring Ludacris?",
-      "answers": ["Justin Bieber", "Bieber"]
+      "answers": ["Justin Bieber", "Bieber"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q013",
       "question": "The pop group ABBA comes from which country?",
-      "answers": ["Sweden", "Swedish"]
+      "answers": ["Sweden", "Swedish"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q014",
       "question": "Who sang the 2007 hit 'Umbrella'?",
-      "answers": ["Rihanna"]
+      "answers": ["Rihanna"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q015",
       "question": "In music, what does 'DJ' stand for?",
-      "answers": ["Disc jockey", "Disk jockey"]
+      "answers": ["Disc jockey", "Disk jockey"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q016",
       "question": "Who sang the 2019 hit 'Bad Guy'?",
-      "answers": ["Billie Eilish", "Eilish"]
+      "answers": ["Billie Eilish", "Eilish"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q017",
       "question": "Which band released 'Hey Jude'?",
-      "answers": ["The Beatles", "Beatles"]
+      "answers": ["The Beatles", "Beatles"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q018",
       "question": "Who sang the 2017 hit 'Shape of You'?",
-      "answers": ["Ed Sheeran", "Sheeran"]
+      "answers": ["Ed Sheeran", "Sheeran"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q019",
       "question": "Which K-pop group released 'Dynamite' in 2020?",
-      "answers": ["BTS", "Bangtan Boys"]
+      "answers": ["BTS", "Bangtan Boys"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q020",
       "question": "Who sang 'Hound Dog' and 'Jailhouse Rock'?",
-      "answers": ["Elvis Presley", "Elvis"]
+      "answers": ["Elvis Presley", "Elvis"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q021",
       "question": "What is the highest female singing voice called?",
-      "answers": ["Soprano"]
+      "answers": ["Soprano"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q022",
       "question": "Who sang the 1998 hit '...Baby One More Time'?",
-      "answers": ["Britney Spears", "Britney"]
+      "answers": ["Britney Spears", "Britney"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q023",
       "question": "Which girl group sang the 1996 hit 'Wannabe'?",
-      "answers": ["Spice Girls", "The Spice Girls"]
+      "answers": ["Spice Girls", "The Spice Girls"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q024",
       "question": "Which band released 'Smells Like Teen Spirit'?",
-      "answers": ["Nirvana"]
+      "answers": ["Nirvana"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q025",
       "question": "Who was the lead singer of Nirvana?",
-      "answers": ["Kurt Cobain", "Cobain"]
+      "answers": ["Kurt Cobain", "Cobain"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q026",
       "question": "Who sang the hits 'Firework' and 'Roar'?",
-      "answers": ["Katy Perry"]
+      "answers": ["Katy Perry"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q027",
       "question": "Which rapper's real name is Marshall Mathers?",
-      "answers": ["Eminem", "Slim Shady"]
+      "answers": ["Eminem", "Slim Shady"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q028",
       "question": "Bob Marley is most associated with which genre of music?",
-      "answers": ["Reggae"]
+      "answers": ["Reggae"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q029",
       "question": "Who sang the 1984 hit 'Purple Rain'?",
-      "answers": ["Prince"]
+      "answers": ["Prince"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q030",
       "question": "Who sang 'I Will Always Love You' in the film The Bodyguard?",
-      "answers": ["Whitney Houston", "Whitney"]
+      "answers": ["Whitney Houston", "Whitney"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q031",
       "question": "Who sang the 2013 hit 'Wrecking Ball'?",
-      "answers": ["Miley Cyrus", "Miley"]
+      "answers": ["Miley Cyrus", "Miley"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q032",
       "question": "Which band recorded 'Stairway to Heaven'?",
-      "answers": ["Led Zeppelin", "Zeppelin"]
+      "answers": ["Led Zeppelin", "Zeppelin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q033",
       "question": "Who sang the 2010 hit 'Just the Way You Are'?",
-      "answers": ["Bruno Mars"]
+      "answers": ["Bruno Mars"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q034",
       "question": "Who sang the 2019 hit 'Blinding Lights'?",
-      "answers": ["The Weeknd", "Weeknd"]
+      "answers": ["The Weeknd", "Weeknd"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q035",
       "question": "Who sang the 1972 hit 'Rocket Man'?",
-      "answers": ["Elton John"]
+      "answers": ["Elton John"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q036",
       "question": "Mick Jagger is the frontman of which band?",
-      "answers": ["The Rolling Stones", "Rolling Stones", "Stones"]
+      "answers": ["The Rolling Stones", "Rolling Stones", "Stones"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q037",
       "question": "Who sang the 2018 hit 'Thank U, Next'?",
-      "answers": ["Ariana Grande", "Ariana"]
+      "answers": ["Ariana Grande", "Ariana"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q038",
       "question": "Which rapper released the 2018 hit 'God's Plan'?",
-      "answers": ["Drake"]
+      "answers": ["Drake"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q039",
       "question": "Which brass instrument did jazz great Louis Armstrong famously play?",
-      "answers": ["Trumpet"]
+      "answers": ["Trumpet"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q040",
       "question": "Which band recorded 'Sweet Child O' Mine'?",
-      "answers": ["Guns N' Roses", "Guns and Roses"]
+      "answers": ["Guns N' Roses", "Guns and Roses"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q041",
       "question": "Who sang 'My Heart Will Go On', the theme from Titanic?",
-      "answers": ["Celine Dion"]
+      "answers": ["Celine Dion"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q042",
       "question": "How many strings does a violin have?",
-      "answers": ["4"]
+      "answers": ["4"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q043",
       "question": "Which rapper released the 2019 hit 'Old Town Road'?",
-      "answers": ["Lil Nas X"]
+      "answers": ["Lil Nas X"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q044",
       "question": "Which band recorded 'Hotel California'?",
-      "answers": ["Eagles", "The Eagles"]
+      "answers": ["Eagles", "The Eagles"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q045",
       "question": "Which country music star wrote and sang 'Jolene'?",
-      "answers": ["Dolly Parton", "Dolly"]
+      "answers": ["Dolly Parton", "Dolly"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q046",
       "question": "Who sang 'Happy' from the film Despicable Me 2?",
-      "answers": ["Pharrell Williams", "Pharrell"]
+      "answers": ["Pharrell Williams", "Pharrell"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q047",
       "question": "Who is the lead singer of Coldplay?",
-      "answers": ["Chris Martin"]
+      "answers": ["Chris Martin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q048",
       "question": "Which band released the 1995 hit 'Wonderwall'?",
-      "answers": ["Oasis"]
+      "answers": ["Oasis"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q049",
       "question": "Who sang the 1963 country hit 'Ring of Fire'?",
-      "answers": ["Johnny Cash", "Cash"]
+      "answers": ["Johnny Cash", "Cash"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q050",
       "question": "Which Australian band released 'Back in Black'?",
-      "answers": ["AC/DC", "ACDC", "AC DC"]
+      "answers": ["AC/DC", "ACDC", "AC DC"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q051",
       "question": "Who sang the 1972 hit 'Superstition'?",
-      "answers": ["Stevie Wonder"]
+      "answers": ["Stevie Wonder"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q052",
       "question": "Who sang the 2014 hit 'Chandelier'?",
-      "answers": ["Sia"]
+      "answers": ["Sia"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q053",
       "question": "Which instrument is smooth-jazz star Kenny G famous for playing?",
-      "answers": ["Saxophone", "Sax", "Soprano saxophone"]
+      "answers": ["Saxophone", "Sax", "Soprano saxophone"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q054",
       "question": "Which band released 'Livin' on a Prayer'?",
-      "answers": ["Bon Jovi"]
+      "answers": ["Bon Jovi"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q055",
       "question": "Who sang the 1967 soul anthem 'Respect'?",
-      "answers": ["Aretha Franklin", "Aretha"]
+      "answers": ["Aretha Franklin", "Aretha"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q056",
       "question": "Which band released the 1982 soft-rock hit 'Africa'?",
-      "answers": ["Toto"]
+      "answers": ["Toto"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q057",
       "question": "Who sang the 2019 hit 'Watermelon Sugar'?",
-      "answers": ["Harry Styles"]
+      "answers": ["Harry Styles"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q058",
       "question": "Harry Styles rose to fame in which boy band?",
-      "answers": ["One Direction", "1D"]
+      "answers": ["One Direction", "1D"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q059",
       "question": "Who sang the 2020 hit 'Levitating'?",
-      "answers": ["Dua Lipa"]
+      "answers": ["Dua Lipa"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q060",
       "question": "Which Norwegian band released the 1985 hit 'Take On Me'?",
-      "answers": ["a-ha", "aha", "A-ha"]
+      "answers": ["a-ha", "aha", "A-ha"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q061",
       "question": "Who sang the 1983 hit 'Girls Just Want to Have Fun'?",
-      "answers": ["Cyndi Lauper"]
+      "answers": ["Cyndi Lauper"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q062",
       "question": "Which band released 'Every Breath You Take'?",
-      "answers": ["The Police", "Police"]
+      "answers": ["The Police", "Police"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q063",
       "question": "Who is the lead singer of U2?",
-      "answers": ["Bono"]
+      "answers": ["Bono"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q064",
       "question": "Who sang the 2009 hit 'Bad Romance'?",
-      "answers": ["Lady Gaga", "Gaga"]
+      "answers": ["Lady Gaga", "Gaga"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q065",
       "question": "Bagpipes are the national instrument of which country?",
-      "answers": ["Scotland"]
+      "answers": ["Scotland"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q066",
       "question": "Flamenco music comes from which country?",
-      "answers": ["Spain"]
+      "answers": ["Spain"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q067",
       "question": "Mariachi music comes from which country?",
-      "answers": ["Mexico"]
+      "answers": ["Mexico"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q068",
       "question": "Which South Korean artist released the viral 2012 hit 'Gangnam Style'?",
-      "answers": ["PSY"]
+      "answers": ["PSY"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q069",
       "question": "Who sang the 2013 hit 'Royals'?",
-      "answers": ["Lorde"]
+      "answers": ["Lorde"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q070",
       "question": "Who sang the 1969 classic 'My Way'?",
-      "answers": ["Frank Sinatra", "Sinatra"]
+      "answers": ["Frank Sinatra", "Sinatra"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q071",
       "question": "Which composer wrote the Ninth Symphony featuring 'Ode to Joy'?",
-      "answers": ["Beethoven", "Ludwig van Beethoven"]
+      "answers": ["Beethoven", "Ludwig van Beethoven"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q072",
       "question": "Which Baroque composer wrote 'The Four Seasons'?",
-      "answers": ["Vivaldi", "Antonio Vivaldi"]
+      "answers": ["Vivaldi", "Antonio Vivaldi"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q073",
       "question": "Which composer wrote the opera 'The Magic Flute'?",
-      "answers": ["Mozart", "Wolfgang Amadeus Mozart"]
+      "answers": ["Mozart", "Wolfgang Amadeus Mozart"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q074",
       "question": "Which Russian composer wrote 'The Nutcracker' ballet?",
-      "answers": ["Tchaikovsky", "Pyotr Ilyich Tchaikovsky"]
+      "answers": ["Tchaikovsky", "Pyotr Ilyich Tchaikovsky"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q075",
       "question": "Which German composer wrote 'Ride of the Valkyries'?",
-      "answers": ["Wagner", "Richard Wagner"]
+      "answers": ["Wagner", "Richard Wagner"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q076",
       "question": "Which French composer wrote 'Clair de Lune'?",
-      "answers": ["Debussy", "Claude Debussy"]
+      "answers": ["Debussy", "Claude Debussy"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q077",
       "question": "Which French composer wrote the hypnotic orchestral piece 'Bolero'?",
-      "answers": ["Ravel", "Maurice Ravel"]
+      "answers": ["Ravel", "Maurice Ravel"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q078",
       "question": "Which American composer wrote 'Rhapsody in Blue'?",
-      "answers": ["Gershwin", "George Gershwin"]
+      "answers": ["Gershwin", "George Gershwin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q079",
       "question": "Which English composer wrote 'The Planets' suite?",
-      "answers": ["Holst", "Gustav Holst"]
+      "answers": ["Holst", "Gustav Holst"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q080",
       "question": "Which Baroque composer wrote the famous 'Canon in D'?",
-      "answers": ["Pachelbel", "Johann Pachelbel"]
+      "answers": ["Pachelbel", "Johann Pachelbel"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-music-q081",
       "question": "Which composer's oratorio 'Messiah' contains the 'Hallelujah Chorus'?",
-      "answers": ["Handel", "George Frideric Handel"]
+      "answers": ["Handel", "George Frideric Handel"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q082",
       "question": "Which composer wrote the 'Brandenburg Concertos'?",
-      "answers": ["Bach", "Johann Sebastian Bach", "JS Bach"]
+      "answers": ["Bach", "Johann Sebastian Bach", "JS Bach"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q083",
       "question": "What nationality was the composer Frederic Chopin?",
-      "answers": ["Polish", "Poland"]
+      "answers": ["Polish", "Poland"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q084",
       "question": "How many symphonies did Beethoven complete?",
-      "answers": ["9"]
+      "answers": ["9"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q085",
       "question": "How many semitones are in one octave?",
-      "answers": ["12"]
+      "answers": ["12"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q086",
       "question": "How many lines are in a standard musical staff?",
-      "answers": ["5"]
+      "answers": ["5"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q087",
       "question": "Which Italian dynamic marking means 'loud'?",
-      "answers": ["Forte"]
+      "answers": ["Forte"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q088",
       "question": "Which Italian tempo marking means 'at a walking pace'?",
-      "answers": ["Andante"]
+      "answers": ["Andante"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q089",
       "question": "Ravi Shankar was a virtuoso of which Indian stringed instrument?",
-      "answers": ["Sitar"]
+      "answers": ["Sitar"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q090",
       "question": "Which jazz trumpeter released the landmark 1959 album 'Kind of Blue'?",
-      "answers": ["Miles Davis"]
+      "answers": ["Miles Davis"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q091",
       "question": "Which jazz saxophonist recorded the 1965 album 'A Love Supreme'?",
-      "answers": ["John Coltrane", "Coltrane"]
+      "answers": ["John Coltrane", "Coltrane"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q092",
       "question": "Which jazz vocalist was nicknamed the 'First Lady of Song'?",
-      "answers": ["Ella Fitzgerald", "Ella"]
+      "answers": ["Ella Fitzgerald", "Ella"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q093",
       "question": "Which jazz pianist's quartet recorded the 1959 hit 'Take Five'?",
-      "answers": ["Dave Brubeck", "The Dave Brubeck Quartet", "Brubeck"]
+      "answers": ["Dave Brubeck", "The Dave Brubeck Quartet", "Brubeck"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q094",
       "question": "Which bandleader wrote 'It Don't Mean a Thing (If It Ain't Got That Swing)'?",
-      "answers": ["Duke Ellington", "Ellington"]
+      "answers": ["Duke Ellington", "Ellington"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q095",
       "question": "Which bebop trumpeter was famous for his puffed cheeks and bent trumpet?",
-      "answers": ["Dizzy Gillespie", "Gillespie"]
+      "answers": ["Dizzy Gillespie", "Gillespie"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q096",
       "question": "Which jazz singer recorded the haunting 1939 protest song 'Strange Fruit'?",
-      "answers": ["Billie Holiday", "Holiday"]
+      "answers": ["Billie Holiday", "Holiday"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q097",
       "question": "Who sang the 1967 classic 'What a Wonderful World'?",
-      "answers": ["Louis Armstrong", "Armstrong", "Satchmo"]
+      "answers": ["Louis Armstrong", "Armstrong", "Satchmo"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q098",
       "question": "Which singer and civil rights activist recorded 'Feeling Good' and 'Sinnerman'?",
-      "answers": ["Nina Simone", "Simone"]
+      "answers": ["Nina Simone", "Simone"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q099",
       "question": "Which soul pioneer recorded 'Georgia on My Mind'?",
-      "answers": ["Ray Charles"]
+      "answers": ["Ray Charles"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q100",
       "question": "Which soul singer recorded the 1960 classic 'At Last'?",
-      "answers": ["Etta James"]
+      "answers": ["Etta James"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q101",
       "question": "Motown Records was founded in which American city?",
-      "answers": ["Detroit"]
+      "answers": ["Detroit"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q102",
       "question": "Which Motown group recorded 'My Girl'?",
-      "answers": ["The Temptations", "Temptations"]
+      "answers": ["The Temptations", "Temptations"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q103",
       "question": "Who was the lead singer of The Supremes?",
-      "answers": ["Diana Ross"]
+      "answers": ["Diana Ross"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q104",
       "question": "Which Motown singer had a 1968 hit with 'I Heard It Through the Grapevine'?",
-      "answers": ["Marvin Gaye", "Gaye"]
+      "answers": ["Marvin Gaye", "Gaye"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q105",
       "question": "Which 1982 Michael Jackson album is the best-selling album of all time?",
-      "answers": ["Thriller"]
+      "answers": ["Thriller"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q106",
       "question": "Michael Jackson debuted the moonwalk in 1983 while performing which song?",
-      "answers": ["Billie Jean"]
+      "answers": ["Billie Jean"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q107",
       "question": "Which band released the 1973 album 'The Dark Side of the Moon'?",
-      "answers": ["Pink Floyd"]
+      "answers": ["Pink Floyd"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q108",
       "question": "Which band released the 1977 album 'Rumours'?",
-      "answers": ["Fleetwood Mac"]
+      "answers": ["Fleetwood Mac"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q109",
       "question": "Which Fleetwood Mac member wrote and sang 'Dreams'?",
-      "answers": ["Stevie Nicks", "Nicks"]
+      "answers": ["Stevie Nicks", "Nicks"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q110",
       "question": "Which American rocker released the 1975 album 'Born to Run'?",
-      "answers": ["Bruce Springsteen", "Springsteen", "The Boss"]
+      "answers": ["Bruce Springsteen", "Springsteen", "The Boss"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q111",
       "question": "Which former Beatle released 'Imagine' in 1971?",
-      "answers": ["John Lennon", "Lennon"]
+      "answers": ["John Lennon", "Lennon"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q112",
       "question": "Who was the drummer of The Beatles?",
-      "answers": ["Ringo Starr", "Ringo"]
+      "answers": ["Ringo Starr", "Ringo"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q113",
       "question": "Paul McCartney formed which band after The Beatles broke up?",
-      "answers": ["Wings", "Paul McCartney and Wings"]
+      "answers": ["Wings", "Paul McCartney and Wings"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q114",
       "question": "In which year did the Live Aid benefit concerts take place?",
-      "answers": ["1985"]
+      "answers": ["1985"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q115",
       "question": "Which band released the 1991 hit 'Losing My Religion'?",
-      "answers": ["R.E.M.", "REM"]
+      "answers": ["R.E.M.", "REM"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q116",
       "question": "Which band released the 1991 hit 'Under the Bridge'?",
-      "answers": ["Red Hot Chili Peppers", "RHCP", "The Red Hot Chili Peppers"]
+      "answers": ["Red Hot Chili Peppers", "RHCP", "The Red Hot Chili Peppers"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q117",
       "question": "Which metal band released 'Enter Sandman'?",
-      "answers": ["Metallica"]
+      "answers": ["Metallica"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q118",
       "question": "Which heavy metal singer fronted Black Sabbath and was nicknamed the Prince of Darkness?",
-      "answers": ["Ozzy Osbourne", "Ozzy"]
+      "answers": ["Ozzy Osbourne", "Ozzy"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q119",
       "question": "What was David Bowie's flame-haired alien alter ego of the early 1970s?",
-      "answers": ["Ziggy Stardust", "Ziggy"]
+      "answers": ["Ziggy Stardust", "Ziggy"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q120",
       "question": "Grunge music emerged from which American city in the late 1980s?",
-      "answers": ["Seattle"]
+      "answers": ["Seattle"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q121",
       "question": "Who is the lead singer of Pearl Jam?",
-      "answers": ["Eddie Vedder", "Vedder"]
+      "answers": ["Eddie Vedder", "Vedder"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q122",
       "question": "Which Nirvana drummer went on to found Foo Fighters?",
-      "answers": ["Dave Grohl", "Grohl"]
+      "answers": ["Dave Grohl", "Grohl"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q123",
       "question": "What was Victoria Beckham's nickname in the Spice Girls?",
-      "answers": ["Posh Spice", "Posh"]
+      "answers": ["Posh Spice", "Posh"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q124",
       "question": "Which NSYNC member launched a solo career with 'Cry Me a River'?",
-      "answers": ["Justin Timberlake", "Timberlake"]
+      "answers": ["Justin Timberlake", "Timberlake"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q125",
       "question": "Which Irish band released the 1994 hit 'Zombie'?",
-      "answers": ["The Cranberries", "Cranberries"]
+      "answers": ["The Cranberries", "Cranberries"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q126",
       "question": "Which band released the 1992 hit 'Creep'?",
-      "answers": ["Radiohead"]
+      "answers": ["Radiohead"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q127",
       "question": "The 1990s chart rivalry between Blur and Oasis defined which British genre?",
-      "answers": ["Britpop", "Brit pop"]
+      "answers": ["Britpop", "Brit pop"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q128",
       "question": "Which band released the 1997 hit 'Bitter Sweet Symphony'?",
-      "answers": ["The Verve", "Verve"]
+      "answers": ["The Verve", "Verve"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q129",
       "question": "Which Britpop band released the 'woo-hoo' anthem 'Song 2'?",
-      "answers": ["Blur"]
+      "answers": ["Blur"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q130",
       "question": "Morrissey was the frontman of which 1980s Manchester band?",
-      "answers": ["The Smiths", "Smiths"]
+      "answers": ["The Smiths", "Smiths"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q131",
       "question": "Who is the lead singer of Blondie?",
-      "answers": ["Debbie Harry", "Deborah Harry"]
+      "answers": ["Debbie Harry", "Deborah Harry"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q132",
       "question": "Which duo released the 1983 hit 'Sweet Dreams (Are Made of This)'?",
-      "answers": ["Eurythmics", "The Eurythmics"]
+      "answers": ["Eurythmics", "The Eurythmics"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q133",
       "question": "Which band fronted by Boy George released 'Karma Chameleon'?",
-      "answers": ["Culture Club"]
+      "answers": ["Culture Club"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q134",
       "question": "Which duo released the 1984 hit 'Wake Me Up Before You Go-Go'?",
-      "answers": ["Wham!", "Wham"]
+      "answers": ["Wham!", "Wham"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q135",
       "question": "Which top-hat-wearing guitarist played the solo on 'Sweet Child O' Mine'?",
-      "answers": ["Slash", "Saul Hudson"]
+      "answers": ["Slash", "Saul Hudson"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q136",
       "question": "Which Spanish duo released the 1990s dance craze 'Macarena'?",
-      "answers": ["Los del Rio", "Los del Río"]
+      "answers": ["Los del Rio", "Los del Río"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q137",
       "question": "Which rapper had a 1990 hit with 'Ice Ice Baby'?",
-      "answers": ["Vanilla Ice"]
+      "answers": ["Vanilla Ice"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q138",
       "question": "Who sang the 1999 one-hit wonder 'Mambo No. 5'?",
-      "answers": ["Lou Bega"]
+      "answers": ["Lou Bega"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q139",
       "question": "Which group released the 2000 party anthem 'Who Let the Dogs Out'?",
-      "answers": ["Baha Men"]
+      "answers": ["Baha Men"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q140",
       "question": "Which British band had a 1997 hit with 'Tubthumping' ('I get knocked down...')?",
-      "answers": ["Chumbawamba"]
+      "answers": ["Chumbawamba"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q141",
       "question": "Which band had a 1982 hit with 'Come On Eileen'?",
-      "answers": ["Dexys Midnight Runners", "Dexys"]
+      "answers": ["Dexys Midnight Runners", "Dexys"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q142",
       "question": "Which German singer released the 1983 hit '99 Luftballons'?",
-      "answers": ["Nena"]
+      "answers": ["Nena"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q143",
       "question": "Which Belgian-Australian artist sang the 2011 hit 'Somebody That I Used to Know'?",
-      "answers": ["Gotye"]
+      "answers": ["Gotye"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q144",
       "question": "Which artist released the 1993 eurodance hit 'What Is Love'?",
-      "answers": ["Haddaway"]
+      "answers": ["Haddaway"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q145",
       "question": "Which Danish group released the 1997 hit 'Barbie Girl'?",
-      "answers": ["Aqua"]
+      "answers": ["Aqua"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q146",
       "question": "Which Italian group released the 1999 hit 'Blue (Da Ba Dee)'?",
-      "answers": ["Eiffel 65"]
+      "answers": ["Eiffel 65"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q147",
@@ -744,289 +890,326 @@
         "Notorious BIG",
         "Biggie",
         "Biggie Smalls"
-      ]
+      ],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q148",
       "question": "Which rapper released the 1996 double album 'All Eyez on Me'?",
-      "answers": ["2Pac", "Tupac", "Tupac Shakur"]
+      "answers": ["2Pac", "Tupac", "Tupac Shakur"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q149",
       "question": "Which group released the pioneering 1979 rap hit 'Rapper's Delight'?",
-      "answers": ["The Sugarhill Gang", "Sugarhill Gang", "Sugar Hill Gang"]
+      "answers": ["The Sugarhill Gang", "Sugarhill Gang", "Sugar Hill Gang"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q150",
       "question": "The rap group N.W.A came from which California city?",
-      "answers": ["Compton"]
+      "answers": ["Compton"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q151",
       "question": "What was the title of Dr. Dre's 1992 debut solo album?",
-      "answers": ["The Chronic", "Chronic"]
+      "answers": ["The Chronic", "Chronic"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q152",
       "question": "Eminem's 'Lose Yourself' was written for which 2002 film?",
-      "answers": ["8 Mile"]
+      "answers": ["8 Mile"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q153",
       "question": "Run-DMC's 1986 hit 'Walk This Way' was a collaboration with which rock band?",
-      "answers": ["Aerosmith"]
+      "answers": ["Aerosmith"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q154",
       "question": "Which hip-hop duo released the 2003 hit 'Hey Ya!'?",
-      "answers": ["Outkast", "OutKast"]
+      "answers": ["Outkast", "OutKast"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q155",
       "question": "Which rapper released the 2003 hit 'In da Club'?",
-      "answers": ["50 Cent"]
+      "answers": ["50 Cent"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q156",
       "question": "Which female rapper released the 2011 hit 'Super Bass'?",
-      "answers": ["Nicki Minaj", "Minaj"]
+      "answers": ["Nicki Minaj", "Minaj"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q157",
       "question": "What was the title of Kanye West's 2004 debut album?",
-      "answers": ["The College Dropout", "College Dropout"]
+      "answers": ["The College Dropout", "College Dropout"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q158",
       "question": "What nationality is the electronic duo Daft Punk?",
-      "answers": ["French", "France"]
+      "answers": ["French", "France"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q159",
       "question": "Which Swedish DJ released the 2013 hit 'Wake Me Up'?",
-      "answers": ["Avicii"]
+      "answers": ["Avicii"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q160",
       "question": "Which Puerto Rican singer released 'Despacito' featuring Daddy Yankee?",
-      "answers": ["Luis Fonsi"]
+      "answers": ["Luis Fonsi"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-music-q161",
       "question": "Which band performed 'Video Killed the Radio Star', the first video played on MTV?",
-      "answers": ["The Buggles", "Buggles"]
+      "answers": ["The Buggles", "Buggles"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q162",
       "question": "Who was the Beatles' original drummer, replaced by Ringo Starr in 1962?",
-      "answers": ["Pete Best"]
+      "answers": ["Pete Best"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q163",
       "question": "Who managed The Beatles from 1962 until his death in 1967?",
-      "answers": ["Brian Epstein", "Epstein"]
+      "answers": ["Brian Epstein", "Epstein"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q164",
       "question": "Which 1965 Beatles song was one of the first Western pop recordings to feature a sitar?",
-      "answers": ["Norwegian Wood"]
+      "answers": ["Norwegian Wood"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q165",
       "question": "Which 17-year-old 'La Bamba' singer died with Buddy Holly in the 1959 plane crash?",
-      "answers": ["Ritchie Valens"]
+      "answers": ["Ritchie Valens"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q166",
       "question": "Which Delta blues guitarist, according to legend, sold his soul to the devil at a crossroads?",
-      "answers": ["Robert Johnson"]
+      "answers": ["Robert Johnson"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q167",
       "question": "Which gospel singer and electric guitar pioneer is called the 'Godmother of Rock and Roll'?",
-      "answers": ["Sister Rosetta Tharpe", "Rosetta Tharpe"]
+      "answers": ["Sister Rosetta Tharpe", "Rosetta Tharpe"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q168",
       "question": "Which Chicago blues legend recorded 'Hoochie Coochie Man'?",
-      "answers": ["Muddy Waters"]
+      "answers": ["Muddy Waters"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q169",
       "question": "Which producer created the dense 'Wall of Sound' recording technique?",
-      "answers": ["Phil Spector", "Spector"]
+      "answers": ["Phil Spector", "Spector"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q170",
       "question": "What was the nickname of Motown's in-house studio band?",
-      "answers": ["The Funk Brothers", "Funk Brothers"]
+      "answers": ["The Funk Brothers", "Funk Brothers"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q171",
       "question": "Which founding Pink Floyd frontman left the band in 1968?",
-      "answers": ["Syd Barrett", "Barrett"]
+      "answers": ["Syd Barrett", "Barrett"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q172",
       "question": "Which Led Zeppelin drummer's death in 1980 led the band to break up?",
-      "answers": ["John Bonham", "Bonham"]
+      "answers": ["John Bonham", "Bonham"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q173",
       "question": "Who was the wild drummer of The Who, who died in 1978?",
-      "answers": ["Keith Moon", "Moon"]
+      "answers": ["Keith Moon", "Moon"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q174",
       "question": "Which founding Rolling Stones guitarist drowned in his pool in 1969?",
-      "answers": ["Brian Jones"]
+      "answers": ["Brian Jones"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q175",
       "question": "Eric Clapton recorded 'Layla' in 1970 with which band?",
-      "answers": ["Derek and the Dominos", "Derek & the Dominos"]
+      "answers": ["Derek and the Dominos", "Derek & the Dominos"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q176",
       "question": "Which New York club, opened in 1973, launched the Ramones, Blondie and Talking Heads?",
-      "answers": ["CBGB", "CBGB's", "CBGBs"]
+      "answers": ["CBGB", "CBGB's", "CBGBs"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q177",
       "question": "After singer Ian Curtis died, Joy Division re-formed under what name?",
-      "answers": ["New Order"]
+      "answers": ["New Order"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q178",
       "question": "Which German group pioneered electronic pop with the 1974 album 'Autobahn'?",
-      "answers": ["Kraftwerk"]
+      "answers": ["Kraftwerk"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q179",
       "question": "What is Bob Dylan's birth name?",
-      "answers": ["Robert Zimmerman", "Robert Allen Zimmerman", "Zimmerman"]
+      "answers": ["Robert Zimmerman", "Robert Allen Zimmerman", "Zimmerman"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q180",
       "question": "At which 1965 folk festival did Bob Dylan famously 'go electric'?",
-      "answers": ["Newport", "Newport Folk Festival"]
+      "answers": ["Newport", "Newport Folk Festival"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q181",
       "question": "What was Freddie Mercury's birth name?",
-      "answers": ["Farrokh Bulsara"]
+      "answers": ["Farrokh Bulsara"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q182",
       "question": "What was the title of David Bowie's final album, released two days before his death in 2016?",
-      "answers": ["Blackstar"]
+      "answers": ["Blackstar"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q183",
       "question": "Which Beach Boy masterminded the 1966 album 'Pet Sounds'?",
-      "answers": ["Brian Wilson"]
+      "answers": ["Brian Wilson"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q184",
       "question": "Which soul singer wrote and first recorded 'Respect' in 1965?",
-      "answers": ["Otis Redding", "Redding"]
+      "answers": ["Otis Redding", "Redding"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q185",
       "question": "Who wrote 'Nothing Compares 2 U', a 1990 hit for Sinead O'Connor?",
-      "answers": ["Prince"]
+      "answers": ["Prince"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q186",
       "question": "Johnny Cash's 2002 song 'Hurt' is a cover of which industrial rock band?",
-      "answers": ["Nine Inch Nails", "NIN"]
+      "answers": ["Nine Inch Nails", "NIN"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q187",
       "question": "Which country legend wrote 'Crazy', a signature hit for Patsy Cline?",
-      "answers": ["Willie Nelson", "Nelson"]
+      "answers": ["Willie Nelson", "Nelson"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q188",
       "question": "Under what fictional rock alter ego did Garth Brooks release a 1999 album?",
-      "answers": ["Chris Gaines"]
+      "answers": ["Chris Gaines"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q189",
       "question": "Johnny Cash recorded a famous 1968 live album at which California prison?",
-      "answers": ["Folsom", "Folsom Prison", "Folsom State Prison"]
+      "answers": ["Folsom", "Folsom Prison", "Folsom State Prison"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q190",
       "question": "Which singer-songwriter released the acclaimed 1994 album 'Grace' before drowning in 1997?",
-      "answers": ["Jeff Buckley", "Buckley"]
+      "answers": ["Jeff Buckley", "Buckley"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q191",
       "question": "Which avant-garde composer wrote 4'33\", a piece consisting of silence?",
-      "answers": ["John Cage", "Cage"]
+      "answers": ["John Cage", "Cage"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q192",
       "question": "Which electronic instrument is played without physically touching it?",
-      "answers": ["Theremin"]
+      "answers": ["Theremin"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q193",
       "question": "Which Belgian instrument maker invented the saxophone?",
-      "answers": ["Adolphe Sax", "Sax"]
+      "answers": ["Adolphe Sax", "Sax"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q194",
       "question": "An orchestra traditionally tunes to a note played by which instrument?",
-      "answers": ["Oboe"]
+      "answers": ["Oboe"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q195",
       "question": "In hertz, what is the standard concert pitch frequency of the A above middle C?",
-      "answers": ["440"]
+      "answers": ["440"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q196",
       "question": "How many black keys are on a standard piano?",
-      "answers": ["36"]
+      "answers": ["36"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q197",
       "question": "Which composer's ballet 'The Rite of Spring' caused a riot at its 1913 premiere?",
-      "answers": ["Stravinsky", "Igor Stravinsky"]
+      "answers": ["Stravinsky", "Igor Stravinsky"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q198",
       "question": "Which Czech composer wrote the 'New World Symphony'?",
-      "answers": ["Dvorak", "Antonin Dvorak", "Dvořák"]
+      "answers": ["Dvorak", "Antonin Dvorak", "Dvořák"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q199",
       "question": "'O Fortuna' is the thunderous opening of which Carl Orff cantata?",
-      "answers": ["Carmina Burana"]
+      "answers": ["Carmina Burana"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-music-q200",
       "question": "Which Austrian composer invented the twelve-tone technique?",
-      "answers": ["Schoenberg", "Arnold Schoenberg", "Schonberg"]
+      "answers": ["Schoenberg", "Arnold Schoenberg", "Schonberg"],
+      "difficulty": "hard"
     }
-  ],
-  "finals": {
-    "easy": {
-      "id": "qz-music-final-easy",
-      "question": "Which Mariah Carey song returns to the top of the charts every December?",
-      "answers": ["All I Want for Christmas Is You", "All I Want for Christmas"]
-    },
-    "medium": {
-      "id": "qz-music-final-medium",
-      "question": "Which legendary guitarist performed 'The Star-Spangled Banner' at Woodstock in 1969?",
-      "answers": ["Jimi Hendrix", "Hendrix"]
-    },
-    "hard": {
-      "id": "qz-music-final-hard",
-      "question": "What name did blues legend B.B. King give to each of his beloved guitars?",
-      "answers": ["Lucille"]
-    }
-  }
+  ]
 }

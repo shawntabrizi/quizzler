@@ -9,1019 +9,1202 @@
     {
       "id": "qz-science-nature-q001",
       "question": "What gas do humans need to breathe to survive?",
-      "answers": ["oxygen", "O2"]
+      "answers": ["oxygen", "O2"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q002",
       "question": "What is the closest star to Earth?",
-      "answers": ["the Sun", "Sun"]
+      "answers": ["the Sun", "Sun"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q003",
       "question": "What planet do we live on?",
-      "answers": ["Earth"]
+      "answers": ["Earth"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q004",
       "question": "What is H2O more commonly known as?",
-      "answers": ["water"]
+      "answers": ["water"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q005",
       "question": "What is the largest land animal on Earth?",
-      "answers": ["African elephant", "elephant"]
+      "answers": ["African elephant", "elephant"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q006",
       "question": "What organ pumps blood around the human body?",
-      "answers": ["heart"]
+      "answers": ["heart"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q007",
       "question": "What is the fastest land animal in the world?",
-      "answers": ["cheetah"]
+      "answers": ["cheetah"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q008",
       "question": "What color is chlorophyll, which makes plants green?",
-      "answers": ["green"]
+      "answers": ["green"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q009",
       "question": "How many legs does an insect have?",
-      "answers": ["6", "six"]
+      "answers": ["6", "six"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q010",
       "question": "What is the tallest animal in the world?",
-      "answers": ["giraffe"]
+      "answers": ["giraffe"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q011",
       "question": "What do bees collect from flowers to make honey?",
-      "answers": ["nectar"]
+      "answers": ["nectar"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q012",
       "question": "What is the center of an atom called?",
-      "answers": ["nucleus"]
+      "answers": ["nucleus"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q013",
       "question": "What planet is known as the Red Planet?",
-      "answers": ["Mars"]
+      "answers": ["Mars"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q014",
       "question": "How many bones does an adult human have?",
-      "answers": ["206"]
+      "answers": ["206"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q015",
       "question": "What is the largest planet in our solar system?",
-      "answers": ["Jupiter"]
+      "answers": ["Jupiter"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q016",
       "question": "What gas do plants absorb from the air for photosynthesis?",
-      "answers": ["carbon dioxide", "CO2"]
+      "answers": ["carbon dioxide", "CO2"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q017",
       "question": "What is the hardest natural substance on Earth?",
-      "answers": ["diamond"]
+      "answers": ["diamond"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q018",
       "question": "What scientific theory describes the movement of Earth's crustal plates?",
-      "answers": ["plate tectonics", "theory of plate tectonics"]
+      "answers": ["plate tectonics", "theory of plate tectonics"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q019",
       "question": "What do you call an animal that eats only plants?",
-      "answers": ["herbivore"]
+      "answers": ["herbivore"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q020",
       "question": "What is the process by which plants make food using sunlight?",
-      "answers": ["photosynthesis"]
+      "answers": ["photosynthesis"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q021",
       "question": "How many planets are in our solar system?",
-      "answers": ["8", "eight"]
+      "answers": ["8", "eight"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q022",
       "question": "What is the largest animal ever known to have lived?",
-      "answers": ["blue whale"]
+      "answers": ["blue whale"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q023",
       "question": "What part of the plant conducts photosynthesis mainly?",
-      "answers": ["leaf", "leaves"]
+      "answers": ["leaf", "leaves"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q024",
       "question": "What is the chemical symbol for gold?",
-      "answers": ["Au"]
+      "answers": ["Au"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q025",
       "question": "What is the freezing point of water in degrees Celsius?",
-      "answers": ["0"]
+      "answers": ["0"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q026",
       "question": "What is the boiling point of water in degrees Celsius at sea level?",
-      "answers": ["100"]
+      "answers": ["100"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q027",
       "question": "What force pulls objects toward the center of the Earth?",
-      "answers": ["gravity"]
+      "answers": ["gravity"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q028",
       "question": "What is the closest planet to the Sun?",
-      "answers": ["Mercury"]
+      "answers": ["Mercury"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q029",
       "question": "What do caterpillars turn into?",
-      "answers": ["butterflies", "butterfly", "moths", "moth"]
+      "answers": ["butterflies", "butterfly", "moths", "moth"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q030",
       "question": "What is the name of Earth's only natural satellite?",
-      "answers": ["the Moon", "Moon"]
+      "answers": ["the Moon", "Moon"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q031",
       "question": "What is the chemical symbol for oxygen?",
-      "answers": ["O"]
+      "answers": ["O"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q032",
       "question": "What is a baby dog called?",
-      "answers": ["puppy"]
+      "answers": ["puppy"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q033",
       "question": "What is a baby cat called?",
-      "answers": ["kitten"]
+      "answers": ["kitten"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q034",
       "question": "What gas makes up most of Earth's atmosphere?",
-      "answers": ["nitrogen", "N2"]
+      "answers": ["nitrogen", "N2"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q035",
       "question": "What is the study of living organisms called?",
-      "answers": ["biology"]
+      "answers": ["biology"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q036",
       "question": "What is the largest organ of the human body?",
-      "answers": ["skin"]
+      "answers": ["skin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q037",
       "question": "What do we call animals that are active at night?",
-      "answers": ["nocturnal"]
+      "answers": ["nocturnal"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q038",
       "question": "What is the chemical symbol for hydrogen?",
-      "answers": ["H"]
+      "answers": ["H"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q039",
       "question": "What is frozen water called?",
-      "answers": ["ice"]
+      "answers": ["ice"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q040",
       "question": "What is the name of our galaxy?",
-      "answers": ["Milky Way", "the Milky Way"]
+      "answers": ["Milky Way", "the Milky Way"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q041",
       "question": "What is the largest big cat in the world?",
-      "answers": ["tiger"]
+      "answers": ["tiger"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q042",
       "question": "What is the powerhouse of the cell often called?",
-      "answers": ["mitochondria", "mitochondrion"]
+      "answers": ["mitochondria", "mitochondrion"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q043",
       "question": "What planet is famous for its rings?",
-      "answers": ["Saturn"]
+      "answers": ["Saturn"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q044",
       "question": "What do you call molten rock that erupts from a volcano?",
-      "answers": ["lava"]
+      "answers": ["lava"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q045",
       "question": "What is the human body's largest artery?",
-      "answers": ["aorta"]
+      "answers": ["aorta"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q046",
       "question": "What is the chemical symbol for sodium?",
-      "answers": ["Na"]
+      "answers": ["Na"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q047",
       "question": "What is the tallest type of tree in the world?",
-      "answers": ["redwood", "coast redwood", "giant sequoia"]
+      "answers": ["redwood", "coast redwood", "giant sequoia"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q048",
       "question": "What do you call an animal that eats both plants and meat?",
-      "answers": ["omnivore"]
+      "answers": ["omnivore"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q049",
       "question": "What is the fastest bird in the world in a dive?",
-      "answers": ["peregrine falcon", "falcon"]
+      "answers": ["peregrine falcon", "falcon"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q050",
       "question": "What is the study of weather called?",
-      "answers": ["meteorology"]
+      "answers": ["meteorology"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q051",
       "question": "What is the chemical symbol for carbon?",
-      "answers": ["C"]
+      "answers": ["C"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q052",
       "question": "How many chambers does the human heart have?",
-      "answers": ["4", "four"]
+      "answers": ["4", "four"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q053",
       "question": "What is the largest reptile in the world?",
-      "answers": ["saltwater crocodile", "crocodile"]
+      "answers": ["saltwater crocodile", "crocodile"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q054",
       "question": "What part of the eye controls how much light enters?",
-      "answers": ["iris", "pupil"]
+      "answers": ["iris", "pupil"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q055",
       "question": "What is the process of a liquid turning into a gas called?",
-      "answers": ["evaporation"]
+      "answers": ["evaporation"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q056",
       "question": "What is the chemical symbol for iron?",
-      "answers": ["Fe"]
+      "answers": ["Fe"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q057",
       "question": "What is the only mammal capable of true flight?",
-      "answers": ["bat"]
+      "answers": ["bat"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q058",
       "question": "What planet is known as the Earth's twin due to similar size?",
-      "answers": ["Venus"]
+      "answers": ["Venus"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q059",
       "question": "What is a group of wolves called?",
-      "answers": ["pack"]
+      "answers": ["pack"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q060",
       "question": "What is the largest bone in the human body?",
-      "answers": ["femur", "thigh bone"]
+      "answers": ["femur", "thigh bone"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q061",
       "question": "What is the chemical symbol for helium?",
-      "answers": ["He"]
+      "answers": ["He"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q062",
       "question": "What is the study of rocks and the Earth called?",
-      "answers": ["geology"]
+      "answers": ["geology"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q063",
       "question": "What is the largest species of penguin?",
-      "answers": ["emperor penguin", "emperor"]
+      "answers": ["emperor penguin", "emperor"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q064",
       "question": "What is the smallest planet in our solar system?",
-      "answers": ["Mercury"]
+      "answers": ["Mercury"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q065",
       "question": "What organ in the body is responsible for filtering blood and making urine?",
-      "answers": ["kidney", "kidneys"]
+      "answers": ["kidney", "kidneys"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q066",
       "question": "What is the chemical symbol for potassium?",
-      "answers": ["K"]
+      "answers": ["K"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q067",
       "question": "What type of animal is a Komodo dragon?",
-      "answers": ["lizard", "reptile"]
+      "answers": ["lizard", "reptile"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q068",
       "question": "What is the process by which water vapor turns into liquid?",
-      "answers": ["condensation"]
+      "answers": ["condensation"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q069",
       "question": "What is the name for animals with a backbone?",
-      "answers": ["vertebrates", "vertebrate"]
+      "answers": ["vertebrates", "vertebrate"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q070",
       "question": "What is the chemical symbol for calcium?",
-      "answers": ["Ca"]
+      "answers": ["Ca"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q071",
       "question": "What scientist proposed the theory of evolution by natural selection?",
-      "answers": ["Charles Darwin", "Darwin"]
+      "answers": ["Charles Darwin", "Darwin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q072",
       "question": "What is the largest internal organ in the human body?",
-      "answers": ["liver"]
+      "answers": ["liver"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q073",
       "question": "What is the term for the variety of life in an ecosystem?",
-      "answers": ["biodiversity"]
+      "answers": ["biodiversity"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q074",
       "question": "What gas is most responsible for the greenhouse effect from human activity?",
-      "answers": ["carbon dioxide", "CO2"]
+      "answers": ["carbon dioxide", "CO2"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q075",
       "question": "What is the chemical symbol for nitrogen?",
-      "answers": ["N"]
+      "answers": ["N"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q076",
       "question": "What is the powerhouse molecule that stores energy in cells?",
-      "answers": ["ATP", "adenosine triphosphate"]
+      "answers": ["ATP", "adenosine triphosphate"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q077",
       "question": "What is the term for animals that have no backbone?",
-      "answers": ["invertebrates", "invertebrate"]
+      "answers": ["invertebrates", "invertebrate"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q078",
       "question": "What scientist developed the three laws of motion?",
-      "answers": ["Isaac Newton", "Newton"]
+      "answers": ["Isaac Newton", "Newton"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q079",
       "question": "What is the chemical symbol for silver?",
-      "answers": ["Ag"]
+      "answers": ["Ag"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q080",
       "question": "What is the outermost layer of the Earth called?",
-      "answers": ["crust"]
+      "answers": ["crust"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-science-nature-q081",
       "question": "What is the study of the stars, planets, and universe called?",
-      "answers": ["astronomy"]
+      "answers": ["astronomy"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q082",
       "question": "What acid is found in the human stomach to aid digestion?",
-      "answers": ["hydrochloric acid", "HCl"]
+      "answers": ["hydrochloric acid", "HCl"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q083",
       "question": "What is the term for a group of similar organisms that can breed together?",
-      "answers": ["species"]
+      "answers": ["species"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q084",
       "question": "What scientist is famous for the theory of relativity?",
-      "answers": ["Albert Einstein", "Einstein"]
+      "answers": ["Albert Einstein", "Einstein"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q085",
       "question": "What is the chemical symbol for lead?",
-      "answers": ["Pb"]
+      "answers": ["Pb"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q086",
       "question": "What is the process by which cells divide to form two identical cells?",
-      "answers": ["mitosis"]
+      "answers": ["mitosis"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q087",
       "question": "What is the innermost part of the Earth called?",
-      "answers": ["inner core", "core"]
+      "answers": ["inner core", "core"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q088",
       "question": "What is the term for the layer of gases surrounding a planet?",
-      "answers": ["atmosphere"]
+      "answers": ["atmosphere"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q089",
       "question": "What element has the atomic number 1?",
-      "answers": ["hydrogen", "H"]
+      "answers": ["hydrogen", "H"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q090",
       "question": "What scientist discovered penicillin?",
-      "answers": ["Alexander Fleming", "Fleming"]
+      "answers": ["Alexander Fleming", "Fleming"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q091",
       "question": "What is the chemical symbol for chlorine?",
-      "answers": ["Cl"]
+      "answers": ["Cl"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q092",
       "question": "What is the smallest unit of an element that retains its properties?",
-      "answers": ["atom"]
+      "answers": ["atom"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q093",
       "question": "What is the medical term for the windpipe?",
-      "answers": ["trachea"]
+      "answers": ["trachea"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q094",
       "question": "What type of energy does a moving object possess?",
-      "answers": ["kinetic energy", "kinetic"]
+      "answers": ["kinetic energy", "kinetic"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q095",
       "question": "What scientist is known as the father of genetics for his pea plant experiments?",
-      "answers": ["Gregor Mendel", "Mendel"]
+      "answers": ["Gregor Mendel", "Mendel"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q096",
       "question": "What is the term for the pigment that gives skin and hair its color?",
-      "answers": ["melanin"]
+      "answers": ["melanin"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q097",
       "question": "What is the chemical formula for table salt?",
-      "answers": ["NaCl", "sodium chloride"]
+      "answers": ["NaCl", "sodium chloride"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q098",
       "question": "What is the largest moon of Jupiter?",
-      "answers": ["Ganymede"]
+      "answers": ["Ganymede"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q099",
       "question": "What is the term for an animal that hunts other animals for food?",
-      "answers": ["predator"]
+      "answers": ["predator"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q100",
       "question": "What is the SI unit of force?",
-      "answers": ["newton", "N"]
+      "answers": ["newton", "N"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q101",
       "question": "Which Polish astronomer published De revolutionibus orbium coelestium in 1543?",
-      "answers": ["Copernicus", "Nicolaus Copernicus"]
+      "answers": ["Copernicus", "Nicolaus Copernicus"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q102",
       "question": "What is the term for the resting stage of an insect between larva and adult?",
-      "answers": ["pupa", "chrysalis"]
+      "answers": ["pupa", "chrysalis"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q103",
       "question": "What is the chemical symbol for copper?",
-      "answers": ["Cu"]
+      "answers": ["Cu"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q104",
       "question": "What is the process by which plants lose water through their leaves?",
-      "answers": ["transpiration"]
+      "answers": ["transpiration"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q105",
       "question": "What is the SI unit of electric current?",
-      "answers": ["ampere", "amp", "A"]
+      "answers": ["ampere", "amp", "A"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q106",
       "question": "What is the term for an animal that is hunted by predators?",
-      "answers": ["prey"]
+      "answers": ["prey"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q107",
       "question": "What is the chemical symbol for zinc?",
-      "answers": ["Zn"]
+      "answers": ["Zn"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q108",
       "question": "What is the layer of the atmosphere that protects us from UV radiation?",
-      "answers": ["ozone layer", "ozone"]
+      "answers": ["ozone layer", "ozone"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q109",
       "question": "What is the SI unit of energy?",
-      "answers": ["joule", "J"]
+      "answers": ["joule", "J"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q110",
       "question": "What is the largest planet's most famous storm called?",
-      "answers": ["Great Red Spot"]
+      "answers": ["Great Red Spot"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q111",
       "question": "What type of blood cell fights infection?",
-      "answers": ["white blood cell", "white blood cells", "leukocyte"]
+      "answers": ["white blood cell", "white blood cells", "leukocyte"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q112",
       "question": "What is the chemical symbol for mercury the element?",
-      "answers": ["Hg"]
+      "answers": ["Hg"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q113",
       "question": "What is the term for the study of fungi?",
-      "answers": ["mycology"]
+      "answers": ["mycology"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q114",
       "question": "What is the process by which a solid turns directly into a gas?",
-      "answers": ["sublimation"]
+      "answers": ["sublimation"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q115",
       "question": "Which protein in red blood cells transports oxygen?",
-      "answers": ["hemoglobin"]
+      "answers": ["hemoglobin"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q116",
       "question": "What is the SI unit of power?",
-      "answers": ["watt", "W"]
+      "answers": ["watt", "W"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q117",
       "question": "What is the term for animals that maintain a constant body temperature?",
-      "answers": ["warm-blooded", "endothermic"]
+      "answers": ["warm-blooded", "endothermic"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q118",
       "question": "What telescope, launched in 1990, is named after an astronomer?",
-      "answers": ["Hubble Space Telescope", "Hubble"]
+      "answers": ["Hubble Space Telescope", "Hubble"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q119",
       "question": "What is the chemical symbol for tin?",
-      "answers": ["Sn"]
+      "answers": ["Sn"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q120",
       "question": "What gland regulates metabolism and is located in the neck?",
-      "answers": ["thyroid", "thyroid gland"]
+      "answers": ["thyroid", "thyroid gland"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q121",
       "question": "What is the term for the study of insects?",
-      "answers": ["entomology"]
+      "answers": ["entomology"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q122",
       "question": "What is the name of the process by which sex cells are produced?",
-      "answers": ["meiosis"]
+      "answers": ["meiosis"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q123",
       "question": "What is the SI unit of frequency?",
-      "answers": ["hertz", "Hz"]
+      "answers": ["hertz", "Hz"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q124",
       "question": "What is the term for a substance that speeds up a chemical reaction?",
-      "answers": ["catalyst"]
+      "answers": ["catalyst"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q125",
       "question": "What is the second most abundant gas in Earth's atmosphere?",
-      "answers": ["oxygen", "O2"]
+      "answers": ["oxygen", "O2"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q126",
       "question": "What is the largest desert in the world by area?",
-      "answers": ["Antarctic", "Antarctic Desert", "Antarctica"]
+      "answers": ["Antarctic", "Antarctic Desert", "Antarctica"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q127",
       "question": "What is the term for a young frog before it develops legs?",
-      "answers": ["tadpole"]
+      "answers": ["tadpole"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q128",
       "question": "What is the pH value of a neutral solution?",
-      "answers": ["7"]
+      "answers": ["7"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q129",
       "question": "What scientist is credited with discovering radioactivity elements polonium and radium?",
-      "answers": ["Marie Curie", "Curie"]
+      "answers": ["Marie Curie", "Curie"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q130",
       "question": "What is the chemical symbol for aluminum?",
-      "answers": ["Al"]
+      "answers": ["Al"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q131",
       "question": "What part of the brain controls balance and coordination?",
-      "answers": ["cerebellum"]
+      "answers": ["cerebellum"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q132",
       "question": "What is the term for animals whose body temperature varies with the environment?",
-      "answers": ["cold-blooded", "ectothermic"]
+      "answers": ["cold-blooded", "ectothermic"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q133",
       "question": "What is the closest galaxy to the Milky Way that is a large spiral?",
-      "answers": ["Andromeda", "Andromeda Galaxy"]
+      "answers": ["Andromeda", "Andromeda Galaxy"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q134",
       "question": "What is the chemical formula for methane?",
-      "answers": ["CH4"]
+      "answers": ["CH4"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q135",
       "question": "What is the medical name for the collarbone?",
-      "answers": ["clavicle"]
+      "answers": ["clavicle"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q136",
       "question": "What is the term for the number of protons in an atom?",
-      "answers": ["atomic number"]
+      "answers": ["atomic number"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q137",
       "question": "What type of rock is formed from cooled magma or lava?",
-      "answers": ["igneous", "igneous rock"]
+      "answers": ["igneous", "igneous rock"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q138",
       "question": "What scientist proposed the model of DNA as a double helix along with Francis Crick?",
-      "answers": ["James Watson", "Watson"]
+      "answers": ["James Watson", "Watson"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q139",
       "question": "What is the chemical symbol for phosphorus?",
-      "answers": ["P"]
+      "answers": ["P"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q140",
       "question": "What is the term for a chemical that neutralizes an acid?",
-      "answers": ["base", "alkali"]
+      "answers": ["base", "alkali"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q141",
       "question": "What is the outermost planet in our solar system?",
-      "answers": ["Neptune"]
+      "answers": ["Neptune"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q142",
       "question": "What is the medical term for the kneecap?",
-      "answers": ["patella"]
+      "answers": ["patella"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q143",
       "question": "What is the SI unit of temperature?",
-      "answers": ["kelvin", "K"]
+      "answers": ["kelvin", "K"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q144",
       "question": "What is the term for the process of an animal shedding its skin?",
-      "answers": ["molting", "moulting", "molt"]
+      "answers": ["molting", "moulting", "molt"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q145",
       "question": "Which blood type has both A and B antigens on its red blood cells?",
-      "answers": ["AB", "type AB"]
+      "answers": ["AB", "type AB"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q146",
       "question": "What scientist formulated the periodic table of elements?",
-      "answers": ["Dmitri Mendeleev", "Mendeleev"]
+      "answers": ["Dmitri Mendeleev", "Mendeleev"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q147",
       "question": "What is the chemical symbol for the element neon?",
-      "answers": ["Ne"]
+      "answers": ["Ne"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q148",
       "question": "What is the term for the study of heredity and genes?",
-      "answers": ["genetics"]
+      "answers": ["genetics"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q149",
       "question": "What is the largest type of shark?",
-      "answers": ["whale shark"]
+      "answers": ["whale shark"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q150",
       "question": "What type of rock forms from layers of sediment over time?",
-      "answers": ["sedimentary", "sedimentary rock"]
+      "answers": ["sedimentary", "sedimentary rock"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q151",
       "question": "What is the chemical formula for ammonia?",
-      "answers": ["NH3"]
+      "answers": ["NH3"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q152",
       "question": "What is the medical term for high blood pressure?",
-      "answers": ["hypertension"]
+      "answers": ["hypertension"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q153",
       "question": "What is the fundamental particle with a negative electric charge?",
-      "answers": ["electron"]
+      "answers": ["electron"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q154",
       "question": "What scientist discovered that the Earth's continents move over time?",
-      "answers": ["Alfred Wegener", "Wegener"]
+      "answers": ["Alfred Wegener", "Wegener"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q155",
       "question": "What is the chemical symbol for the element uranium?",
-      "answers": ["U"]
+      "answers": ["U"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q156",
       "question": "What is the term for a symbiotic relationship where both organisms benefit?",
-      "answers": ["mutualism"]
+      "answers": ["mutualism"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q157",
       "question": "What is the layer of the Earth between the crust and the core?",
-      "answers": ["mantle"]
+      "answers": ["mantle"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q158",
       "question": "What is the medical term for the voice box?",
-      "answers": ["larynx"]
+      "answers": ["larynx"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q159",
       "question": "What is the brightest star in the night sky as seen from Earth?",
-      "answers": ["Sirius"]
+      "answers": ["Sirius"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q160",
       "question": "What type of rock is formed by heat and pressure changing existing rock?",
-      "answers": ["metamorphic", "metamorphic rock"]
+      "answers": ["metamorphic", "metamorphic rock"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-science-nature-q161",
       "question": "What is the chemical formula for glucose?",
-      "answers": ["C6H12O6"]
+      "answers": ["C6H12O6"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q162",
       "question": "What is the term for the maximum number of organisms an environment can support?",
-      "answers": ["carrying capacity"]
+      "answers": ["carrying capacity"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q163",
       "question": "What is the fundamental particle that carries the electromagnetic force?",
-      "answers": ["photon"]
+      "answers": ["photon"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q164",
       "question": "What scientist is known for the uncertainty principle in quantum mechanics?",
-      "answers": ["Werner Heisenberg", "Heisenberg"]
+      "answers": ["Werner Heisenberg", "Heisenberg"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q165",
       "question": "What is the chemical symbol for the element cobalt?",
-      "answers": ["Co"]
+      "answers": ["Co"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q166",
       "question": "What is the term for the study of the classification of living things?",
-      "answers": ["taxonomy"]
+      "answers": ["taxonomy"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q167",
       "question": "What is the name of the boundary around a black hole beyond which nothing escapes?",
-      "answers": ["event horizon"]
+      "answers": ["event horizon"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q168",
       "question": "What is the chemical formula for hydrogen peroxide?",
-      "answers": ["H2O2"]
+      "answers": ["H2O2"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q169",
       "question": "What is the chemical symbol for the element tungsten?",
-      "answers": ["W"]
+      "answers": ["W"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q170",
       "question": "What is the term for a relationship where one organism benefits and the other is harmed?",
-      "answers": ["parasitism"]
+      "answers": ["parasitism"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q171",
       "question": "What is the term for the tendency of an object to resist changes in motion?",
-      "answers": ["inertia"]
+      "answers": ["inertia"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q172",
       "question": "What is the name of the process where a star like the Sun fuses hydrogen into helium?",
-      "answers": ["nuclear fusion", "fusion"]
+      "answers": ["nuclear fusion", "fusion"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q173",
       "question": "What is the chemical formula for sulfuric acid?",
-      "answers": ["H2SO4"]
+      "answers": ["H2SO4"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q174",
       "question": "What is the term for the study of the interactions between organisms and their environment?",
-      "answers": ["ecology"]
+      "answers": ["ecology"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q175",
       "question": "What is the SI unit of electrical resistance?",
-      "answers": ["ohm"]
+      "answers": ["ohm"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q176",
       "question": "What scientist developed the smallpox vaccine?",
-      "answers": ["Edward Jenner", "Jenner"]
+      "answers": ["Edward Jenner", "Jenner"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q177",
       "question": "What is the chemical symbol for the element nickel?",
-      "answers": ["Ni"]
+      "answers": ["Ni"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q178",
       "question": "What is the term for the average weather conditions of a region over a long period?",
-      "answers": ["climate"]
+      "answers": ["climate"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q179",
       "question": "What is the name of the force that opposes motion between surfaces in contact?",
-      "answers": ["friction"]
+      "answers": ["friction"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q180",
       "question": "What is the chemical formula for baking soda, sodium bicarbonate?",
-      "answers": ["NaHCO3"]
+      "answers": ["NaHCO3"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q181",
       "question": "What is the SI unit of electric charge?",
-      "answers": ["coulomb", "C"]
+      "answers": ["coulomb", "C"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q182",
       "question": "What scientist is credited with formulating the laws of planetary motion?",
-      "answers": ["Johannes Kepler", "Kepler"]
+      "answers": ["Johannes Kepler", "Kepler"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q183",
       "question": "What is the chemical symbol for the element iodine?",
-      "answers": ["I"]
+      "answers": ["I"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q184",
       "question": "What is the name of the phenomenon where light bends as it passes between materials?",
-      "answers": ["refraction"]
+      "answers": ["refraction"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q185",
       "question": "What is the term for the star at the end of its life that has collapsed into an extremely dense point?",
-      "answers": ["black hole"]
+      "answers": ["black hole"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q186",
       "question": "What is the chemical formula for nitric acid?",
-      "answers": ["HNO3"]
+      "answers": ["HNO3"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q187",
       "question": "What scientist proposed the Big Bang theory's expansion basis, discovering galaxies moving away?",
-      "answers": ["Edwin Hubble", "Hubble"]
+      "answers": ["Edwin Hubble", "Hubble"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q188",
       "question": "What is the chemical symbol for the element bromine?",
-      "answers": ["Br"]
+      "answers": ["Br"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q189",
       "question": "What is the term for the process by which a species changes over generations?",
-      "answers": ["evolution"]
+      "answers": ["evolution"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q190",
       "question": "What is the name of the theoretical particle thought to give mass to other particles?",
-      "answers": ["Higgs boson", "Higgs"]
+      "answers": ["Higgs boson", "Higgs"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q191",
       "question": "What is the term for the amount of matter in an object?",
-      "answers": ["mass"]
+      "answers": ["mass"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q192",
       "question": "What is the SI unit of electric potential, or voltage?",
-      "answers": ["volt", "V"]
+      "answers": ["volt", "V"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q193",
       "question": "What is the term for the study of the nervous system?",
-      "answers": ["neurology", "neuroscience"]
+      "answers": ["neurology", "neuroscience"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q194",
       "question": "What is the chemical symbol for the element argon?",
-      "answers": ["Ar"]
+      "answers": ["Ar"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q195",
       "question": "What is the term for a substance that cannot be broken down into simpler substances by chemical means?",
-      "answers": ["element"]
+      "answers": ["element"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q196",
       "question": "What is the name of the closest star to the Sun other than the Sun itself?",
-      "answers": ["Proxima Centauri", "Proxima"]
+      "answers": ["Proxima Centauri", "Proxima"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q197",
       "question": "What scientist first observed cells using a microscope and coined the term cell?",
-      "answers": ["Robert Hooke", "Hooke"]
+      "answers": ["Robert Hooke", "Hooke"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q198",
       "question": "What is the chemical symbol for the element krypton?",
-      "answers": ["Kr"]
+      "answers": ["Kr"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q199",
       "question": "What is the term for the branch of chemistry dealing with carbon compounds?",
-      "answers": ["organic chemistry"]
+      "answers": ["organic chemistry"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-science-nature-q200",
       "question": "What is the name of the effect where the frequency of a wave changes due to relative motion?",
-      "answers": ["Doppler effect", "Doppler shift"]
+      "answers": ["Doppler effect", "Doppler shift"],
+      "difficulty": "hard"
     }
-  ],
-  "finals": {
-    "easy": {
-      "id": "qz-science-nature-final-easy",
-      "question": "What is the name of the star at the center of our solar system?",
-      "answers": ["the Sun", "Sun"]
-    },
-    "medium": {
-      "id": "qz-science-nature-final-medium",
-      "question": "What is the chemical process by which plants convert sunlight, water, and carbon dioxide into food?",
-      "answers": ["photosynthesis"]
-    },
-    "hard": {
-      "id": "qz-science-nature-final-hard",
-      "question": "What is the name of the phenomenon where a quantum particle can be in multiple states at once until measured?",
-      "answers": ["superposition", "quantum superposition"]
-    }
-  }
+  ]
 }

@@ -9,8 +9,7 @@
  * catalog practical while every contract call remains resumable.
  *
  * Resume-safe: packs whose title already exists on-chain sealed are skipped;
- * a partially-seeded pack continues from its on-chain `regular_count`, and
- * finals tolerate "already set" reverts.
+ * a partially-seeded pack continues from its on-chain `question_count`.
  *
  * Usage:
  *   pnpm seed:packs                       # dev //Alice
@@ -54,8 +53,10 @@ interface PackView {
     title: string;
     emoji: string;
     sealed: boolean;
-    regular_count: number;
-    finals_set_count: number;
+    question_count: number;
+    easy_count: number;
+    medium_count: number;
+    hard_count: number;
 }
 
 interface ExpectedStarterPack {
@@ -67,8 +68,42 @@ interface ExpectedStarterPack {
 interface QuestionInput {
     text: string;
     answers: string[];
-    is_final: boolean;
     difficulty: number;
+}
+
+const DIFFICULTY_INDEX = {
+    easy: 0,
+    medium: 1,
+    hard: 2,
+} as const;
+
+interface PackCounts {
+    question_count: number;
+    easy_count: number;
+    medium_count: number;
+    hard_count: number;
+}
+
+function expectedPackCounts(pack: PackFile): PackCounts {
+    const counts: PackCounts = {
+        question_count: pack.questions.length,
+        easy_count: 0,
+        medium_count: 0,
+        hard_count: 0,
+    };
+    for (const question of pack.questions) {
+        if (question.difficulty === "easy") counts.easy_count += 1;
+        else if (question.difficulty === "medium") counts.medium_count += 1;
+        else counts.hard_count += 1;
+    }
+    return counts;
+}
+
+function hasExpectedPackCounts(view: PackCounts, expected: PackCounts): boolean {
+    return view.question_count === expected.question_count
+        && view.easy_count === expected.easy_count
+        && view.medium_count === expected.medium_count
+        && view.hard_count === expected.hard_count;
 }
 
 /** Stable per-file nonce makes a rerun resolve its own created pack safely. */
@@ -277,7 +312,8 @@ async function main(): Promise<void> {
     // ── seed each pack ───────────────────────────────────────────
 
     for (const { file, pack, emoji } of selected) {
-        console.log(`\n── ${file}: ${emoji} "${pack.title}" — ${pack.questions.length} questions + finals`);
+        const expectedCounts = expectedPackCounts(pack);
+        console.log(`\n── ${file}: ${emoji} "${pack.title}" — ${pack.questions.length} questions`);
 
         const creationNonce = creationNonceFor(file);
         let packId = await packForCreation(creationNonce);
@@ -311,16 +347,16 @@ async function main(): Promise<void> {
             throw new Error(`pack #${packId} does not match ${file}'s creator, title, or emoji`);
         }
         if (existing.sealed) {
-            if (existing.regular_count !== pack.questions.length || existing.finals_set_count !== 3) {
+            if (!hasExpectedPackCounts(existing, expectedCounts)) {
                 throw new Error(`sealed pack #${packId} does not match ${file}'s expected question count`);
             }
             console.log("  already sealed on-chain — skipping");
             continue;
         }
-        if (existing.regular_count > pack.questions.length) {
-            throw new Error(`pack #${packId} has more regular questions than ${file}`);
+        if (existing.question_count > pack.questions.length) {
+            throw new Error(`pack #${packId} has more questions than ${file}`);
         }
-        const resumeFrom = existing.regular_count;
+        const resumeFrom = existing.question_count;
         if (resumeFrom > 0) console.log(`  resuming pack #${packId} from question ${resumeFrom}`);
 
         // The registry accepts a bounded, atomic addQuestions chunk. Submit
@@ -329,8 +365,7 @@ async function main(): Promise<void> {
         const regular: QuestionInput[] = pack.questions.slice(resumeFrom).map((question) => ({
             text: question.text,
             answers: normalizeAcceptedAnswers(question.answers),
-            is_final: false,
-            difficulty: 0,
+            difficulty: DIFFICULTY_INDEX[question.difficulty],
         }));
         if (regular.length > 0) {
             const batches = Array.from(
@@ -362,28 +397,6 @@ async function main(): Promise<void> {
             console.log(`  ${regular.length} question(s) submitted`);
         }
 
-        // Finals go individually so an "already set" revert (resume case)
-        // can be tolerated without killing a whole batch.
-        for (const [d, name] of (["easy", "medium", "hard"] as const).entries()) {
-            const data = encodeFunctionData({
-                abi,
-                functionName: "addQuestions",
-                args: [packId, [{
-                    text: pack.finals[name].text,
-                    answers: normalizeAcceptedAnswers(pack.finals[name].answers),
-                    is_final: true,
-                    difficulty: d,
-                } satisfies QuestionInput]],
-            });
-            try {
-                const price = await dryRun(data);
-                await submitAt(reviveCall(data, price.gas, price.deposit), nonce++);
-            } catch (e) {
-                if (!String(e).includes("FinalAlreadySet")) throw e;
-                console.log(`  final:${name} already set — skipping`);
-            }
-        }
-
         const sealData = encodeFunctionData({ abi, functionName: "sealPack", args: [packId] });
         const sealPrice = await dryRun(sealData);
         await submitAt(reviveCall(sealData, sealPrice.gas, sealPrice.deposit), nonce++);
@@ -391,12 +404,11 @@ async function main(): Promise<void> {
         if (
             !sealed.sealed
             || sealed.emoji !== emoji
-            || sealed.regular_count !== pack.questions.length
-            || sealed.finals_set_count !== 3
+            || !hasExpectedPackCounts(sealed, expectedCounts)
         ) {
             throw new Error(`pack #${packId} did not seal with the expected content`);
         }
-        console.log(`  sealed=${sealed.sealed} regular_count=${sealed.regular_count} ✓`);
+        console.log(`  sealed=${sealed.sealed} question_count=${sealed.question_count} ✓`);
     }
 
     console.log(`\n${only ? "Selected" : "All"} packs seeded.`);

@@ -9,707 +9,848 @@
     {
       "id": "qz-food-drink-q001",
       "question": "What fruit is traditionally used to make guacamole?",
-      "answers": ["avocado", "avocados"]
+      "answers": ["avocado", "avocados"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q002",
       "question": "Which Italian dish consists of a flat bread base topped with tomato sauce and cheese?",
-      "answers": ["pizza"]
+      "answers": ["pizza"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q003",
       "question": "What is the main ingredient in an omelette?",
-      "answers": ["eggs", "egg"]
+      "answers": ["eggs", "egg"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q004",
       "question": "What alcoholic drink is made by fermenting grapes?",
-      "answers": ["wine"]
+      "answers": ["wine"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q005",
       "question": "Sushi originated in which country?",
-      "answers": ["Japan"]
+      "answers": ["Japan"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q006",
       "question": "What sweet substance do bees produce?",
-      "answers": ["honey"]
+      "answers": ["honey"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q007",
       "question": "Which vegetable is used to make french fries?",
-      "answers": ["potato", "potatoes"]
+      "answers": ["potato", "potatoes"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q008",
       "question": "What is the primary dry ingredient in bread?",
-      "answers": ["flour"]
+      "answers": ["flour"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q009",
       "question": "Which fruit is said to keep the doctor away when eaten daily?",
-      "answers": ["apple", "an apple"]
+      "answers": ["apple", "an apple"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q010",
       "question": "What hot beverage is made from roasted, ground beans?",
-      "answers": ["coffee"]
+      "answers": ["coffee"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q011",
       "question": "Which country is famous for croissants and baguettes?",
-      "answers": ["France"]
+      "answers": ["France"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q012",
       "question": "What dairy product is made by churning cream?",
-      "answers": ["butter"]
+      "answers": ["butter"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q013",
       "question": "What legume is the main ingredient in hummus?",
-      "answers": ["chickpeas", "chickpea", "garbanzo beans", "garbanzos"]
+      "answers": ["chickpeas", "chickpea", "garbanzo beans", "garbanzos"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q014",
       "question": "What long, thin pasta is commonly served with meatballs?",
-      "answers": ["spaghetti"]
+      "answers": ["spaghetti"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q015",
       "question": "What fruit is dried to make raisins?",
-      "answers": ["grapes", "grape"]
+      "answers": ["grapes", "grape"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q016",
       "question": "What is the traditional Japanese rice wine called?",
-      "answers": ["sake", "saki"]
+      "answers": ["sake", "saki"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q017",
       "question": "What curved yellow fruit grows in bunches called hands?",
-      "answers": ["banana", "bananas"]
+      "answers": ["banana", "bananas"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q018",
       "question": "What red condiment made from tomatoes, vinegar, and sugar is often squirted on fries?",
-      "answers": ["ketchup", "tomato ketchup", "catsup"]
+      "answers": ["ketchup", "tomato ketchup", "catsup"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q019",
       "question": "What type of food is cheddar?",
-      "answers": ["cheese"]
+      "answers": ["cheese"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q020",
       "question": "Which grain is fermented to make Japanese sake?",
-      "answers": ["rice"]
+      "answers": ["rice"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q021",
       "question": "What is the Mexican flatbread made from corn or wheat and used for tacos called?",
-      "answers": ["tortilla", "tortillas"]
+      "answers": ["tortilla", "tortillas"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q022",
       "question": "What deep-fried, ring-shaped sweet pastry is often topped with a glaze?",
-      "answers": ["donut", "doughnut", "donuts", "doughnuts"]
+      "answers": ["donut", "doughnut", "donuts", "doughnuts"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q023",
       "question": "Tacos, burritos, and enchiladas come from which country's cuisine?",
-      "answers": ["Mexico"]
+      "answers": ["Mexico"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q024",
       "question": "What small green citrus fruit is often wedged into the neck of a Mexican beer?",
-      "answers": ["lime"]
+      "answers": ["lime"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q025",
       "question": "What do you call bread that has been browned with heat, often eaten with butter at breakfast?",
-      "answers": ["toast"]
+      "answers": ["toast"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q026",
       "question": "What is the main vegetable in coleslaw?",
-      "answers": ["cabbage"]
+      "answers": ["cabbage"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q027",
       "question": "Which nut is used to make marzipan?",
-      "answers": ["almond", "almonds"]
+      "answers": ["almond", "almonds"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q028",
       "question": "What salty brown sauce made from fermented soybeans is a staple of Chinese cooking?",
-      "answers": ["soy sauce", "soya sauce"]
+      "answers": ["soy sauce", "soya sauce"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q029",
       "question": "Traditional perry is made from which fruit?",
-      "answers": ["pears", "pear"]
+      "answers": ["pears", "pear"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q030",
       "question": "What is the Italian style of frozen dessert similar to ice cream called?",
-      "answers": ["gelato"]
+      "answers": ["gelato"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q031",
       "question": "What green herb is the main ingredient in pesto?",
-      "answers": ["basil"]
+      "answers": ["basil"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q032",
       "question": "Which beverage is made by infusing leaves from the Camellia sinensis plant?",
-      "answers": ["tea"]
+      "answers": ["tea"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q033",
       "question": "Which fast food item takes its name from the German city of Hamburg?",
-      "answers": ["hamburger", "the hamburger", "hamburgers"]
+      "answers": ["hamburger", "the hamburger", "hamburgers"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q034",
       "question": "What white, briny cheese is traditionally crumbled over a Greek salad?",
-      "answers": ["feta", "feta cheese"]
+      "answers": ["feta", "feta cheese"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q035",
       "question": "Which vegetable famously makes people cry when they chop it?",
-      "answers": ["onion", "onions"]
+      "answers": ["onion", "onions"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q036",
       "question": "What Mexican dish is a tortilla folded around cheese and grilled until melted?",
-      "answers": ["quesadilla", "quesadillas"]
+      "answers": ["quesadilla", "quesadillas"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q037",
       "question": "What frozen dessert is commonly served in a cone?",
-      "answers": ["ice cream", "icecream"]
+      "answers": ["ice cream", "icecream"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q038",
       "question": "What breakfast food is made from batter cooked on a griddle and often topped with maple syrup?",
-      "answers": ["pancakes", "pancake"]
+      "answers": ["pancakes", "pancake"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q039",
       "question": "Tofu is made from the curds of which plant's milk?",
-      "answers": ["soybean", "soy", "soybeans", "soya"]
+      "answers": ["soybean", "soy", "soybeans", "soya"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q040",
       "question": "Which country does the rice dish paella come from?",
-      "answers": ["Spain"]
+      "answers": ["Spain"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q041",
       "question": "Which sweet spice, made from tree bark, is essential to pumpkin pie?",
-      "answers": ["cinnamon"]
+      "answers": ["cinnamon"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q042",
       "question": "Which fruit is thrown by the ton at Spain's La Tomatina festival?",
-      "answers": ["tomato", "tomatoes"]
+      "answers": ["tomato", "tomatoes"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q043",
       "question": "What Italian dessert is made with coffee-soaked ladyfingers and layers of creamy filling?",
-      "answers": ["tiramisu"]
+      "answers": ["tiramisu"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q044",
       "question": "Bacon comes from which animal?",
-      "answers": ["pig", "pork", "hog"]
+      "answers": ["pig", "pork", "hog"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q045",
       "question": "What spirit is the main alcohol in a margarita?",
-      "answers": ["tequila"]
+      "answers": ["tequila"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q046",
       "question": "Which cereal grain is malted to brew most beer?",
-      "answers": ["barley"]
+      "answers": ["barley"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q047",
       "question": "What is a dried plum called?",
-      "answers": ["prune", "prunes"]
+      "answers": ["prune", "prunes"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q048",
       "question": "In which country did pizza originate?",
-      "answers": ["Italy"]
+      "answers": ["Italy"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q049",
       "question": "What is the Indian flatbread traditionally baked on the wall of a tandoor oven called?",
-      "answers": ["naan", "naan bread"]
+      "answers": ["naan", "naan bread"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q050",
       "question": "What vegetable is a pickle usually made from?",
-      "answers": ["cucumber", "cucumbers", "gherkin"]
+      "answers": ["cucumber", "cucumbers", "gherkin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q051",
       "question": "What soft white spread is smoked salmon commonly paired with on a bagel?",
-      "answers": ["cream cheese"]
+      "answers": ["cream cheese"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q052",
       "question": "What hard Italian cheese is traditionally grated over spaghetti bolognese?",
-      "answers": ["parmesan", "parmigiano", "parmigiano reggiano"]
+      "answers": ["parmesan", "parmigiano", "parmigiano reggiano"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q053",
       "question": "Chocolate is made from the beans of which plant?",
-      "answers": ["cacao", "cocoa", "cacao tree"]
+      "answers": ["cacao", "cocoa", "cacao tree"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q054",
       "question": "What is the term for cooking food by submerging it in hot oil?",
-      "answers": ["deep frying", "frying", "deep fry", "fry"]
+      "answers": ["deep frying", "frying", "deep fry", "fry"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q055",
       "question": "Which red berry wears its seeds on the outside?",
-      "answers": ["strawberry", "strawberries"]
+      "answers": ["strawberry", "strawberries"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q056",
       "question": "What spirit is the base of a mojito?",
-      "answers": ["rum", "white rum"]
+      "answers": ["rum", "white rum"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q057",
       "question": "What bird is the traditional centerpiece of a US Thanksgiving dinner?",
-      "answers": ["turkey"]
+      "answers": ["turkey"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q058",
       "question": "What is the Japanese dish of sliced raw fish served without rice called?",
-      "answers": ["sashimi"]
+      "answers": ["sashimi"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q059",
       "question": "What large orange gourd is used to make a classic Thanksgiving pie?",
-      "answers": ["pumpkin"]
+      "answers": ["pumpkin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q060",
       "question": "What small tube-shaped pasta is typically baked with cheese in a classic comfort dish?",
-      "answers": ["macaroni", "elbow macaroni"]
+      "answers": ["macaroni", "elbow macaroni"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q061",
       "question": "What spread is made from ground roasted peanuts?",
-      "answers": ["peanut butter"]
+      "answers": ["peanut butter"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q062",
       "question": "Which green vegetable looks like a miniature tree?",
-      "answers": ["broccoli"]
+      "answers": ["broccoli"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q063",
       "question": "Which animal provides most of the milk consumed worldwide?",
-      "answers": ["cow", "cows", "cattle"]
+      "answers": ["cow", "cows", "cattle"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q064",
       "question": "Which citrus fruit shares its name with a color?",
-      "answers": ["orange"]
+      "answers": ["orange"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q065",
       "question": "What is the sweet sugar-based topping spread over cakes called?",
-      "answers": ["icing", "frosting"]
+      "answers": ["icing", "frosting"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q066",
       "question": "What Korean staple side dish is made from fermented cabbage?",
-      "answers": ["kimchi", "kimchee"]
+      "answers": ["kimchi", "kimchee"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q067",
       "question": "What French culinary term means ingredients are prepared and arranged before cooking begins?",
-      "answers": ["mise en place"]
+      "answers": ["mise en place"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q068",
       "question": "Which drink is traditionally ordered by the pint in British pubs?",
-      "answers": ["beer", "ale"]
+      "answers": ["beer", "ale"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q069",
       "question": "What creamy Italian rice dish is made by slowly stirring in broth?",
-      "answers": ["risotto"]
+      "answers": ["risotto"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q070",
       "question": "What classic Italian tomato sauce takes its name from the word for sailors?",
-      "answers": ["marinara", "marinara sauce"]
+      "answers": ["marinara", "marinara sauce"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q071",
       "question": "What is the most expensive spice in the world by weight?",
-      "answers": ["saffron"]
+      "answers": ["saffron"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q072",
       "question": "Which buttery French sauce made with egg yolks is poured over eggs Benedict?",
-      "answers": ["hollandaise", "hollandaise sauce"]
+      "answers": ["hollandaise", "hollandaise sauce"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q073",
       "question": "What type of pastry is used to make eclairs and profiteroles?",
-      "answers": ["choux", "choux pastry", "pate a choux"]
+      "answers": ["choux", "choux pastry", "pate a choux"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q074",
       "question": "What green Japanese horseradish paste is served alongside sushi?",
-      "answers": ["wasabi"]
+      "answers": ["wasabi"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q075",
       "question": "Couscous is made from which milled grain product?",
-      "answers": ["semolina", "durum wheat", "wheat"]
+      "answers": ["semolina", "durum wheat", "wheat"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q076",
       "question": "Goulash originated in which country?",
-      "answers": ["Hungary"]
+      "answers": ["Hungary"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q077",
       "question": "Which root vegetable gives borscht its deep red color?",
-      "answers": ["beetroot", "beet", "beets"]
+      "answers": ["beetroot", "beet", "beets"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q078",
       "question": "Filet mignon is cut from which part of the cow?",
-      "answers": ["tenderloin", "beef tenderloin"]
+      "answers": ["tenderloin", "beef tenderloin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q079",
       "question": "Which coffee liqueur is combined with vodka and cream in a White Russian?",
-      "answers": ["kahlua", "coffee liqueur"]
+      "answers": ["kahlua", "coffee liqueur"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q080",
       "question": "What Italian phrase describes pasta cooked so it is still firm to the bite?",
-      "answers": ["al dente"]
+      "answers": ["al dente"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-food-drink-q081",
       "question": "Which fruit puree is mixed with prosecco in a Bellini?",
-      "answers": ["peach", "peaches", "white peach"]
+      "answers": ["peach", "peaches", "white peach"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q082",
       "question": "What is the clarified butter widely used in Indian cooking called?",
-      "answers": ["ghee"]
+      "answers": ["ghee"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q083",
       "question": "Which soft Italian cheese is the key ingredient in tiramisu's creamy layer?",
-      "answers": ["mascarpone"]
+      "answers": ["mascarpone"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q084",
       "question": "Rioja wine comes from which country?",
-      "answers": ["Spain"]
+      "answers": ["Spain"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q085",
       "question": "What is the dominant flavor of the Greek spirit ouzo?",
-      "answers": ["anise", "aniseed", "licorice", "liquorice"]
+      "answers": ["anise", "aniseed", "licorice", "liquorice"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q086",
       "question": "What chunky tomato-based dip takes its name from the Spanish word for sauce?",
-      "answers": ["salsa"]
+      "answers": ["salsa"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q087",
       "question": "Which variety of lettuce is traditional in a Caesar salad?",
-      "answers": ["romaine", "cos", "romaine lettuce"]
+      "answers": ["romaine", "cos", "romaine lettuce"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q088",
       "question": "What German dish is made of finely shredded, fermented cabbage?",
-      "answers": ["sauerkraut"]
+      "answers": ["sauerkraut"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q089",
       "question": "Which nuts are traditionally blended with basil in pesto?",
-      "answers": ["pine nuts", "pine nut", "pignoli", "pinoli"]
+      "answers": ["pine nuts", "pine nut", "pignoli", "pinoli"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q090",
       "question": "What Japanese soup is made from fermented soybean paste dissolved in stock?",
-      "answers": ["miso soup", "miso"]
+      "answers": ["miso soup", "miso"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q091",
       "question": "Which spirit is the base of a Moscow Mule?",
-      "answers": ["vodka"]
+      "answers": ["vodka"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q092",
       "question": "What French term describes vegetables cut into thin matchstick strips?",
-      "answers": ["julienne"]
+      "answers": ["julienne"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q093",
       "question": "Which berries give gin its signature flavor?",
-      "answers": ["juniper berries", "juniper", "juniper berry"]
+      "answers": ["juniper berries", "juniper", "juniper berry"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q094",
       "question": "What legume is falafel traditionally made from?",
-      "answers": ["chickpeas", "chickpea", "garbanzo beans", "fava beans"]
+      "answers": ["chickpeas", "chickpea", "garbanzo beans", "fava beans"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q095",
       "question": "What Indian drink is made by blending yogurt with water and fruit or spices?",
-      "answers": ["lassi"]
+      "answers": ["lassi"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q096",
       "question": "What classic French dish is beef slowly braised in red wine?",
-      "answers": ["beef bourguignon", "boeuf bourguignon", "bourguignon"]
+      "answers": ["beef bourguignon", "boeuf bourguignon", "bourguignon"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q097",
       "question": "What spongy Ethiopian flatbread made from teff flour is used to scoop up stews?",
-      "answers": ["injera"]
+      "answers": ["injera"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q098",
       "question": "Traditional caviar comes from the roe of which fish?",
-      "answers": ["sturgeon"]
+      "answers": ["sturgeon"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q099",
       "question": "What cold Spanish soup is made from blended raw tomatoes and vegetables?",
-      "answers": ["gazpacho"]
+      "answers": ["gazpacho"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q100",
       "question": "Which Italian dry-cured ham is classically served with melon?",
-      "answers": ["prosciutto", "parma ham"]
+      "answers": ["prosciutto", "parma ham"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q101",
       "question": "What fortified wine from Portugal is traditionally served with dessert?",
-      "answers": ["port", "port wine"]
+      "answers": ["port", "port wine"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q102",
       "question": "What cooking technique involves briefly boiling food and then plunging it into ice water?",
-      "answers": ["blanching", "blanch"]
+      "answers": ["blanching", "blanch"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q103",
       "question": "Which grain is the base of traditional Scottish porridge?",
-      "answers": ["oats", "oatmeal", "oat"]
+      "answers": ["oats", "oatmeal", "oat"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q104",
       "question": "What is the tall, pleated white hat worn by chefs called?",
-      "answers": ["toque", "toque blanche"]
+      "answers": ["toque", "toque blanche"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q105",
       "question": "Which Dutch cheese is famous for its coating of red wax?",
-      "answers": ["edam"]
+      "answers": ["edam"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q106",
       "question": "What Middle Eastern paste is made from ground sesame seeds?",
-      "answers": ["tahini", "tahina"]
+      "answers": ["tahini", "tahina"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q107",
       "question": "Which spiky Southeast Asian fruit is famous for its powerful smell and banned on some public transport?",
-      "answers": ["durian"]
+      "answers": ["durian"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q108",
       "question": "What Vietnamese noodle soup, often made with beef, is considered the national dish?",
-      "answers": ["pho"]
+      "answers": ["pho"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q109",
       "question": "What Japanese dish consists of seafood or vegetables coated in a light batter and deep-fried?",
-      "answers": ["tempura"]
+      "answers": ["tempura"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q110",
       "question": "Cognac is a variety of which spirit?",
-      "answers": ["brandy"]
+      "answers": ["brandy"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q111",
       "question": "What Greek dip is made from strained yogurt, cucumber, and garlic?",
-      "answers": ["tzatziki"]
+      "answers": ["tzatziki"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q112",
       "question": "What technique cooks food slowly in fat at a low temperature?",
-      "answers": ["confit", "confit cooking"]
+      "answers": ["confit", "confit cooking"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q113",
       "question": "What scale is used to measure the heat of chili peppers?",
-      "answers": ["scoville scale", "scoville"]
+      "answers": ["scoville scale", "scoville"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q114",
       "question": "Which country is the world's largest producer of coffee?",
-      "answers": ["Brazil"]
+      "answers": ["Brazil"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q115",
       "question": "Which meat is traditionally used in a Cornish pasty?",
-      "answers": ["beef", "steak"]
+      "answers": ["beef", "steak"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q116",
       "question": "What pastry is made from layers of filo, chopped nuts, and syrup?",
-      "answers": ["baklava"]
+      "answers": ["baklava"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q117",
       "question": "What Scottish dish is made of sheep's offal traditionally cooked in the animal's stomach?",
-      "answers": ["haggis"]
+      "answers": ["haggis"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q118",
       "question": "Which Brazilian sugarcane spirit is the base of a caipirinha?",
-      "answers": ["cachaca"]
+      "answers": ["cachaca"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q119",
       "question": "What Indian spice blend has a name that translates to 'hot mixture'?",
-      "answers": ["garam masala"]
+      "answers": ["garam masala"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q120",
       "question": "What Italian lemon liqueur is a specialty of the Amalfi Coast?",
-      "answers": ["limoncello"]
+      "answers": ["limoncello"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q121",
       "question": "Authentic mozzarella di bufala is made from the milk of which animal?",
-      "answers": ["water buffalo", "buffalo"]
+      "answers": ["water buffalo", "buffalo"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q122",
       "question": "Which vegetable is the main ingredient in baba ghanoush?",
-      "answers": ["eggplant", "aubergine"]
+      "answers": ["eggplant", "aubergine"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q123",
       "question": "What is the French appetizer of cooked snails called?",
-      "answers": ["escargot", "escargots"]
+      "answers": ["escargot", "escargots"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q124",
       "question": "What classic cocktail combines gin, lemon juice, sugar, and soda water and shares its name with a man?",
-      "answers": ["tom collins"]
+      "answers": ["tom collins"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q125",
       "question": "What is the Japanese single-portion boxed meal called?",
-      "answers": ["bento", "bento box"]
+      "answers": ["bento", "bento box"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q126",
       "question": "Which acid gives vinegar its sour taste?",
-      "answers": ["acetic acid", "acetic"]
+      "answers": ["acetic acid", "acetic"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q127",
       "question": "What Hawaiian dish of cubed raw fish is often served in a bowl over rice?",
-      "answers": ["poke"]
+      "answers": ["poke"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q128",
       "question": "Which soft French cheese with a bloomy white rind is nicknamed the 'king of cheeses'?",
-      "answers": ["brie"]
+      "answers": ["brie"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q129",
       "question": "What Eastern European filled dumplings are commonly stuffed with potato and cheese?",
-      "answers": ["pierogi", "pierogies", "perogies", "pirogi"]
+      "answers": ["pierogi", "pierogies", "perogies", "pirogi"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q130",
       "question": "What ingredient gives black pudding its dark color?",
-      "answers": ["blood", "pig's blood", "pork blood"]
+      "answers": ["blood", "pig's blood", "pork blood"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q131",
       "question": "Which flower flavors the French liqueur St-Germain?",
-      "answers": ["elderflower", "elderflowers"]
+      "answers": ["elderflower", "elderflowers"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q132",
       "question": "What is the term for letting shaped bread dough rise before baking?",
-      "answers": ["proofing", "proving", "proof"]
+      "answers": ["proofing", "proving", "proof"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q133",
       "question": "Which protein-rich South American seed, a staple of the Inca, is now a popular health food?",
-      "answers": ["quinoa"]
+      "answers": ["quinoa"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q134",
       "question": "What Italian dessert of sweetened cream set with gelatin has a name meaning 'cooked cream'?",
-      "answers": ["panna cotta"]
+      "answers": ["panna cotta"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q135",
       "question": "Roquefort cheese is made from the milk of which animal?",
-      "answers": ["sheep", "ewe", "ewes"]
+      "answers": ["sheep", "ewe", "ewes"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q136",
       "question": "What round-bottomed pan is essential to Chinese stir-frying?",
-      "answers": ["wok"]
+      "answers": ["wok"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q137",
       "question": "What alcoholic drink is made by fermenting honey with water?",
-      "answers": ["mead"]
+      "answers": ["mead"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q138",
       "question": "What is the Spanish tradition of serving small savory plates alongside drinks called?",
-      "answers": ["tapas"]
+      "answers": ["tapas"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q139",
       "question": "Besides parsley, what cracked wheat product is the main ingredient in tabbouleh?",
-      "answers": ["bulgur", "bulgur wheat", "bulghur"]
+      "answers": ["bulgur", "bulgur wheat", "bulghur"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q140",
       "question": "What hybrid citrus fruit is a cross between a tangerine and a pomelo or grapefruit?",
-      "answers": ["tangelo"]
+      "answers": ["tangelo"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q141",
       "question": "What is the French technique of slowly cooking food submerged in fat at low temperature called?",
-      "answers": ["confit"]
+      "answers": ["confit"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q142",
@@ -718,262 +859,314 @@
         "pastel de nata",
         "pasteis de nata",
         "portuguese custard tart"
-      ]
+      ],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q143",
       "question": "What single-celled fungus makes bread dough rise?",
-      "answers": ["yeast"]
+      "answers": ["yeast"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q144",
       "question": "What Indian chili, once the world's hottest, is also known as bhut jolokia?",
-      "answers": ["ghost pepper", "ghost chili", "ghost chilli"]
+      "answers": ["ghost pepper", "ghost chili", "ghost chilli"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q145",
       "question": "What sauce is the traditional British accompaniment to roast lamb?",
-      "answers": ["mint sauce", "mint"]
+      "answers": ["mint sauce", "mint"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q146",
       "question": "What classic cocktail is made with bourbon or rye, sugar, bitters, and an orange twist?",
-      "answers": ["old fashioned"]
+      "answers": ["old fashioned"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q147",
       "question": "What is the Japanese dish of grilled chicken skewers called?",
-      "answers": ["yakitori"]
+      "answers": ["yakitori"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q148",
       "question": "What prized underground fungus is traditionally hunted with pigs or trained dogs?",
-      "answers": ["truffle", "truffles"]
+      "answers": ["truffle", "truffles"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q149",
       "question": "What square New Orleans doughnut is served buried in powdered sugar?",
-      "answers": ["beignet", "beignets"]
+      "answers": ["beignet", "beignets"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q150",
       "question": "What smoky Mexican agave spirit is a cousin of tequila?",
-      "answers": ["mezcal", "mescal"]
+      "answers": ["mezcal", "mescal"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q151",
       "question": "What French dessert is a chilled custard topped with a brittle layer of caramelized sugar?",
-      "answers": ["creme brulee"]
+      "answers": ["creme brulee"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q152",
       "question": "What Argentinian sauce of parsley, garlic, oregano, vinegar, and oil is served with grilled meat?",
-      "answers": ["chimichurri"]
+      "answers": ["chimichurri"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q153",
       "question": "Which tea is flavored with oil of bergamot?",
-      "answers": ["earl grey", "earl grey tea"]
+      "answers": ["earl grey", "earl grey tea"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q154",
       "question": "What process of heating milk to kill harmful bacteria is named after a French scientist?",
-      "answers": ["pasteurization", "pasteurisation"]
+      "answers": ["pasteurization", "pasteurisation"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q155",
       "question": "What is the nixtamalized corn dough used to make tortillas and tamales called?",
-      "answers": ["masa", "masa harina"]
+      "answers": ["masa", "masa harina"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q156",
       "question": "What Swiss dish involves dipping bread cubes into a pot of melted cheese?",
-      "answers": ["fondue", "cheese fondue"]
+      "answers": ["fondue", "cheese fondue"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q157",
       "question": "What small Russian pancakes are traditionally served with sour cream or caviar?",
-      "answers": ["blini", "blinis", "blin"]
+      "answers": ["blini", "blinis", "blin"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q158",
       "question": "Which fruit is baked into a traditional French clafoutis?",
-      "answers": ["cherries", "cherry"]
+      "answers": ["cherries", "cherry"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q159",
       "question": "What is the fifth basic taste, alongside sweet, salty, sour, and bitter?",
-      "answers": ["umami"]
+      "answers": ["umami"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q160",
       "question": "Which bitter red Italian aperitif joins gin and sweet vermouth in a Negroni?",
-      "answers": ["campari"]
+      "answers": ["campari"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-food-drink-q161",
       "question": "What Georgian bread is baked in a boat shape, filled with cheese, and topped with an egg?",
-      "answers": ["khachapuri", "adjaruli khachapuri"]
+      "answers": ["khachapuri", "adjaruli khachapuri"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q162",
       "question": "Which French mother sauce is made from a white roux and milk?",
-      "answers": ["bechamel", "bechamel sauce"]
+      "answers": ["bechamel", "bechamel sauce"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q163",
       "question": "What chemical reaction between amino acids and sugars gives seared and baked foods their browned flavor?",
-      "answers": ["maillard reaction", "maillard"]
+      "answers": ["maillard reaction", "maillard"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q164",
       "question": "What Peruvian dish of raw fish cured in citrus juice is the country's national dish?",
-      "answers": ["ceviche", "cebiche"]
+      "answers": ["ceviche", "cebiche"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q165",
       "question": "Chablis wine is made exclusively from which grape variety?",
-      "answers": ["chardonnay"]
+      "answers": ["chardonnay"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q166",
       "question": "What is the Italian tradition of pre-dinner drinks and snacks called?",
-      "answers": ["aperitivo"]
+      "answers": ["aperitivo"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q167",
       "question": "Which mold genus creates the blue veins in cheeses like Roquefort and Stilton?",
-      "answers": ["penicillium", "penicillium roqueforti"]
+      "answers": ["penicillium", "penicillium roqueforti"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q168",
       "question": "What one-pot West African rice dish cooked in a tomato and pepper base sparks rivalry between Nigeria and Ghana?",
-      "answers": ["jollof rice", "jollof"]
+      "answers": ["jollof rice", "jollof"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q169",
       "question": "What Yucatan dish of pork marinated in achiote and sour orange is slow-roasted in a pit?",
-      "answers": ["cochinita pibil"]
+      "answers": ["cochinita pibil"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q170",
       "question": "Which French wine region is renowned for its Pinot Noir and Chardonnay?",
-      "answers": ["burgundy", "bourgogne"]
+      "answers": ["burgundy", "bourgogne"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q171",
       "question": "What Korean dish of rice topped with vegetables, egg, and gochujang is mixed together before eating?",
-      "answers": ["bibimbap"]
+      "answers": ["bibimbap"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q172",
       "question": "What protein-digesting enzyme in pineapple prevents gelatin from setting?",
-      "answers": ["bromelain"]
+      "answers": ["bromelain"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q173",
       "question": "The slow-cooked spiced beef dish rendang originated in which country?",
-      "answers": ["Indonesia"]
+      "answers": ["Indonesia"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q174",
       "question": "What Filipino national dish is meat braised in vinegar, soy sauce, garlic, and bay leaves?",
-      "answers": ["adobo"]
+      "answers": ["adobo"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q175",
       "question": "What Sicilian sweet-and-sour dish is made from fried eggplant, celery, capers, and olives?",
-      "answers": ["caponata"]
+      "answers": ["caponata"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q176",
       "question": "What official cocktail of New Orleans combines rye whiskey, bitters, sugar, and an absinthe rinse?",
-      "answers": ["sazerac"]
+      "answers": ["sazerac"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q177",
       "question": "What famed Japanese wagyu beef must come from Tajima cattle raised in Hyogo prefecture?",
-      "answers": ["kobe beef", "kobe"]
+      "answers": ["kobe beef", "kobe"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q178",
       "question": "What is the leftover mass of grape skins and seeds after pressing called, used to make grappa?",
-      "answers": ["pomace", "marc"]
+      "answers": ["pomace", "marc"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q179",
       "question": "Which milk protein coagulates to form the curds in cheesemaking?",
-      "answers": ["casein"]
+      "answers": ["casein"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q180",
       "question": "What North African stew shares its name with the conical earthenware pot it is cooked in?",
-      "answers": ["tagine", "tajine"]
+      "answers": ["tagine", "tajine"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q181",
       "question": "What Italian condiment of lemon zest, garlic, and parsley traditionally tops osso buco?",
-      "answers": ["gremolata"]
+      "answers": ["gremolata"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q182",
       "question": "What is the elaborate Danish open-faced sandwich called?",
-      "answers": ["smorrebrod", "smoerrebroed"]
+      "answers": ["smorrebrod", "smoerrebroed"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q183",
       "question": "What is the luxury coffee made from beans that have passed through a civet called?",
-      "answers": ["kopi luwak", "civet coffee"]
+      "answers": ["kopi luwak", "civet coffee"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q184",
       "question": "Basque burnt cheesecake was created at a bar in which Spanish city?",
-      "answers": ["san sebastian", "donostia"]
+      "answers": ["san sebastian", "donostia"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q185",
       "question": "What milky Mexican drink is made from the fermented sap of the agave plant?",
-      "answers": ["pulque"]
+      "answers": ["pulque"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q186",
       "question": "What French term describes food baked inside a folded parchment paper pouch?",
-      "answers": ["en papillote", "papillote"]
+      "answers": ["en papillote", "papillote"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q187",
       "question": "What Japanese breakfast food of fermented soybeans is notorious for its sticky, stringy texture?",
-      "answers": ["natto"]
+      "answers": ["natto"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q188",
       "question": "What shredded Austrian pancake dessert is named after Emperor Franz Joseph?",
-      "answers": ["kaiserschmarrn", "kaiserschmarren"]
+      "answers": ["kaiserschmarrn", "kaiserschmarren"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q189",
       "question": "What rich French sauce is made by slowly reducing brown stock with espagnole sauce?",
-      "answers": ["demi-glace", "demi glace", "demiglace"]
+      "answers": ["demi-glace", "demi glace", "demiglace"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q190",
       "question": "What Levantine spice blend combines dried thyme, sumac, and toasted sesame seeds?",
-      "answers": ["zaatar", "za'atar", "zatar"]
+      "answers": ["zaatar", "za'atar", "zatar"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q191",
       "question": "A chipotle is the smoked, dried form of which chili pepper?",
-      "answers": ["jalapeno"]
+      "answers": ["jalapeno"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q192",
       "question": "What is the collective Italian term for cured meat products such as salami and prosciutto?",
-      "answers": ["salumi"]
+      "answers": ["salumi"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q193",
       "question": "What is Brazil's national dish, a hearty stew of black beans and pork?",
-      "answers": ["feijoada"]
+      "answers": ["feijoada"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q194",
@@ -982,54 +1175,44 @@
         "methode champenoise",
         "traditional method",
         "methode traditionnelle"
-      ]
+      ],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q195",
       "question": "What Welsh delicacy is made from boiled and minced seaweed?",
-      "answers": ["laverbread", "laver bread", "laver"]
+      "answers": ["laverbread", "laver bread", "laver"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q196",
       "question": "What complex Mexican sauce blending chiles, spices, and chocolate is traditionally served over turkey?",
-      "answers": ["mole", "mole poblano", "mole negro"]
+      "answers": ["mole", "mole poblano", "mole negro"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q197",
       "question": "What Japanese dining term meaning 'I leave it up to you' lets the chef choose your meal?",
-      "answers": ["omakase"]
+      "answers": ["omakase"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q198",
       "question": "What Mexican delicacy, sometimes called corn truffle, is a fungus that grows on ears of corn?",
-      "answers": ["huitlacoche", "cuitlacoche", "corn smut"]
+      "answers": ["huitlacoche", "cuitlacoche", "corn smut"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q199",
       "question": "What classic dessert of poached peaches, vanilla ice cream, and raspberry sauce did Escoffier name after an Australian opera singer?",
-      "answers": ["peach melba"]
+      "answers": ["peach melba"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-food-drink-q200",
       "question": "What is the Icelandic dish of fermented shark called?",
-      "answers": ["hakarl", "kaestur hakarl"]
+      "answers": ["hakarl", "kaestur hakarl"],
+      "difficulty": "hard"
     }
-  ],
-  "finals": {
-    "easy": {
-      "id": "qz-food-drink-final-easy",
-      "question": "What yellow citrus fruit is used to make lemonade?",
-      "answers": ["lemon", "lemons"]
-    },
-    "medium": {
-      "id": "qz-food-drink-final-medium",
-      "question": "Which nut gives Nutella its signature flavor?",
-      "answers": ["hazelnut", "hazelnuts"]
-    },
-    "hard": {
-      "id": "qz-food-drink-final-hard",
-      "question": "What chemical compound makes chili peppers taste hot?",
-      "answers": ["capsaicin"]
-    }
-  }
+  ]
 }

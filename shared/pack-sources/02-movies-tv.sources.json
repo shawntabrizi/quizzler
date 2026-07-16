@@ -9,27 +9,32 @@
     {
       "id": "qz-movies-tv-q001",
       "question": "Who directed both Titanic and Avatar?",
-      "answers": ["James Cameron", "Cameron"]
+      "answers": ["James Cameron", "Cameron"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q002",
       "question": "'May the Force be with you' is a famous line from which film franchise?",
-      "answers": ["Star Wars"]
+      "answers": ["Star Wars"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q003",
       "question": "Daniel Radcliffe played which boy wizard on film?",
-      "answers": ["Harry Potter"]
+      "answers": ["Harry Potter"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q004",
       "question": "Jack and Rose fall in love aboard a doomed ocean liner in which 1997 film?",
-      "answers": ["Titanic"]
+      "answers": ["Titanic"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q005",
       "question": "What is the name of the lion cub who becomes king in The Lion King?",
-      "answers": ["Simba"]
+      "answers": ["Simba"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q006",
@@ -39,147 +44,176 @@
         "Robert Downey Jr",
         "Robert Downey Junior",
         "RDJ"
-      ]
+      ],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q007",
       "question": "What is the name of the school of witchcraft and wizardry in Harry Potter?",
-      "answers": ["Hogwarts"]
+      "answers": ["Hogwarts"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q008",
       "question": "What is the name of the friendly snowman in Frozen?",
-      "answers": ["Olaf"]
+      "answers": ["Olaf"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q009",
       "question": "Which Pixar film series is about toys that come to life when humans aren't around?",
-      "answers": ["Toy Story"]
+      "answers": ["Toy Story"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q010",
       "question": "Katniss Everdeen is the heroine of which film franchise?",
-      "answers": ["The Hunger Games", "Hunger Games"]
+      "answers": ["The Hunger Games", "Hunger Games"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q011",
       "question": "'I'll be back' is a famous line from which 1984 sci-fi film?",
-      "answers": ["The Terminator", "Terminator"]
+      "answers": ["The Terminator", "Terminator"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q012",
       "question": "Mike Myers voices which green ogre in an animated film series?",
-      "answers": ["Shrek"]
+      "answers": ["Shrek"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q013",
       "question": "In which Pixar film does a clownfish search the ocean for his lost son?",
-      "answers": ["Finding Nemo", "Nemo"]
+      "answers": ["Finding Nemo", "Nemo"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q014",
       "question": "Which actor played Captain Jack Sparrow in Pirates of the Caribbean?",
-      "answers": ["Johnny Depp", "Depp"]
+      "answers": ["Johnny Depp", "Depp"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q015",
       "question": "Walter White cooks meth in which TV drama?",
-      "answers": ["Breaking Bad"]
+      "answers": ["Breaking Bad"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q016",
       "question": "Which sitcom follows six New Yorkers who hang out at the Central Perk coffee shop?",
-      "answers": ["Friends"]
+      "answers": ["Friends"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q017",
       "question": "Noble houses battle for the Iron Throne in which HBO fantasy series?",
-      "answers": ["Game of Thrones", "GoT"]
+      "answers": ["Game of Thrones", "GoT"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q018",
       "question": "Which animated TV family lives in the town of Springfield?",
-      "answers": ["The Simpsons", "Simpsons"]
+      "answers": ["The Simpsons", "Simpsons"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q019",
       "question": "In which fictional city does Batman fight crime?",
-      "answers": ["Gotham", "Gotham City"]
+      "answers": ["Gotham", "Gotham City"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q020",
       "question": "What is the name of Superman's home planet?",
-      "answers": ["Krypton"]
+      "answers": ["Krypton"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q021",
       "question": "Which cocktail does James Bond famously order 'shaken, not stirred'?",
-      "answers": ["Martini", "Vodka martini", "A martini"]
+      "answers": ["Martini", "Vodka martini", "A martini"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q022",
       "question": "Which hobbit carries the One Ring to Mordor in The Lord of the Rings?",
-      "answers": ["Frodo", "Frodo Baggins"]
+      "answers": ["Frodo", "Frodo Baggins"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q023",
       "question": "Ian McKellen played which wizard in The Lord of the Rings films?",
-      "answers": ["Gandalf"]
+      "answers": ["Gandalf"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q024",
       "question": "'Life is like a box of chocolates' is a line from which 1994 film?",
-      "answers": ["Forrest Gump"]
+      "answers": ["Forrest Gump"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q025",
       "question": "Which 1993 Spielberg film features a theme park full of cloned dinosaurs?",
-      "answers": ["Jurassic Park"]
+      "answers": ["Jurassic Park"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q026",
       "question": "Which 1975 Spielberg film about a killer shark terrorized beachgoers?",
-      "answers": ["Jaws"]
+      "answers": ["Jaws"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q027",
       "question": "In which Christmas movie does young Kevin McCallister defend his house from burglars?",
-      "answers": ["Home Alone"]
+      "answers": ["Home Alone"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q028",
       "question": "Bruce Banner turns into which giant green Marvel hero?",
-      "answers": ["The Hulk", "Hulk", "Incredible Hulk"]
+      "answers": ["The Hulk", "Hulk", "Incredible Hulk"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q029",
       "question": "What is the name of Thor's hammer?",
-      "answers": ["Mjolnir", "Mjölnir"]
+      "answers": ["Mjolnir", "Mjölnir"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q030",
       "question": "Which Marvel superhero is the king of Wakanda?",
-      "answers": ["Black Panther", "T'Challa", "TChalla"]
+      "answers": ["Black Panther", "T'Challa", "TChalla"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q031",
       "question": "Peter Parker is the secret identity of which superhero?",
-      "answers": ["Spider-Man", "Spiderman", "Spider Man"]
+      "answers": ["Spider-Man", "Spiderman", "Spider Man"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q032",
       "question": "Which princess in Frozen has magical ice powers?",
-      "answers": ["Elsa"]
+      "answers": ["Elsa"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q033",
       "question": "What is the name of Dorothy's dog in The Wizard of Oz?",
-      "answers": ["Toto"]
+      "answers": ["Toto"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q034",
       "question": "'There's no place like home' is a famous line from which 1939 film?",
-      "answers": ["The Wizard of Oz", "Wizard of Oz"]
+      "answers": ["The Wizard of Oz", "Wizard of Oz"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q035",
@@ -188,187 +222,224 @@
         "Fast and Furious",
         "The Fast and the Furious",
         "Fast & Furious"
-      ]
+      ],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q036",
       "question": "Keanu Reeves plays which hitman who comes out of retirement to avenge his dog?",
-      "answers": ["John Wick"]
+      "answers": ["John Wick"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q037",
       "question": "Which actor played Jack Dawson in Titanic?",
-      "answers": ["Leonardo DiCaprio", "DiCaprio", "Leo DiCaprio"]
+      "answers": ["Leonardo DiCaprio", "DiCaprio", "Leo DiCaprio"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q038",
       "question": "A girl named Eleven battles creatures from the Upside Down in which Netflix series?",
-      "answers": ["Stranger Things"]
+      "answers": ["Stranger Things"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q039",
       "question": "The hit series Squid Game was made in which country?",
-      "answers": ["South Korea", "Korea"]
+      "answers": ["South Korea", "Korea"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q040",
       "question": "Grogu, known to fans as Baby Yoda, appears in which Star Wars TV series?",
-      "answers": ["The Mandalorian", "Mandalorian"]
+      "answers": ["The Mandalorian", "Mandalorian"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q041",
       "question": "Complete Buzz Lightyear's catchphrase: 'To infinity...'",
-      "answers": ["and beyond", "beyond"]
+      "answers": ["and beyond", "beyond"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q042",
       "question": "Which cartoon mouse is the official mascot of Disney?",
-      "answers": ["Mickey Mouse", "Mickey"]
+      "answers": ["Mickey Mouse", "Mickey"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q043",
       "question": "SpongeBob SquarePants lives in what kind of fruit under the sea?",
-      "answers": ["Pineapple", "A pineapple"]
+      "answers": ["Pineapple", "A pineapple"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q044",
       "question": "Robin Williams voiced the Genie in which 1992 Disney film?",
-      "answers": ["Aladdin"]
+      "answers": ["Aladdin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q045",
       "question": "The song 'Hakuna Matata' comes from which Disney film?",
-      "answers": ["The Lion King", "Lion King"]
+      "answers": ["The Lion King", "Lion King"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q046",
       "question": "What sport does Rocky Balboa compete in?",
-      "answers": ["Boxing"]
+      "answers": ["Boxing"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q047",
       "question": "In which film is Tom Hanks stranded on an island with a volleyball named Wilson?",
-      "answers": ["Cast Away", "Castaway"]
+      "answers": ["Cast Away", "Castaway"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q048",
       "question": "Which actor played Captain America in the Marvel films?",
-      "answers": ["Chris Evans"]
+      "answers": ["Chris Evans"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q049",
       "question": "Bruce Wayne is the secret identity of which superhero?",
-      "answers": ["Batman"]
+      "answers": ["Batman"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q050",
       "question": "Clark Kent is the secret identity of which superhero?",
-      "answers": ["Superman"]
+      "answers": ["Superman"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q051",
       "question": "In The Matrix, what color pill does Neo take?",
-      "answers": ["Red", "The red pill", "Red pill"]
+      "answers": ["Red", "The red pill", "Red pill"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q052",
       "question": "In Harry Potter, what sport is played on flying broomsticks?",
-      "answers": ["Quidditch"]
+      "answers": ["Quidditch"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q053",
       "question": "In the 1982 Spielberg film, E.T. wants to phone where?",
-      "answers": ["Home"]
+      "answers": ["Home"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q054",
       "question": "'Who you gonna call?' is the tagline of which 1984 comedy about paranormal exterminators?",
-      "answers": ["Ghostbusters"]
+      "answers": ["Ghostbusters"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q055",
       "question": "Who is the boss of the Minions in Despicable Me?",
-      "answers": ["Gru", "Felonious Gru"]
+      "answers": ["Gru", "Felonious Gru"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q056",
       "question": "What is the name of the paper company in the US version of The Office?",
-      "answers": ["Dunder Mifflin"]
+      "answers": ["Dunder Mifflin"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q057",
       "question": "Which actor played Michael Scott in the US version of The Office?",
-      "answers": ["Steve Carell", "Carell"]
+      "answers": ["Steve Carell", "Carell"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q058",
       "question": "Which classic cartoon features a cat and mouse locked in endless rivalry?",
-      "answers": ["Tom and Jerry", "Tom & Jerry"]
+      "answers": ["Tom and Jerry", "Tom & Jerry"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q059",
       "question": "What is the name of Scooby-Doo's scruffy best friend who loves snacks?",
-      "answers": ["Shaggy", "Norville Rogers"]
+      "answers": ["Shaggy", "Norville Rogers"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q060",
       "question": "Which animated series is set in the underwater town of Bikini Bottom?",
-      "answers": ["SpongeBob SquarePants", "SpongeBob"]
+      "answers": ["SpongeBob SquarePants", "SpongeBob"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q061",
       "question": "In Star Wars, who is Darth Vader's son?",
-      "answers": ["Luke Skywalker", "Luke"]
+      "answers": ["Luke Skywalker", "Luke"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q062",
       "question": "Lightning McQueen is the star of which Pixar film series?",
-      "answers": ["Cars"]
+      "answers": ["Cars"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q063",
       "question": "What is the name of the forgetful blue fish voiced by Ellen DeGeneres?",
-      "answers": ["Dory"]
+      "answers": ["Dory"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q064",
       "question": "What is the name of the alien moon where Avatar takes place?",
-      "answers": ["Pandora"]
+      "answers": ["Pandora"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q065",
       "question": "Which actress played Hermione Granger in the Harry Potter films?",
-      "answers": ["Emma Watson", "Watson"]
+      "answers": ["Emma Watson", "Watson"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q066",
       "question": "Which film series features a time-traveling DeLorean car?",
-      "answers": ["Back to the Future"]
+      "answers": ["Back to the Future"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q067",
       "question": "What is the name of the teenager who travels through time with Doc Brown?",
-      "answers": ["Marty McFly", "Marty"]
+      "answers": ["Marty McFly", "Marty"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q068",
       "question": "Which singer performed 'My Heart Will Go On', the theme from Titanic?",
-      "answers": ["Celine Dion", "Céline Dion"]
+      "answers": ["Celine Dion", "Céline Dion"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q069",
       "question": "The hit song 'Let It Go' comes from which animated film?",
-      "answers": ["Frozen"]
+      "answers": ["Frozen"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q070",
       "question": "In the Dr. Seuss story, which holiday does the Grinch try to steal?",
-      "answers": ["Christmas"]
+      "answers": ["Christmas"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q071",
       "question": "Who directed Pulp Fiction?",
-      "answers": ["Quentin Tarantino", "Tarantino"]
+      "answers": ["Quentin Tarantino", "Tarantino"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q072",
@@ -377,347 +448,416 @@
         "The Shawshank Redemption",
         "Shawshank Redemption",
         "Shawshank"
-      ]
+      ],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q073",
       "question": "Which actor played Vito Corleone in the original 1972 film The Godfather?",
-      "answers": ["Marlon Brando", "Brando"]
+      "answers": ["Marlon Brando", "Brando"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q074",
       "question": "What is the surname of the mafia family in The Godfather?",
-      "answers": ["Corleone"]
+      "answers": ["Corleone"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q075",
       "question": "Which director made Psycho, The Birds, and Vertigo?",
-      "answers": ["Alfred Hitchcock", "Hitchcock"]
+      "answers": ["Alfred Hitchcock", "Hitchcock"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q076",
       "question": "'Here's Johnny!' is a famous line from which 1980 horror film?",
-      "answers": ["The Shining", "Shining"]
+      "answers": ["The Shining", "Shining"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q077",
       "question": "The Shining is based on a novel by which author?",
-      "answers": ["Stephen King", "King"]
+      "answers": ["Stephen King", "King"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q078",
       "question": "In which film does Tom Hanks say 'Houston, we have a problem'?",
-      "answers": ["Apollo 13"]
+      "answers": ["Apollo 13"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q079",
       "question": "Who directed Forrest Gump and Back to the Future?",
-      "answers": ["Robert Zemeckis", "Zemeckis"]
+      "answers": ["Robert Zemeckis", "Zemeckis"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q080",
       "question": "Complete the first rule of Fight Club: you do not ___ about Fight Club.",
-      "answers": ["Talk"]
+      "answers": ["Talk"],
+      "difficulty": "easy"
     },
     {
       "id": "qz-movies-tv-q081",
       "question": "Brad Pitt battles a global zombie pandemic in which 2013 film?",
-      "answers": ["World War Z"]
+      "answers": ["World War Z"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q082",
       "question": "In which Christopher Nolan film do thieves plant ideas inside people's dreams?",
-      "answers": ["Inception"]
+      "answers": ["Inception"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q083",
       "question": "What is the title of the second film in Christopher Nolan's Batman trilogy?",
-      "answers": ["The Dark Knight", "Dark Knight"]
+      "answers": ["The Dark Knight", "Dark Knight"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q084",
       "question": "Heath Ledger won a posthumous Oscar for playing which Batman villain?",
-      "answers": ["The Joker", "Joker"]
+      "answers": ["The Joker", "Joker"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q085",
       "question": "Anthony Hopkins won an Oscar for playing which cannibalistic psychiatrist?",
-      "answers": ["Hannibal Lecter", "Hannibal", "Dr. Hannibal Lecter"]
+      "answers": ["Hannibal Lecter", "Hannibal", "Dr. Hannibal Lecter"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q086",
       "question": "FBI trainee Clarice Starling appears in which 1991 thriller?",
-      "answers": ["The Silence of the Lambs", "Silence of the Lambs"]
+      "answers": ["The Silence of the Lambs", "Silence of the Lambs"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q087",
       "question": "Which South Korean film won Best Picture at the Oscars in 2020?",
-      "answers": ["Parasite"]
+      "answers": ["Parasite"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q088",
       "question": "Who directed Parasite?",
-      "answers": ["Bong Joon-ho", "Bong Joon Ho", "Bong Joonho"]
+      "answers": ["Bong Joon-ho", "Bong Joon Ho", "Bong Joonho"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q089",
       "question": "Spirited Away and My Neighbor Totoro were made by which Japanese animation studio?",
-      "answers": ["Studio Ghibli", "Ghibli"]
+      "answers": ["Studio Ghibli", "Ghibli"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q090",
       "question": "Which director made Spirited Away and Howl's Moving Castle?",
-      "answers": ["Hayao Miyazaki", "Miyazaki"]
+      "answers": ["Hayao Miyazaki", "Miyazaki"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q091",
       "question": "Which actress starred opposite Ryan Gosling in La La Land?",
-      "answers": ["Emma Stone", "Stone"]
+      "answers": ["Emma Stone", "Stone"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q092",
       "question": "Which film was mistakenly announced as Best Picture in 2017 before Moonlight won?",
-      "answers": ["La La Land"]
+      "answers": ["La La Land"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q093",
       "question": "What is the title of the 2018 Freddie Mercury biopic?",
-      "answers": ["Bohemian Rhapsody"]
+      "answers": ["Bohemian Rhapsody"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q094",
       "question": "Rami Malek won an Oscar for playing which rock star?",
-      "answers": ["Freddie Mercury", "Mercury"]
+      "answers": ["Freddie Mercury", "Mercury"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q095",
       "question": "Which actor won an Oscar for the title role in Joker (2019)?",
-      "answers": ["Joaquin Phoenix", "Phoenix"]
+      "answers": ["Joaquin Phoenix", "Phoenix"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q096",
       "question": "Which actor played Wolverine in the X-Men films?",
-      "answers": ["Hugh Jackman", "Jackman"]
+      "answers": ["Hugh Jackman", "Jackman"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q097",
       "question": "Which actor plays the wisecracking mercenary Deadpool?",
-      "answers": ["Ryan Reynolds", "Reynolds"]
+      "answers": ["Ryan Reynolds", "Reynolds"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q098",
       "question": "Which actress plays Black Widow in the Marvel films?",
-      "answers": ["Scarlett Johansson", "Johansson"]
+      "answers": ["Scarlett Johansson", "Johansson"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q099",
       "question": "Thanos seeks to collect all six of what powerful gems?",
-      "answers": ["Infinity Stones", "The Infinity Stones", "Infinity Gems"]
+      "answers": ["Infinity Stones", "The Infinity Stones", "Infinity Gems"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q100",
       "question": "In which Avengers film does Thanos snap away half of all life?",
-      "answers": ["Avengers: Infinity War", "Infinity War"]
+      "answers": ["Avengers: Infinity War", "Infinity War"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q101",
       "question": "What is the title of the 2019 Avengers film that concluded the Thanos saga?",
-      "answers": ["Avengers: Endgame", "Endgame"]
+      "answers": ["Avengers: Endgame", "Endgame"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q102",
       "question": "Which actor plays Nick Fury in the Marvel films?",
-      "answers": ["Samuel L. Jackson", "Samuel Jackson", "Sam Jackson"]
+      "answers": ["Samuel L. Jackson", "Samuel Jackson", "Sam Jackson"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q103",
       "question": "Tom Hanks voices which cowboy doll in Toy Story?",
-      "answers": ["Woody", "Sheriff Woody"]
+      "answers": ["Woody", "Sheriff Woody"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q104",
       "question": "In which Pixar film does a rat named Remy dream of becoming a chef?",
-      "answers": ["Ratatouille"]
+      "answers": ["Ratatouille"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q105",
       "question": "Which Pixar film personifies the emotions inside a young girl's head?",
-      "answers": ["Inside Out"]
+      "answers": ["Inside Out"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q106",
       "question": "What is the name of the grumpy old man who flies his house with balloons in Up?",
-      "answers": ["Carl", "Carl Fredricksen"]
+      "answers": ["Carl", "Carl Fredricksen"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q107",
       "question": "What is the name of the sleek robot WALL-E falls in love with?",
-      "answers": ["EVE", "Eva", "Eve"]
+      "answers": ["EVE", "Eva", "Eve"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q108",
       "question": "The Pixar film Coco celebrates the Day of the Dead traditions of which country?",
-      "answers": ["Mexico"]
+      "answers": ["Mexico"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q109",
       "question": "What is the surname of the magical family in Encanto?",
-      "answers": ["Madrigal"]
+      "answers": ["Madrigal"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q110",
       "question": "Complete the Encanto song title: 'We Don't Talk About ___'.",
-      "answers": ["Bruno"]
+      "answers": ["Bruno"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q111",
       "question": "What is the name of the shapeshifting demigod in Moana?",
-      "answers": ["Maui"]
+      "answers": ["Maui"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q112",
       "question": "Sebastian the crab appears in which Disney animated film?",
-      "answers": ["The Little Mermaid", "Little Mermaid"]
+      "answers": ["The Little Mermaid", "Little Mermaid"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q113",
       "question": "Who is the sea-witch villain in The Little Mermaid?",
-      "answers": ["Ursula"]
+      "answers": ["Ursula"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q114",
       "question": "What is the name of Aladdin's pet monkey?",
-      "answers": ["Abu"]
+      "answers": ["Abu"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q115",
       "question": "The Disney film Mulan is set in which country?",
-      "answers": ["China"]
+      "answers": ["China"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q116",
       "question": "What is the name of Simba's treacherous uncle in The Lion King?",
-      "answers": ["Scar"]
+      "answers": ["Scar"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q117",
       "question": "What is the name of the fairy who accompanies Peter Pan?",
-      "answers": ["Tinker Bell", "Tinkerbell"]
+      "answers": ["Tinker Bell", "Tinkerbell"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q118",
       "question": "Cruella de Vil wants to make a fur coat from which breed of dog?",
-      "answers": ["Dalmatian", "Dalmatians"]
+      "answers": ["Dalmatian", "Dalmatians"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q119",
       "question": "What is the name of the young woman who falls for the Beast in Beauty and the Beast?",
-      "answers": ["Belle"]
+      "answers": ["Belle"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q120",
       "question": "Which villain curses Princess Aurora in Sleeping Beauty?",
-      "answers": ["Maleficent"]
+      "answers": ["Maleficent"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q121",
       "question": "Sheldon Cooper is a main character in which long-running sitcom?",
-      "answers": ["The Big Bang Theory", "Big Bang Theory"]
+      "answers": ["The Big Bang Theory", "Big Bang Theory"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q122",
       "question": "What is the title of the prequel series about Sheldon Cooper's childhood?",
-      "answers": ["Young Sheldon"]
+      "answers": ["Young Sheldon"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q123",
       "question": "What is the name of Ross's pet monkey in Friends?",
-      "answers": ["Marcel"]
+      "answers": ["Marcel"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q124",
       "question": "Which Friends character is famous for the pickup line 'How you doin'?'",
-      "answers": ["Joey", "Joey Tribbiani"]
+      "answers": ["Joey", "Joey Tribbiani"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q125",
       "question": "What is the name of Jerry's eccentric neighbor in Seinfeld?",
-      "answers": ["Kramer", "Cosmo Kramer"]
+      "answers": ["Kramer", "Cosmo Kramer"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q126",
       "question": "Which sitcom about a radio psychiatrist was a spin-off of Cheers?",
-      "answers": ["Frasier"]
+      "answers": ["Frasier"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q127",
       "question": "In which Pennsylvania city is the US version of The Office set?",
-      "answers": ["Scranton"]
+      "answers": ["Scranton"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q128",
       "question": "Which actress played Leslie Knope in Parks and Recreation?",
-      "answers": ["Amy Poehler", "Poehler"]
+      "answers": ["Amy Poehler", "Poehler"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q129",
       "question": "Parks and Recreation is set in which fictional Indiana town?",
-      "answers": ["Pawnee"]
+      "answers": ["Pawnee"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q130",
       "question": "Who is the stoic captain of the precinct in Brooklyn Nine-Nine?",
-      "answers": ["Captain Holt", "Raymond Holt", "Holt"]
+      "answers": ["Captain Holt", "Raymond Holt", "Holt"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q131",
       "question": "What alias does Walter White use in the meth business in Breaking Bad?",
-      "answers": ["Heisenberg"]
+      "answers": ["Heisenberg"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q132",
       "question": "What is the title of the Breaking Bad spin-off about lawyer Jimmy McGill?",
-      "answers": ["Better Call Saul"]
+      "answers": ["Better Call Saul"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q133",
       "question": "Which actor played Jesse Pinkman in Breaking Bad?",
-      "answers": ["Aaron Paul", "Paul"]
+      "answers": ["Aaron Paul", "Paul"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q134",
       "question": "The crime drama The Wire is set in which American city?",
-      "answers": ["Baltimore"]
+      "answers": ["Baltimore"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q135",
       "question": "The Sopranos is set primarily in which US state?",
-      "answers": ["New Jersey"]
+      "answers": ["New Jersey"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q136",
       "question": "Which actor played Tony Soprano?",
-      "answers": ["James Gandolfini", "Gandolfini"]
+      "answers": ["James Gandolfini", "Gandolfini"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q137",
       "question": "Which actor played Don Draper in Mad Men?",
-      "answers": ["Jon Hamm", "Hamm"]
+      "answers": ["Jon Hamm", "Hamm"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q138",
       "question": "Don Draper of Mad Men works in which industry?",
-      "answers": ["Advertising"]
+      "answers": ["Advertising"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q139",
       "question": "Which Game of Thrones character is known as the Mother of Dragons?",
-      "answers": ["Daenerys Targaryen", "Daenerys", "Khaleesi"]
+      "answers": ["Daenerys Targaryen", "Daenerys", "Khaleesi"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q140",
       "question": "'Winter is coming' is the motto of which Game of Thrones house?",
-      "answers": ["Stark", "House Stark"]
+      "answers": ["Stark", "House Stark"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q141",
@@ -727,319 +867,362 @@
         "George RR Martin",
         "George Martin",
         "GRRM"
-      ]
+      ],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q142",
       "question": "What is the name of the monster from the Upside Down in season 1 of Stranger Things?",
-      "answers": ["Demogorgon", "The Demogorgon"]
+      "answers": ["Demogorgon", "The Demogorgon"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q143",
       "question": "Which actress plays Eleven in Stranger Things?",
-      "answers": ["Millie Bobby Brown", "Millie Brown"]
+      "answers": ["Millie Bobby Brown", "Millie Brown"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q144",
       "question": "The Netflix series The Crown chronicles the reign of which British monarch?",
-      "answers": ["Queen Elizabeth II", "Elizabeth II", "Elizabeth"]
+      "answers": ["Queen Elizabeth II", "Elizabeth II", "Elizabeth"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q145",
       "question": "What is the name of the Doctor's time machine in Doctor Who?",
-      "answers": ["TARDIS", "The TARDIS"]
+      "answers": ["TARDIS", "The TARDIS"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q146",
       "question": "Which actor played Sherlock Holmes in the BBC series Sherlock?",
-      "answers": ["Benedict Cumberbatch", "Cumberbatch"]
+      "answers": ["Benedict Cumberbatch", "Cumberbatch"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q147",
       "question": "What is Sherlock Holmes's famous London address?",
-      "answers": ["221B Baker Street", "221B", "Baker Street"]
+      "answers": ["221B Baker Street", "221B", "Baker Street"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q148",
       "question": "What is the surname of the aristocratic family in Downton Abbey?",
-      "answers": ["Crawley"]
+      "answers": ["Crawley"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q149",
       "question": "The gang drama Peaky Blinders is set in which English city?",
-      "answers": ["Birmingham"]
+      "answers": ["Birmingham"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q150",
       "question": "The heist series Money Heist was originally made in which country?",
-      "answers": ["Spain"]
+      "answers": ["Spain"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q151",
       "question": "What is the codename of the mastermind behind the heists in Money Heist?",
-      "answers": ["The Professor", "Professor", "El Profesor"]
+      "answers": ["The Professor", "Professor", "El Profesor"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q152",
       "question": "The time-travel Netflix series Dark comes from which country?",
-      "answers": ["Germany"]
+      "answers": ["Germany"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q153",
       "question": "The first seasons of Narcos focus on which Colombian drug lord?",
-      "answers": ["Pablo Escobar", "Escobar"]
+      "answers": ["Pablo Escobar", "Escobar"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q154",
       "question": "What is the first deadly game the contestants play in Squid Game?",
-      "answers": ["Red Light, Green Light", "Red Light Green Light"]
+      "answers": ["Red Light, Green Light", "Red Light Green Light"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q155",
       "question": "Which actor played Geralt of Rivia in the first seasons of Netflix's The Witcher?",
-      "answers": ["Henry Cavill", "Cavill"]
+      "answers": ["Henry Cavill", "Cavill"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q156",
       "question": "Which actress plays the title role in the Netflix series Wednesday?",
-      "answers": ["Jenna Ortega", "Ortega"]
+      "answers": ["Jenna Ortega", "Ortega"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q157",
       "question": "In Ted Lasso, an American coach takes charge of a team in which sport?",
-      "answers": ["Soccer", "Football", "Association football"]
+      "answers": ["Soccer", "Football", "Association football"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q158",
       "question": "What is the name of the fictional football club coached by Ted Lasso?",
-      "answers": ["AFC Richmond", "Richmond"]
+      "answers": ["AFC Richmond", "Richmond"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q159",
       "question": "What is the surname of the media-mogul family in HBO's Succession?",
-      "answers": ["Roy"]
+      "answers": ["Roy"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q160",
       "question": "Which actor plays Joel in the HBO adaptation of The Last of Us?",
-      "answers": ["Pedro Pascal", "Pascal"]
+      "answers": ["Pedro Pascal", "Pascal"],
+      "difficulty": "medium"
     },
     {
       "id": "qz-movies-tv-q161",
       "question": "Who directed the 1927 silent sci-fi classic Metropolis?",
-      "answers": ["Fritz Lang", "Lang"]
+      "answers": ["Fritz Lang", "Lang"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q162",
       "question": "What is the dying word spoken at the start of Citizen Kane?",
-      "answers": ["Rosebud"]
+      "answers": ["Rosebud"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q163",
       "question": "Who directed and starred in Citizen Kane?",
-      "answers": ["Orson Welles", "Welles"]
+      "answers": ["Orson Welles", "Welles"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q164",
       "question": "Who directed the 1954 Japanese epic Seven Samurai?",
-      "answers": ["Akira Kurosawa", "Kurosawa"]
+      "answers": ["Akira Kurosawa", "Kurosawa"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q165",
       "question": "What is the name of the motel in Hitchcock's Psycho?",
-      "answers": ["Bates Motel", "The Bates Motel"]
+      "answers": ["Bates Motel", "The Bates Motel"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q166",
       "question": "The 1948 neorealist classic Bicycle Thieves comes from which country?",
-      "answers": ["Italy"]
+      "answers": ["Italy"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q167",
       "question": "What was Disney's first feature-length animated film, released in 1937?",
-      "answers": ["Snow White and the Seven Dwarfs", "Snow White"]
+      "answers": ["Snow White and the Seven Dwarfs", "Snow White"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q168",
       "question": "Which actor has won the Best Actor Oscar three times, including for There Will Be Blood?",
-      "answers": ["Daniel Day-Lewis", "Day-Lewis", "Daniel Day Lewis"]
+      "answers": ["Daniel Day-Lewis", "Day-Lewis", "Daniel Day Lewis"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q169",
       "question": "Which actress holds the record with four acting Oscars?",
-      "answers": ["Katharine Hepburn", "Hepburn"]
+      "answers": ["Katharine Hepburn", "Hepburn"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q170",
       "question": "Which 1927 silent film was the first to win the Best Picture Oscar?",
-      "answers": ["Wings"]
+      "answers": ["Wings"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q171",
       "question": "Which 1948 Hitchcock film was shot to appear as one continuous take?",
-      "answers": ["Rope"]
+      "answers": ["Rope"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q172",
       "question": "What is the name of the murderous computer in 2001: A Space Odyssey?",
-      "answers": ["HAL 9000", "HAL"]
+      "answers": ["HAL 9000", "HAL"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q173",
       "question": "Which 1964 Kubrick satire is subtitled 'How I Learned to Stop Worrying and Love the Bomb'?",
-      "answers": ["Dr. Strangelove", "Doctor Strangelove", "Dr Strangelove"]
+      "answers": ["Dr. Strangelove", "Doctor Strangelove", "Dr Strangelove"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q174",
       "question": "Blade Runner is based on a novel by which science fiction author?",
-      "answers": ["Philip K. Dick", "Philip K Dick", "Philip Dick"]
+      "answers": ["Philip K. Dick", "Philip K Dick", "Philip Dick"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q175",
       "question": "Which actor won an Oscar for playing the young Vito Corleone in The Godfather Part II?",
-      "answers": ["Robert De Niro", "De Niro", "Robert DeNiro"]
+      "answers": ["Robert De Niro", "De Niro", "Robert DeNiro"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q176",
       "question": "Who directed Apocalypse Now?",
-      "answers": ["Francis Ford Coppola", "Coppola"]
+      "answers": ["Francis Ford Coppola", "Coppola"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q177",
       "question": "'You talkin' to me?' is an improvised line from which 1976 Scorsese film?",
-      "answers": ["Taxi Driver"]
+      "answers": ["Taxi Driver"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q178",
       "question": "Which South Korean director made the 2019 film Parasite?",
-      "answers": ["Bong Joon-ho", "Bong Joon Ho", "Bong"]
+      "answers": ["Bong Joon-ho", "Bong Joon Ho", "Bong"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q179",
       "question": "In Reservoir Dogs, Tim Roth plays Mr. what?",
-      "answers": ["Orange", "Mr. Orange", "Mr Orange"]
+      "answers": ["Orange", "Mr. Orange", "Mr Orange"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q180",
       "question": "Who is the mysterious criminal mastermind in The Usual Suspects?",
-      "answers": ["Keyser Soze", "Keyser Söze", "Soze"]
+      "answers": ["Keyser Soze", "Keyser Söze", "Soze"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q181",
       "question": "Which actor played Detective Somerset in the 1995 thriller Se7en?",
-      "answers": ["Morgan Freeman", "Freeman"]
+      "answers": ["Morgan Freeman", "Freeman"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q182",
       "question": "Who directed Memento, a thriller told largely in reverse order?",
-      "answers": ["Christopher Nolan", "Nolan"]
+      "answers": ["Christopher Nolan", "Nolan"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q183",
       "question": "Who directed the 2003 South Korean revenge thriller Oldboy?",
-      "answers": ["Park Chan-wook", "Park Chan Wook", "Park Chanwook"]
+      "answers": ["Park Chan-wook", "Park Chan Wook", "Park Chanwook"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q184",
       "question": "Which Hong Kong director made In the Mood for Love?",
-      "answers": ["Wong Kar-wai", "Wong Kar Wai", "Wong Kar-Wai"]
+      "answers": ["Wong Kar-wai", "Wong Kar Wai", "Wong Kar-Wai"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q185",
       "question": "Which 1972 Tarkovsky film is set on a station orbiting a sentient ocean planet?",
-      "answers": ["Solaris"]
+      "answers": ["Solaris"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q186",
       "question": "Which Swedish director made Persona and The Seventh Seal?",
-      "answers": ["Ingmar Bergman", "Bergman"]
+      "answers": ["Ingmar Bergman", "Bergman"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q187",
       "question": "In The Seventh Seal, what game does the knight play against Death?",
-      "answers": ["Chess"]
+      "answers": ["Chess"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q188",
       "question": "Which Italian director made 8 1/2 and La Dolce Vita?",
-      "answers": ["Federico Fellini", "Fellini"]
+      "answers": ["Federico Fellini", "Fellini"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q189",
       "question": "Who directed the 1960 French New Wave film Breathless?",
-      "answers": ["Jean-Luc Godard", "Godard", "Jean Luc Godard"]
+      "answers": ["Jean-Luc Godard", "Godard", "Jean Luc Godard"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q190",
       "question": "What is the name of the top prize awarded at the Cannes Film Festival?",
-      "answers": ["Palme d'Or", "Palme dOr", "Golden Palm"]
+      "answers": ["Palme d'Or", "Palme dOr", "Golden Palm"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q191",
       "question": "In the 1960s series The Prisoner, what number is assigned to the protagonist?",
-      "answers": ["6", "Six", "Number Six"]
+      "answers": ["6", "Six", "Number Six"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q192",
       "question": "Which director co-created the surreal TV series Twin Peaks?",
-      "answers": ["David Lynch", "Lynch"]
+      "answers": ["David Lynch", "Lynch"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q193",
       "question": "Which actor played the rumpled TV detective Columbo?",
-      "answers": ["Peter Falk", "Falk"]
+      "answers": ["Peter Falk", "Falk"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q194",
       "question": "The sitcom M*A*S*H is set during which war?",
-      "answers": ["Korean War", "The Korean War", "Korea"]
+      "answers": ["Korean War", "The Korean War", "Korea"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q195",
       "question": "Which comedy pioneer starred in and produced I Love Lucy?",
-      "answers": ["Lucille Ball", "Ball"]
+      "answers": ["Lucille Ball", "Ball"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q196",
       "question": "Who created and hosted the original Twilight Zone?",
-      "answers": ["Rod Serling", "Serling"]
+      "answers": ["Rod Serling", "Serling"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q197",
       "question": "Which actor played Captain Kirk in the original Star Trek series?",
-      "answers": ["William Shatner", "Shatner"]
+      "answers": ["William Shatner", "Shatner"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q198",
       "question": "What are the robotic enemies of humanity called in Battlestar Galactica?",
-      "answers": ["Cylons", "Cylon"]
+      "answers": ["Cylons", "Cylon"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q199",
       "question": "Which former journalist created the HBO series The Wire?",
-      "answers": ["David Simon", "Simon"]
+      "answers": ["David Simon", "Simon"],
+      "difficulty": "hard"
     },
     {
       "id": "qz-movies-tv-q200",
       "question": "Which 1997 HBO prison drama was the network's first hour-long original drama series?",
-      "answers": ["Oz"]
+      "answers": ["Oz"],
+      "difficulty": "hard"
     }
-  ],
-  "finals": {
-    "easy": {
-      "id": "qz-movies-tv-final-easy",
-      "question": "In The Lion King, what is the name of Simba's father?",
-      "answers": ["Mufasa"]
-    },
-    "medium": {
-      "id": "qz-movies-tv-final-medium",
-      "question": "Which actor played the Terminator in the original 1984 film?",
-      "answers": ["Arnold Schwarzenegger", "Schwarzenegger", "Arnie"]
-    },
-    "hard": {
-      "id": "qz-movies-tv-final-hard",
-      "question": "In Blade Runner, what is the term for the bioengineered humans that Deckard hunts?",
-      "answers": ["Replicants", "Replicant"]
-    }
-  }
+  ]
 }

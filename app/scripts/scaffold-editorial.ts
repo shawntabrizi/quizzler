@@ -12,18 +12,13 @@ const sourcesDir = join(__dirname, "..", "..", "shared", "pack-sources");
 interface ExistingManifest {
   status?: unknown;
   questions?: unknown;
-  finals?: unknown;
 }
 
 function isEmptyDraft(existing: ExistingManifest): boolean {
   return (
     existing.status === "draft" &&
     Array.isArray(existing.questions) &&
-    existing.questions.length === 0 &&
-    typeof existing.finals === "object" &&
-    existing.finals !== null &&
-    !Array.isArray(existing.finals) &&
-    Object.keys(existing.finals).length === 0
+    existing.questions.length === 0
   );
 }
 
@@ -81,17 +76,8 @@ async function main(): Promise<void> {
       id: `${prefix}-q${String(index + 1).padStart(3, "0")}`,
       question: question.text,
       answers: question.answers,
+      difficulty: question.difficulty,
     })),
-    finals: Object.fromEntries(
-      (["easy", "medium", "hard"] as const).map((difficulty) => [
-        difficulty,
-        {
-          id: `${prefix}-final-${difficulty}`,
-          question: pack.finals[difficulty].text,
-          answers: pack.finals[difficulty].answers,
-        },
-      ]),
-    ),
   };
   await mkdir(sourcesDir, { recursive: true });
   await writeFile(output, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
