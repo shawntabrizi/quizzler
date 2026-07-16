@@ -95,6 +95,27 @@ describe("transaction ABI", () => {
         ]);
     });
 
+    it("persists and exposes global player aliases", () => {
+        const setDisplayName = method(gameAbi as AbiItem[], "setDisplayName");
+        expect(setDisplayName.stateMutability).toBe("nonpayable");
+        expect(setDisplayName.inputs).toEqual([{ name: "name", type: "string" }]);
+        expect(setDisplayName.outputs).toEqual([]);
+
+        const getDisplayName = method(gameAbi as AbiItem[], "getDisplayName");
+        expect(getDisplayName.stateMutability).toBe("view");
+        expect(getDisplayName.inputs).toEqual([{ name: "who", type: "address" }]);
+        expect(getDisplayName.outputs).toEqual([{ name: "", type: "string" }]);
+
+        const getLiveGame = method(gameAbi as AbiItem[], "getLiveGame");
+        expect(getLiveGame.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: expect.arrayContaining([{ name: "player_names", type: "string[]" }]),
+            },
+        ]);
+    });
+
     it("does not expose superseded creation APIs", () => {
         const registryNames = new Set(
             (registryAbi as AbiItem[])

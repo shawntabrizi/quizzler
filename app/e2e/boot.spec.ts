@@ -14,7 +14,10 @@ test("boots inside the host and reaches the home screen", async ({ testHost }) =
     expect(mappingAt).toBeGreaterThanOrEqual(0);
     expect(handlesAt).toBeGreaterThan(mappingAt);
     expect(bootLog).not.toContain("contract mismatch");
-    await expect(frame.getByTestId("chain-account")).toHaveText(/^[^.]+\.\.\.[^.]+$/);
+    const playerName = await frame.getByTestId("chain-account").textContent();
+    expect(playerName).toMatch(/\S/);
+    expect(playerName).not.toMatch(/0x|\.\.\./i);
+    await expect(frame.getByTestId("display-name-card")).toBeVisible();
     await expect(frame.getByTestId("screen-home")).toBeVisible();
     await expect(frame.getByTestId("btn-join-game")).toBeVisible();
     await expect(frame.getByTestId("btn-new-pack")).toBeVisible();

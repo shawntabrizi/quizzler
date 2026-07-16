@@ -24,14 +24,16 @@ import {
     createContractRuntimeFromClient,
     ensureContractAccountMapped,
 } from "@parity/product-sdk-contracts";
-import { accountIdBytes, ss58Encode, ss58ToH160, truncateAddress } from "@parity/product-sdk-address";
+import { accountIdBytes, ss58Encode, ss58ToH160 } from "@parity/product-sdk-address";
 import { encodeFunctionData, erc20Abi, hexToBytes } from "viem";
 
 import registryAbi from "./abi-registry.json";
 import gameAbi from "./abi-game.json";
 import sessionRegistryAbi from "./abi-session-registry.json";
 import contractInfo from "./contract-address.json";
-import { retryChainRead } from "./chain-read-retry";
+import { retryChainRead, withTimeout } from "./chain-read-retry";
+import { hydrateLiveSnapshotContent } from "./live-snapshot-content";
+import { generatedPlayerName, playerLabels as resolvePlayerLabels, playerName } from "./player-identity";
 import {
     ANSWER_BLOCK_PRESETS,
     countdownLabel,
@@ -41,7 +43,22 @@ import {
     questionCountOptions,
     REVIEW_BLOCK_PRESETS,
 } from "./game-config";
-import { activeGameSessionKey, parseStoredGameId } from "./game-session";
+import {
+    gamePaceLabel,
+    gameProgressLabel,
+    playerCountLabel,
+    questionCountLabel as gameQuestionCountLabel,
+    reviewContinueLabel,
+} from "./game-settings";
+import {
+    knownGamesKey,
+    readKnownGames,
+    removeKnownGame,
+    touchKnownGame,
+    writeKnownGames,
+    type KnownGame,
+    type KnownGamesStore,
+} from "./known-games";
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
@@ -151,10 +168,21 @@ const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
 const MAX_GAME_QUESTIONS = 20;
 const POLL_FALLBACK_MS = 8_000;
+const LIVE_GAME_READ_TIMEOUT_MS = 12_000;
+const REGISTRY_CONTENT_READ_TIMEOUT_MS = 8_000;
+const KNOWN_GAMES_STORAGE_TIMEOUT_MS = 2_500;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
 const PACK_VIEW_BATCH_SIZE = 32;
 const PRODUCT_DERIVATION_INDEX = 0;
+
+function isSettingsStage(stage: number): boolean {
+    return stage >= STAGE_LOBBY && stage <= STAGE_FINAL_REVIEW;
+}
+
+function isActiveGameplayStage(stage: number): boolean {
+    return stage >= STAGE_ANSWER && stage <= STAGE_FINAL_REVIEW;
+}
 
 // Paseo Next Asset Hub's personhood-backed gas asset. The session setup
 // keeps its batch entirely Revive calls (including this ERC-20 transfer), so
@@ -291,6 +319,8 @@ interface Snapshot {
     players: string[];
     /** Optional on-chain names, parallel to `players`. */
     playerNames: string[];
+    /** Friendly labels derived from on-chain aliases and stable fallbacks. */
+    playerLabels: string[];
     scores: number[];
     /** Per-roster-player difficulty choice and whether it is locked. */
     difficultyChoices: number[];
@@ -361,10 +391,17 @@ let sessionRegistry: any = null;
 let assetHub: any = null;
 let unsafeAssetHub: any = null;
 let myAddress = ""; // lowercase H160
-let savedGameId: bigint | null = null;
+let knownGames: KnownGame[] = [];
+let knownGamesStore: KnownGamesStore | null = null;
+let knownGamesHydration: Promise<void> | null = null;
+let knownGamesPersist: Promise<void> = Promise.resolve();
 const nextTxNonceByAddress = new Map<string, number>();
 const nonceSyncByAddress = new Map<string, Promise<number | null>>();
 let gameId: bigint | null = null;
+// A settings view is a stable overlay in the navigation state, not a new
+// chain phase. Polls keep refreshing the details without kicking a player
+// back into a question while they are deciding whether to leave.
+let gameSettingsOpen = false;
 // A final forfeit can make the game Abandoned. Keep that one terminal
 // snapshot long enough to show its scorecard, even though this account is no
 // longer active and therefore cannot resume it later.
@@ -442,7 +479,13 @@ let pollInFlight = false;
 let pollQueued = false;
 let consecutivePollFailures = 0;
 let lastRank = -1;
-let behindStreak = 0;
+let behindPhaseCandidate: {
+    rank: number;
+    stage: number;
+    cursor: number;
+    currentBlock: bigint;
+    sightings: number;
+} | null = null;
 let latestObservedAt = 0;
 // Incremented whenever a game is entered or left. This distinguishes a new
 // session from a stale request even when the player re-enters the same game.
@@ -470,6 +513,9 @@ const sealedPackCache = new Map<string, PackView>();
 const questionRequests = new Map<string, Promise<string>>();
 const answerRequests = new Map<string, Promise<string>>();
 const packTitleRequests = new Map<string, Promise<string>>();
+const gameSettingsPackRequests = new Map<string, Promise<PackView | null>>();
+const gameSettingsPackRetryAfter = new Map<string, number>();
+const GAME_SETTINGS_PACK_RETRY_MS = 15_000;
 
 // A dry-run is needed to size each contract call. Most game actions have
 // plenty of think time, so warm the estimate in the background and let the
@@ -479,6 +525,11 @@ let createGamePreflightTimer: ReturnType<typeof setTimeout> | null = null;
 let preparedGameCreationNonce: bigint | null = null;
 
 let myDisplayName = "";
+// Profile reads are intentionally non-blocking, so guard an optimistic save
+// from an older RPC response (or a pre-inclusion game snapshot) that arrives
+// afterwards. Keep the local result until the chain echoes the same value.
+let displayNameRevision = 0;
+let pendingDisplayName: string | null = null;
 
 // Pack studio state. Draft contents are deliberately local until the final
 // publish action; only the selected cover and validated quiz are ever sent to
@@ -496,7 +547,7 @@ let publishingDraftId: string | null = null;
 
 // ── Screen switching ─────────────────────────────────────────────────
 
-const SCREENS = ["boot", "home", "pack-select", "configure", "builder", "lobby", "question", "review", "vote", "final-wager", "results", "abandoned"] as const;
+const SCREENS = ["boot", "home", "pack-select", "configure", "builder", "lobby", "game-settings", "question", "review", "vote", "final-wager", "results", "abandoned"] as const;
 type Screen = (typeof SCREENS)[number];
 const $appShell = document.querySelector<HTMLElement>("main");
 let visibleScreen: Screen | null = null;
@@ -513,7 +564,7 @@ function showScreen(name: Screen): void {
     $appShell?.classList.toggle("game-stage-open", isGameStage);
     const changed = visibleScreen !== name;
     visibleScreen = name;
-    if (name === "home" || name === "lobby") renderQuickPlayStatus();
+    if (name === "home" || name === "lobby" || name === "game-settings") renderQuickPlayStatus();
     // Announce a genuine stage transition without stealing the cursor from an
     // answer field on every block-driven re-render.
     if (changed && name !== "boot") {
@@ -526,62 +577,137 @@ function showScreen(name: Screen): void {
     }
 }
 
-function gameSessionKey(): string | null {
+function knownGamesStorageKey(): string | null {
     return myAddress && isContractAddress(activeContracts.game)
-        ? activeGameSessionKey(activeContracts.game, myAddress)
+        ? knownGamesKey(activeContracts.game, myAddress)
         : null;
 }
 
-function readSavedGame(): bigint | null {
-    const key = gameSessionKey();
-    if (key === null) return null;
+function browserKnownGamesStore(): KnownGamesStore {
+    const keyFor = (key: string) => `quizzler:games:${key}`;
+    return {
+        async getJSON<T>(key: string): Promise<T | null> {
+            try {
+                const raw = window.localStorage.getItem(keyFor(key));
+                return raw === null ? null : JSON.parse(raw) as T;
+            } catch {
+                return null;
+            }
+        },
+        async setJSON(key: string, value: unknown): Promise<void> {
+            try {
+                window.localStorage.setItem(keyFor(key), JSON.stringify(value));
+            } catch {
+                // Browser privacy settings should not block party play.
+            }
+        },
+        async remove(key: string): Promise<void> {
+            try {
+                window.localStorage.removeItem(keyFor(key));
+            } catch {
+                // Best effort only.
+            }
+        },
+    };
+}
+
+async function getKnownGamesStore(): Promise<KnownGamesStore> {
+    if (knownGamesStore) return knownGamesStore;
     try {
-        const raw = window.sessionStorage.getItem(key);
-        const id = parseStoredGameId(raw);
-        // Corrupt storage should never create an invisible, repeatedly failing
-        // resume loop. The contract still has the room if the player knows its
-        // code and chooses to re-enter it manually.
-        if (raw !== null && id === null) window.sessionStorage.removeItem(key);
-        return id;
+        knownGamesStore = await createLocalKvStore({ prefix: "quizzler:games" });
     } catch {
-        return null;
+        // The published app uses Polkadot's host storage. A normal browser
+        // preview still gets durable recovery through its own local storage.
+        knownGamesStore = browserKnownGamesStore();
     }
+    return knownGamesStore;
+}
+
+async function hydrateKnownGames(): Promise<void> {
+    if (knownGamesHydration) return knownGamesHydration;
+    knownGamesHydration = (async () => {
+        const key = knownGamesStorageKey();
+        if (key === null) return;
+        const load = (async (): Promise<KnownGame[]> =>
+            readKnownGames(await getKnownGamesStore(), key))();
+        try {
+            knownGames = await withTimeout(
+                load,
+                KNOWN_GAMES_STORAGE_TIMEOUT_MS,
+                "Timed out restoring saved games.",
+            );
+        } catch {
+            // Host storage is recovery-only. Show Home on time, then let a
+            // late result populate the visible rejoin list if it arrives
+            // before the player enters another room.
+            knownGames = [];
+            void load.then((stored) => {
+                if (knownGames.length > 0) return;
+                knownGames = stored;
+                renderKnownGames();
+                refreshKnownGames();
+            }).catch(() => undefined);
+        }
+        renderKnownGames();
+    })();
+    return knownGamesHydration;
+}
+
+function persistKnownGames(): void {
+    const key = knownGamesStorageKey();
+    if (key === null) return;
+    const snapshot = [...knownGames];
+    knownGamesPersist = knownGamesPersist
+        .catch(() => undefined)
+        .then(async () => {
+            try {
+                await writeKnownGames(await getKnownGamesStore(), key, snapshot);
+            } catch {
+                // Recovery is a convenience; a storage outage never blocks play.
+            }
+        });
+}
+
+/** Start an independent final write when a page is about to close. */
+function flushKnownGames(): void {
+    const key = knownGamesStorageKey();
+    if (key === null) return;
+    const snapshot = [...knownGames];
+    void getKnownGamesStore()
+        .then((store) => writeKnownGames(store, key, snapshot))
+        .catch(() => undefined);
 }
 
 function rememberGame(id: bigint): void {
-    savedGameId = id;
-    const key = gameSessionKey();
-    if (key === null) return;
-    try {
-        window.sessionStorage.setItem(key, id.toString());
-    } catch {
-        // Private browsing/storage policy must not prevent a player joining.
-    }
+    knownGames = touchKnownGame(knownGames, id);
+    persistKnownGames();
+    renderKnownGames();
 }
 
-function forgetSavedGame(): void {
-    savedGameId = null;
-    const key = gameSessionKey();
-    if (key === null) return;
-    try {
-        window.sessionStorage.removeItem(key);
-    } catch {
-        // Best effort only; the next active-membership validation remains safe.
-    }
+function forgetKnownGame(id: bigint): void {
+    knownGames = removeKnownGame(knownGames, id);
+    persistKnownGames();
+    renderKnownGames();
 }
 
 const $bootLog = getEl("boot-log");
 const $connPill = getEl("conn-pill");
 const $chainStatus = getEl("chain-status");
 const $chainAccount = getEl("chain-account");
-const $gameActions = getEl("game-actions");
-const $btnForfeitGame = getEl<HTMLButtonElement>("btn-forfeit-game");
+const $gameStageTimer = getEl("game-stage-timer");
+const $btnGameSettings = getEl<HTMLButtonElement>("btn-game-settings");
 const $forfeitDialog = getEl<HTMLDialogElement>("forfeit-dialog");
 const $transactionStatus = getEl("transaction-status");
 
-function setGameActions(mode: "hidden" | "lobby" | "active"): void {
-    $gameActions.style.display = mode === "hidden" ? "none" : "flex";
-    $btnForfeitGame.style.display = mode === "active" ? "" : "none";
+function setGameControls(mode: "hidden" | "lobby" | "active"): void {
+    const showingSettings = gameSettingsOpen;
+    $btnGameSettings.hidden = mode === "hidden" || showingSettings;
+    const showTimer = mode === "active" && !showingSettings;
+    $gameStageTimer.hidden = !showTimer;
+    if (!showTimer) {
+        $gameStageTimer.textContent = "";
+        $gameStageTimer.classList.remove("urgent");
+    }
 }
 
 function bootLog(msg: string, level: "info" | "ok" | "err" = "info"): void {
@@ -611,12 +737,11 @@ function setTransactionStatus(message: string | null): void {
     $transactionStatus.textContent = message ?? "";
 }
 
-function showActiveAccount(address: string): void {
-    // Keep this compact enough for the phone header. CSS must not ellipsize an
-    // already shortened value, otherwise it reads like two nested truncations.
-    $chainAccount.textContent = truncateAddress(address, 4, 3);
-    $chainAccount.title = `Active account: ${address}`;
-    $chainAccount.setAttribute("aria-label", `Active account: ${address}`);
+function showActivePlayerName(): void {
+    const name = playerName(myAddress, myDisplayName);
+    $chainAccount.textContent = name;
+    $chainAccount.title = `Your player name: ${name}`;
+    $chainAccount.setAttribute("aria-label", `Your player name: ${name}`);
 }
 
 // Chain plumbing (block numbers) stays out of the header; the shared block
@@ -632,14 +757,9 @@ function subscribeChainStatus(): void {
     chainStatusSubscription = bestBlocks.subscribe(onBlockSignal);
 }
 
-function fmtAddr(addr: string): string {
-    return addr.toLowerCase() === myAddress ? "You" : truncateAddress(addr);
-}
-
-function fmtPlayer(snap: Pick<Snapshot, "players" | "playerNames">, addr: string): string {
+function fmtPlayer(snap: Pick<Snapshot, "players" | "playerLabels">, addr: string): string {
     const index = snap.players.findIndex((player) => player.toLowerCase() === addr.toLowerCase());
-    const name = index >= 0 ? snap.playerNames[index]?.trim() : "";
-    return name || fmtAddr(addr);
+    return index >= 0 ? snap.playerLabels[index] ?? playerName(addr) : playerName(addr);
 }
 
 /** In-flight tx feedback: spinner + disabled, cleared in the finally. */
@@ -1763,13 +1883,16 @@ async function questionText(packId: number, slot: number): Promise<string> {
     const pending = questionRequests.get(key);
     if (pending) return pending;
     const registryAtRequest = registry;
-    const request = (async () => {
-        const res = await retryChainRead<any>(() => registryAtRequest.getQuestion.query(packId, slot));
+    const request = withTimeout(
+        retryChainRead<any>(() => registryAtRequest.getQuestion.query(packId, slot)),
+        REGISTRY_CONTENT_READ_TIMEOUT_MS,
+        "Timed out loading this question.",
+    ).then((res) => {
         if (!res.success) return "";
         const text = res.value as string;
         questionCache.set(key, text);
         return text;
-    })().finally(() => questionRequests.delete(key));
+    }).catch(() => "").finally(() => questionRequests.delete(key));
     questionRequests.set(key, request);
     return request;
 }
@@ -1781,14 +1904,17 @@ async function canonicalAnswer(packId: number, slot: number): Promise<string> {
     const pending = answerRequests.get(key);
     if (pending) return pending;
     const registryAtRequest = registry;
-    const request = (async () => {
-        const res = await retryChainRead<any>(() => registryAtRequest.getAnswers.query(packId, slot));
+    const request = withTimeout(
+        retryChainRead<any>(() => registryAtRequest.getAnswers.query(packId, slot)),
+        REGISTRY_CONTENT_READ_TIMEOUT_MS,
+        "Timed out loading this answer.",
+    ).then((res) => {
         if (!res.success) return "";
         const answers = res.value as string[];
         const canonical = answers[0] ?? "";
         answerCache.set(key, canonical);
         return canonical;
-    })().finally(() => answerRequests.delete(key));
+    }).catch(() => "").finally(() => answerRequests.delete(key));
     answerRequests.set(key, request);
     return request;
 }
@@ -1867,6 +1993,34 @@ async function sealedPacks(
         if (!byId.has(packId)) byId.set(packId, null);
     }
     return packIds.map((packId) => byId.get(packId) ?? null);
+}
+
+/**
+ * The settings screen re-renders on every live-game poll. Coalesce its
+ * cosmetic pack lookup and briefly back off after an unavailable registry so
+ * opening settings never turns into a request per block.
+ */
+function gameSettingsPack(packId: number): Promise<PackView | null> {
+    const key = registryPackCacheKey(packId);
+    const cached = sealedPackCache.get(key);
+    if (cached) return Promise.resolve(cached);
+    const pending = gameSettingsPackRequests.get(key);
+    if (pending) return pending;
+    if ((gameSettingsPackRetryAfter.get(key) ?? 0) > Date.now()) return Promise.resolve(null);
+
+    const request = sealedPacks([packId])
+        .then(([pack]) => {
+            if (pack) gameSettingsPackRetryAfter.delete(key);
+            else gameSettingsPackRetryAfter.set(key, Date.now() + GAME_SETTINGS_PACK_RETRY_MS);
+            return pack;
+        })
+        .catch(() => {
+            gameSettingsPackRetryAfter.set(key, Date.now() + GAME_SETTINGS_PACK_RETRY_MS);
+            return null;
+        })
+        .finally(() => gameSettingsPackRequests.delete(key));
+    gameSettingsPackRequests.set(key, request);
+    return request;
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────
@@ -1976,9 +2130,11 @@ async function init(): Promise<void> {
     }
     productAccount = productRes.value;
     myAddress = ss58ToH160(productAccount.address).toLowerCase();
-    savedGameId = readSavedGame();
-    showActiveAccount(productAccount.address);
-    bootLog(`Account ready: ${truncateAddress(productAccount.address)}`, "ok");
+    // Begin restoring the durable recovery list in parallel with the chain
+    // setup. The host-backed read is small and must never delay signing.
+    const knownGamesReady = hydrateKnownGames();
+    showActivePlayerName();
+    bootLog("Player account ready", "ok");
 
     bootLog("Opening chain client…");
     const { paseo_asset_hub } = await descriptorReady;
@@ -2029,15 +2185,22 @@ async function init(): Promise<void> {
         return;
     }
 
+    await knownGamesReady;
+
+    // A profile read is independent of resuming a game. Start it now so the
+    // home form and compact header show the saved on-chain alias as soon as it
+    // arrives, without delaying a returning player's game recovery.
+    syncDisplayNameProfile();
+    void hydrateDisplayName();
+
     // Sealed packs are immutable. Restore their last known metadata for an
     // instant picker on a return visit, then reconcile the current registry
     // window in the background below.
     hydratePackCatalogCache();
     void refreshPacks();
 
-    // A stored session is trusted only after its on-chain owner mapping is
-    // checked. This is intentionally best-effort: a storage/host outage must
-    // never block normal product-account play.
+    // A remembered room is trusted only after its on-chain roster and live
+    // status are checked. Storage trouble never blocks normal party play.
     if (sessionRegistry) void hydrateQuickPlay();
 
     // Prime the best-block nonce without holding up the home screen. It is
@@ -2045,7 +2208,7 @@ async function init(): Promise<void> {
     void syncTxNonce(productTransactionActor());
 
     setConnectionStatus("connected", "ok");
-    const resume = await resumeSavedGame();
+    const resume = await resumeMostRecentKnownGame();
     if (resume === "resumed") return;
     // A saved active room takes precedence over a recovery marker. If its
     // status is temporarily unavailable, do not risk opening another table.
@@ -2059,7 +2222,7 @@ async function init(): Promise<void> {
     } else if (sharedLobbyInvite.present) {
         if (sharedLobbyInvite.gameId === null) {
             inviteError = "This invite link doesn’t contain a valid six-digit game code.";
-        } else if (savedGameId === null) {
+        } else if (knownGames.length === 0) {
             getEl<HTMLInputElement>("join-game-id").value = sharedLobbyInvite.gameId.toString();
             bootLog(`Joining shared lobby ${sharedLobbyInvite.gameId}…`);
             if (await joinGameById(sharedLobbyInvite.gameId, $homeError)) return;
@@ -2071,11 +2234,12 @@ async function init(): Promise<void> {
     showScreen("home");
     const homeReadyMark = performanceMark("home:shown");
     performanceMeasure("boot:to-home", appStartMark, homeReadyMark);
-    renderResumeCard();
+    renderKnownGames();
+    refreshKnownGames();
     if (inviteError) {
         $homeError.textContent = inviteError;
     } else if (resume === "unavailable") {
-        $homeError.textContent = "Couldn’t reopen your saved quiz yet. Try Resume when the connection recovers.";
+        $homeError.textContent = "Couldn’t reopen your game yet. Try again from Your games when the connection recovers.";
     }
 }
 
@@ -2096,8 +2260,8 @@ const $reviewBlocks = getEl<HTMLSelectElement>("cfg-review-blocks");
 const $configPackArt = getEl("config-pack-art");
 const $configPackTitle = getEl("config-pack-title");
 const $configPackMeta = getEl("config-pack-meta");
-const $resumeGameCard = getEl("resume-game-card");
-const $resumeGameCode = getEl("resume-game-code");
+const $yourGames = getEl("your-games");
+const $yourGamesList = getEl("your-games-list");
 const $displayName = getEl<HTMLInputElement>("display-name");
 const $displayNameStatus = getEl("display-name-status");
 const $instantPlayCard = getEl("instant-play-card");
@@ -2108,6 +2272,66 @@ const $lobbyInstantPlay = getEl("lobby-instant-play");
 const $lobbyInstantPlayStatus = getEl("lobby-instant-play-status");
 const $lobbyInstantPlayError = getEl("lobby-instant-play-error");
 const $btnRetryInstantPlay = getEl<HTMLButtonElement>("btn-retry-instant-play");
+const $settingsInstantPlay = getEl("settings-instant-play");
+const $settingsInstantPlayStatus = getEl("settings-instant-play-status");
+const $settingsInstantPlayError = getEl("settings-instant-play-error");
+const $btnSettingsRetryInstantPlay = getEl<HTMLButtonElement>("btn-settings-retry-instant-play");
+const $btnSettingsTurnOffInstantPlay = getEl<HTMLButtonElement>("btn-settings-turn-off-instant-play");
+
+function syncDisplayNameProfile(status?: string): void {
+    if (!myAddress) return;
+    const fallback = generatedPlayerName(myAddress);
+    $displayName.placeholder = fallback;
+    // A live snapshot may arrive while the player is editing their alias. Do
+    // not overwrite their unsaved text just because a polling read completes.
+    if (document.activeElement !== $displayName) $displayName.value = myDisplayName;
+    $displayNameStatus.textContent = status
+        ?? (myDisplayName
+            ? `Saved alias: ${myDisplayName}.`
+            : `No custom alias yet — you’ll appear as ${fallback}.`);
+    showActivePlayerName();
+}
+
+function applyOnChainDisplayName(name: string, observedRevision: number): void {
+    if (observedRevision !== displayNameRevision) return;
+    if (pendingDisplayName !== null) {
+        if (name !== pendingDisplayName) return;
+        pendingDisplayName = null;
+    }
+    if (name === myDisplayName) return;
+    myDisplayName = name;
+    displayNameRevision += 1;
+    syncDisplayNameProfile();
+}
+
+function applyMyDisplayNameToLatest(): void {
+    if (latest === null) return;
+    const index = latest.players.findIndex((player) => player.toLowerCase() === myAddress);
+    if (index < 0) return;
+    const playerNames = [...latest.playerNames];
+    playerNames[index] = myDisplayName;
+    latest = {
+        ...latest,
+        playerNames,
+        playerLabels: resolvePlayerLabels(latest.players, playerNames),
+    };
+    render(latest);
+}
+
+async function hydrateDisplayName(): Promise<void> {
+    if (!productAccount || !myAddress) return;
+    const observedRevision = displayNameRevision;
+    try {
+        const result = await retryChainRead<any>(() => game.getDisplayName.query(myAddress, {
+            origin: productAccount!.address,
+        }));
+        if (!result.success) return;
+        applyOnChainDisplayName(String(result.value).trim(), observedRevision);
+    } catch {
+        // The party game remains usable with its generated identity when this
+        // optional profile read is temporarily unavailable.
+    }
+}
 
 function renderQuickPlayStatus(): void {
     const configured = sessionRegistryConfigured();
@@ -2116,6 +2340,7 @@ function renderQuickPlayStatus(): void {
     // Pending is a factual on-chain state, not a spinner. Keeping it separate
     // from in-flight work makes a failed activation readable and retryable.
     const settingUp = quickPlaySetup !== null || automaticInstantPlaySetup !== null;
+    renderSettingsInstantPlayStatus(configured, enabled, pending, settingUp);
     $instantPlayCard.style.display = configured && enabled ? "" : "none";
     if (!configured) {
         $lobbyInstantPlay.style.display = "none";
@@ -2140,7 +2365,30 @@ function renderQuickPlayStatus(): void {
     $btnRetryInstantPlay.textContent = pending ? "Finish instant actions" : "Try instant actions";
 }
 
-$btnRetryInstantPlay.addEventListener("click", () => {
+function renderSettingsInstantPlayStatus(
+    configured: boolean,
+    enabled: boolean,
+    pending: boolean,
+    settingUp: boolean,
+): void {
+    const showingSettings = visibleScreen === "game-settings";
+    $settingsInstantPlay.style.display = configured && showingSettings ? "" : "none";
+    if (!configured || !showingSettings) return;
+
+    $settingsInstantPlayStatus.textContent = enabled
+        ? "Instant actions are on — game moves don’t need approvals."
+        : settingUp
+          ? quickPlayMessage || "Setting up instant actions…"
+          : quickPlayMessage || "You’ll approve each move.";
+    $settingsInstantPlayError.textContent = instantPlayFailureDetail;
+    $btnSettingsRetryInstantPlay.style.display = enabled ? "none" : "";
+    $btnSettingsRetryInstantPlay.disabled = settingUp || busy;
+    $btnSettingsRetryInstantPlay.textContent = pending ? "Finish instant actions" : "Try instant actions";
+    $btnSettingsTurnOffInstantPlay.style.display = enabled ? "" : "none";
+    $btnSettingsTurnOffInstantPlay.disabled = busy;
+}
+
+function retryInstantPlay(): void {
     if (busy || quickPlaySetup || automaticInstantPlaySetup) return;
     automaticInstantPlayAttempted = false;
     instantPlayFallback = false;
@@ -2151,24 +2399,39 @@ $btnRetryInstantPlay.addEventListener("click", () => {
     void saveInstantPlayPreference(null);
     startDefaultInstantPlay(true);
     renderQuickPlayStatus();
-});
+}
 
-$btnTurnOffInstantPlay.addEventListener("click", async () => {
+$btnRetryInstantPlay.addEventListener("click", retryInstantPlay);
+$btnSettingsRetryInstantPlay.addEventListener("click", retryInstantPlay);
+
+async function turnOffInstantPlay(
+    buttonId: "btn-turn-off-instant-play" | "btn-settings-turn-off-instant-play",
+    error: HTMLElement,
+): Promise<void> {
     if (busy || !sessionAccount) return;
     busy = true;
-    $instantPlayError.textContent = "";
-    setLoading("btn-turn-off-instant-play", true);
+    error.textContent = "";
+    setLoading(buttonId, true);
     renderQuickPlayStatus();
     try {
         await endQuickPlay();
     } catch (cause) {
-        $instantPlayError.textContent = friendlyError(cause);
+        error.textContent = friendlyError(cause);
     } finally {
         busy = false;
-        setLoading("btn-turn-off-instant-play", false);
+        setLoading(buttonId, false);
         renderQuickPlayStatus();
     }
-});
+}
+
+$btnTurnOffInstantPlay.addEventListener("click", () => void turnOffInstantPlay(
+    "btn-turn-off-instant-play",
+    $instantPlayError,
+));
+$btnSettingsTurnOffInstantPlay.addEventListener("click", () => void turnOffInstantPlay(
+    "btn-settings-turn-off-instant-play",
+    $settingsInstantPlayError,
+));
 
 getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", async () => {
     if (busy || !productAccount) return;
@@ -2178,12 +2441,19 @@ getEl<HTMLButtonElement>("btn-save-display-name").addEventListener("click", asyn
         return;
     }
     busy = true;
+    // Invalidate reads launched before the player chose this new value.
+    displayNameRevision += 1;
     $displayNameStatus.textContent = "";
     setLoading("btn-save-display-name", true);
     try {
         await sendTx(game, "setDisplayName", name);
         myDisplayName = name;
-        $displayNameStatus.textContent = name ? "Name saved for your next lobby refresh." : "Name cleared.";
+        pendingDisplayName = name;
+        displayNameRevision += 1;
+        syncDisplayNameProfile(name
+            ? `Saved as ${name}. Everyone in your games will see it.`
+            : `Alias cleared. You’ll appear as ${generatedPlayerName(myAddress)}.`);
+        applyMyDisplayNameToLatest();
     } catch (error) {
         $displayNameStatus.textContent = friendlyError(error);
     } finally {
@@ -2205,10 +2475,135 @@ function showConfigError(message: string): void {
     $configError.textContent = message;
 }
 
-function renderResumeCard(): void {
-    const shouldShow = savedGameId !== null && gameId === null;
-    $resumeGameCard.style.display = shouldShow ? "" : "none";
-    $resumeGameCode.textContent = shouldShow ? String(savedGameId) : "";
+type KnownGameInspection =
+    | { kind: "checking" }
+    | { kind: "active"; stage: number; cursor: number; questionCount: number }
+    | { kind: "unavailable" };
+
+const knownGameInspections = new Map<bigint, KnownGameInspection>();
+const knownGameOpenings = new Set<bigint>();
+
+async function inspectKnownGame(id: bigint): Promise<KnownGameInspection | "stale"> {
+    if (!game || !myAddress) return { kind: "unavailable" };
+    try {
+        const result = await withTimeout(
+            retryChainRead<any>(() => game.getLiveGame.query(id)),
+            LIVE_GAME_READ_TIMEOUT_MS,
+            "Timed out checking this quiz.",
+        );
+        if (!result.success) return { kind: "unavailable" };
+        const live = result.value as LiveGameView;
+        const stage = Number(live.stage);
+        const players = live.players.map((player) => String(player).toLowerCase());
+        const index = players.indexOf(myAddress);
+        const submission = index >= 0
+            ? live.submissions.find((item) => String(item.player).toLowerCase() === myAddress)
+            : undefined;
+        if (stage < STAGE_LOBBY || stage > STAGE_FINAL_REVIEW || index < 0 || submission?.active === false) {
+            return "stale";
+        }
+        return {
+            kind: "active",
+            stage,
+            cursor: Number(live.cursor),
+            questionCount: Number(live.num_questions),
+        };
+    } catch {
+        // A transient host/RPC failure is not evidence that a player left.
+        return { kind: "unavailable" };
+    }
+}
+
+function knownGameStatusLabel(inspection: KnownGameInspection | undefined): string {
+    if (!inspection || inspection.kind === "checking") return "Checking game…";
+    if (inspection.kind === "unavailable") return "Couldn’t check this game yet.";
+    return gameProgressLabel(inspection.stage, inspection.cursor, inspection.questionCount);
+}
+
+function renderKnownGames(): void {
+    const show = gameId === null && knownGames.length > 0;
+    $yourGames.style.display = show ? "" : "none";
+    if (!show) {
+        $yourGamesList.replaceChildren();
+        return;
+    }
+    renderList(
+        $yourGamesList,
+        knownGames.map((known) => {
+            const inspection = knownGameInspections.get(known.id);
+            const summary = document.createElement("span");
+            summary.className = "your-game-summary";
+            summary.append(
+                span("your-game-code", `Game ${known.id}`),
+                span("sub", knownGameStatusLabel(inspection)),
+            );
+            const actions = document.createElement("span");
+            actions.className = "your-game-actions";
+            const rejoin = document.createElement("button");
+            rejoin.type = "button";
+            rejoin.className = "primary";
+            rejoin.dataset.testid = "btn-rejoin-game";
+            rejoin.dataset.gameId = known.id.toString();
+            rejoin.textContent = inspection?.kind === "unavailable" ? "Try again" : "Rejoin";
+            rejoin.disabled = inspection?.kind === "checking" || knownGameOpenings.has(known.id);
+            rejoin.addEventListener("click", () => void reopenKnownGame(known.id));
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "quiet";
+            remove.dataset.testid = "btn-remove-known-game";
+            remove.dataset.gameId = known.id.toString();
+            remove.textContent = "Remove";
+            remove.setAttribute("aria-label", `Remove game ${known.id} from this device`);
+            remove.disabled = knownGameOpenings.has(known.id);
+            remove.addEventListener("click", () => forgetKnownGame(known.id));
+            actions.append(rejoin, remove);
+            const row = li(summary, actions);
+            row.className = "your-game-row";
+            return row;
+        }),
+    );
+}
+
+function refreshKnownGames(): void {
+    if (!game || !myAddress || gameId !== null || knownGames.length === 0) return;
+    const records = [...knownGames];
+    for (const known of records) knownGameInspections.set(known.id, { kind: "checking" });
+    renderKnownGames();
+    void Promise.all(records.map(async (known) => {
+        const inspection = await inspectKnownGame(known.id);
+        // The player may have removed it while the lookup was in flight.
+        if (!knownGames.some((current) => current.id === known.id)) return;
+        if (inspection === "stale") {
+            forgetKnownGame(known.id);
+            return;
+        }
+        knownGameInspections.set(known.id, inspection);
+        renderKnownGames();
+    }));
+}
+
+async function reopenKnownGame(id: bigint): Promise<boolean> {
+    if (gameId !== null || knownGameOpenings.has(id)) return false;
+    knownGameOpenings.add(id);
+    renderKnownGames();
+    try {
+        const inspection = await inspectKnownGame(id);
+        if (inspection === "stale") {
+            forgetKnownGame(id);
+            $homeError.textContent = "That game is no longer available to rejoin.";
+            return false;
+        }
+        knownGameInspections.set(id, inspection);
+        if (inspection.kind === "unavailable") {
+            $homeError.textContent = "Couldn’t reopen that game yet. Try again when the connection recovers.";
+            return false;
+        }
+        enterGame(id);
+        return true;
+    } finally {
+        knownGameOpenings.delete(id);
+        if (gameId === null) renderKnownGames();
+    }
 }
 
 interface SelectOption {
@@ -2670,7 +3065,8 @@ getEl("btn-host-game").addEventListener("click", showPackSelection);
 
 getEl("btn-pack-back").addEventListener("click", () => {
     showScreen("home");
-    renderResumeCard();
+    renderKnownGames();
+    refreshKnownGames();
 });
 
 getEl("btn-pack-continue").addEventListener("click", () => {
@@ -2681,6 +3077,9 @@ getEl("btn-pack-continue").addEventListener("click", () => {
     $configError.textContent = "";
     updateSelectedPackSummary();
     showScreen("configure");
+    // The picker owns its own scroll region on phones. Start the next setup
+    // step at its heading rather than preserving the previous page position.
+    window.scrollTo(0, 0);
     scheduleCreateGamePreflight();
 });
 
@@ -2832,10 +3231,14 @@ async function resumePendingGameCreation(): Promise<"none" | "resumed" | "unavai
 /** `null` means the chain could not be queried; `false` is authoritative. */
 async function activePlayerStatus(id: bigint): Promise<boolean | null> {
     try {
-        const res = await game.isPlayerActive.query(id, myAddress);
+        const res = await withTimeout(
+            retryChainRead<any>(() => game.isPlayerActive.query(id, myAddress)),
+            LIVE_GAME_READ_TIMEOUT_MS,
+            "Timed out checking this player.",
+        );
         // A failed contract read is not evidence that the player left. Keep
-        // the saved room so a temporary RPC/fork error cannot erase their
-        // ability to resume it on the next attempt.
+        // the known room so a temporary RPC/fork error cannot erase the
+        // player’s recovery path.
         if (!res.success) return null;
         return Boolean(res.value);
     } catch {
@@ -2848,42 +3251,70 @@ async function amActivePlayerInGame(id: bigint): Promise<boolean> {
     return (await activePlayerStatus(id)) === true;
 }
 
-type ResumeResult = "none" | "resumed" | "not-active" | "unavailable";
+type ResumeResult = "none" | "resumed" | "unavailable";
 
-/** Restore a browser's current room only after the new contract confirms it. */
-async function resumeSavedGame(): Promise<ResumeResult> {
-    const id = savedGameId ?? readSavedGame();
-    if (id === null || !game || !myAddress) return "none";
-    savedGameId = id;
-    const active = await activePlayerStatus(id);
-    if (active === null) {
-        // Keep the pointer so the explicit Resume button and a later refresh
-        // can retry after a transient RPC outage.
-        return "unavailable";
+/**
+ * Restore the newest room this account has opened on this device. The game
+ * contract has no account-to-game index, so this durable local list is a
+ * recovery aid rather than a claim that it can discover every room globally.
+ */
+async function resumeMostRecentKnownGame(): Promise<ResumeResult> {
+    if (!game || !myAddress) return "none";
+    // Begin every lookup concurrently so stale records do not add their
+    // timeout budgets together, but await them in recency order. That lets a
+    // healthy newest room reopen immediately without waiting on old entries.
+    const inspections = [...knownGames].map(async (known) => ({
+            known,
+            inspection: await inspectKnownGame(known.id),
+        }));
+    let hadUnavailable = false;
+    for (const pending of inspections) {
+        const { known, inspection } = await pending;
+        if (inspection === "stale") {
+            forgetKnownGame(known.id);
+            continue;
+        }
+        knownGameInspections.set(known.id, inspection);
+        if (inspection.kind === "unavailable") {
+            hadUnavailable = true;
+            continue;
+        }
+        bootLog(`Reopening game ${known.id}…`, "ok");
+        enterGame(known.id);
+        return "resumed";
     }
-    if (!active) {
-        forgetSavedGame();
-        return "not-active";
-    }
-    bootLog(`Reopening game ${id}…`, "ok");
-    enterGame(id);
-    return "resumed";
+    return hadUnavailable ? "unavailable" : "none";
 }
 
 /**
- * A party is deliberately one current table per browser session. The
+ * A party is deliberately one current table per app. The
  * contract remains permissive — it does not maintain a costly global
  * account-to-game index — but never silently replace the room a player can
  * resume locally.
  */
-function canStartAnotherQuiz(error = $homeError): boolean {
+async function canStartAnotherQuiz(error = $homeError): Promise<boolean> {
     if (pendingGameCreation()) {
         error.textContent = "Your new lobby is still being confirmed. Give it a moment, then try again to reopen it.";
         return false;
     }
-    if (savedGameId === null) return true;
-    error.textContent = "You already have a quiz in progress. Resume it, leave its lobby, or forfeit it before starting another.";
-    return false;
+    for (const known of [...knownGames]) {
+        const inspection = await inspectKnownGame(known.id);
+        // A stale device record must not lock a player out of starting a new
+        // quiz while the normal background refresh is still catching up.
+        if (inspection === "stale") {
+            forgetKnownGame(known.id);
+            continue;
+        }
+        knownGameInspections.set(known.id, inspection);
+        if (inspection.kind === "unavailable") {
+            error.textContent = "Couldn’t check your existing quiz yet. Try again in a moment.";
+        } else {
+            error.textContent = "You already have a quiz in progress. Rejoin it, leave its lobby, or forfeit it before starting another.";
+        }
+        renderKnownGames();
+        return false;
+    }
+    return true;
 }
 
 /** Join or reopen a room, shared by the manual form and `?join=` invites. */
@@ -2897,18 +3328,12 @@ async function joinGameById(id: bigint, error: HTMLElement): Promise<boolean> {
             error.textContent = "Your new lobby is still being confirmed. Try again in a moment.";
             return false;
         }
-        if (savedGameId !== null) {
-            if (savedGameId === id) {
-                const result = await resumeSavedGame();
-                if (result === "resumed") return true;
-                error.textContent = result === "not-active"
-                    ? "You are no longer an active player in that quiz."
-                    : "Couldn’t reopen that quiz yet. Try again when the connection recovers.";
-                return false;
-            }
-            canStartAnotherQuiz(error);
+        if (knownGames.some((known) => known.id === id)) {
+            if (await reopenKnownGame(id)) return true;
+            error.textContent = $homeError.textContent || "Couldn’t reopen that quiz yet. Try again when the connection recovers.";
             return false;
         }
+        if (!await canStartAnotherQuiz(error)) return false;
 
         await sendTx(game, "joinGame", id);
         enterGame(id);
@@ -2940,18 +3365,20 @@ getEl("btn-create-game").addEventListener("click", async () => {
         createGamePreflightTimer = null;
     }
     $configError.textContent = "";
-    const pendingCreation = await resumePendingGameCreation();
-    if (pendingCreation === "resumed") return;
-    if (pendingCreation === "unavailable") {
-        showConfigError("Your new lobby is still being confirmed. Try again in a moment.");
-        return;
-    }
-    if (!canStartAnotherQuiz($configError)) return;
-    const config = readCreatedGameConfig(true);
-    if (!config) return;
     busy = true;
-    setLoading("btn-create-game", true);
+    let submitted = false;
     try {
+        const pendingCreation = await resumePendingGameCreation();
+        if (pendingCreation === "resumed") return;
+        if (pendingCreation === "unavailable") {
+            showConfigError("Your new lobby is still being confirmed. Try again in a moment.");
+            return;
+        }
+        if (!await canStartAnotherQuiz($configError)) return;
+        const config = readCreatedGameConfig(true);
+        if (!config) return;
+        submitted = true;
+        setLoading("btn-create-game", true);
         const call = gameCreateCall(config);
         await sendWarmedTx(game, call.method, call.args);
         showConfigProgress("Game created — opening your lobby…");
@@ -2965,9 +3392,11 @@ getEl("btn-create-game").addEventListener("click", async () => {
     } catch (e) {
         showConfigError(friendlyError(e));
     } finally {
-        preparedGameCreationNonce = null;
+        if (submitted) {
+            preparedGameCreationNonce = null;
+            setLoading("btn-create-game", false);
+        }
         busy = false;
-        setLoading("btn-create-game", false);
     }
 });
 
@@ -3005,20 +3434,6 @@ getEl<HTMLInputElement>("join-game-id").addEventListener("keydown", (event) => {
         event.preventDefault();
         getEl<HTMLButtonElement>("btn-join-game").click();
     }
-});
-
-getEl<HTMLButtonElement>("btn-resume-game").addEventListener("click", async () => {
-    const result = await resumeSavedGame();
-    if (result === "resumed") return;
-    renderResumeCard();
-    $homeError.textContent = result === "not-active"
-        ? "You are no longer an active player in that quiz."
-        : "Couldn’t reopen that quiz yet. Try again when the connection recovers.";
-});
-
-getEl<HTMLButtonElement>("btn-forget-saved-game").addEventListener("click", () => {
-    forgetSavedGame();
-    renderResumeCard();
 });
 
 // ── Pack studio ──────────────────────────────────────────────────────
@@ -3487,6 +3902,7 @@ async function publishPackDraft(): Promise<void> {
         updateSelectedPackSummary();
         $builderPublishStatus.textContent = "Published — now set up your game.";
         showScreen("configure");
+        window.scrollTo(0, 0);
         scheduleCreateGamePreflight();
     } catch (error) {
         $builderError.textContent = friendlyError(error);
@@ -3506,18 +3922,24 @@ getEl("btn-builder-done").addEventListener("click", async () => {
     if (packPublishInProgress) return;
     await packDraftSaver.flush();
     showScreen("home");
-    renderResumeCard();
+    renderKnownGames();
+    refreshKnownGames();
 });
 
 window.addEventListener("pagehide", () => {
     // A final best-effort save turns a refresh during authoring into a normal
     // draft restore rather than relying solely on the debounce timer.
     void packDraftSaver.flush();
+    // The room list is written immediately as well, so an accidental close
+    // right after entering a lobby still leaves a visible route back in.
+    flushKnownGames();
 });
 
 // ── Game loop ────────────────────────────────────────────────────────
 
 function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
+    const players = [myAddress];
+    const playerNames = [myDisplayName];
     return {
         phase: {
             stage: STAGE_LOBBY,
@@ -3545,8 +3967,9 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             player_count: 1,
             active_player_count: 1,
         },
-        players: [myAddress],
-        playerNames: [myDisplayName],
+        players,
+        playerNames,
+        playerLabels: resolvePlayerLabels(players, playerNames),
         scores: [0],
         difficultyChoices: [0],
         difficultyVoteLocked: [false],
@@ -3593,6 +4016,7 @@ function startGamePolling(): void {
 function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     gameSession += 1;
     gameId = id;
+    gameSettingsOpen = false;
     gameEntryMark = performanceMark("game:entered");
     awaitingFirstGameSnapshot = true;
     pendingAbandonedForfeit = null;
@@ -3609,12 +4033,12 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     activeFinalWagerKey = "";
     optimisticAnswer = null;
     lastRank = -1;
-    behindStreak = 0;
+    behindPhaseCandidate = null;
     latestObservedAt = initialSnapshot ? Date.now() : 0;
     getEl<HTMLInputElement>("answer-input").value = "";
     getEl<HTMLInputElement>("final-wager-input").value = "0";
-    setGameActions("hidden");
-    renderResumeCard();
+    setGameControls("hidden");
+    renderKnownGames();
     if (initialSnapshot) {
         recordFirstGameSnapshot();
         render(initialSnapshot);
@@ -3631,7 +4055,9 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     // Any allowance/setup work tied to the room we just left must not resume
     // into a later screen. A new room will queue its own attempt.
     pendingInstantPlayRequest = null;
+    const departingGameId = gameId;
     gameId = null;
+    gameSettingsOpen = false;
     pendingAbandonedForfeit = null;
     latest = null;
     selectedWager = null;
@@ -3642,14 +4068,15 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     latestObservedAt = 0;
     gameEntryMark = null;
     awaitingFirstGameSnapshot = false;
-    if (!preserveSavedGame) forgetSavedGame();
+    if (!preserveSavedGame && departingGameId !== null) forgetKnownGame(departingGameId);
     if ($forfeitDialog.open) $forfeitDialog.close();
     setTransactionStatus(null);
-    setGameActions("hidden");
+    setGameControls("hidden");
     stopGamePolling();
     void refreshPacks();
     showScreen("home");
-    renderResumeCard();
+    renderKnownGames();
+    refreshKnownGames();
 }
 
 function isCurrentGame(id: bigint, session: number): boolean {
@@ -3667,32 +4094,57 @@ function recordFirstGameSnapshot(): void {
 getEl("btn-back-home").addEventListener("click", () => leaveGame());
 getEl("btn-abandoned-home").addEventListener("click", () => leaveGame());
 
-getEl("btn-leave-screen").addEventListener("click", () => {
-    // Navigation is deliberately not a forfeit: the player can resume from
-    // this browser session or by re-entering the game code later.
-    leaveGame({ preserveSavedGame: true });
-});
+function returnToCurrentGame(): void {
+    if (!latest) return;
+    gameSettingsOpen = false;
+    render(latest);
+}
 
-getEl("btn-leave-lobby").addEventListener("click", async () => {
+function openGameSettings(): void {
+    if (!latest || !isSettingsStage(latest.phase.stage)) return;
+    if (busy) {
+        setTransactionStatus("Finishing your last action…");
+        return;
+    }
+    getEl("settings-action-error").textContent = "";
+    gameSettingsOpen = true;
+    render(latest);
+}
+
+function openForfeitDialog(): void {
+    if (busy || gameId === null || !latest) return;
+    getEl("forfeit-error").textContent = "";
+    if (!$forfeitDialog.open) $forfeitDialog.showModal();
+}
+
+async function leaveLobby(buttonId: "btn-leave-lobby" | "btn-settings-leave-lobby"): Promise<void> {
     if (busy || gameId === null || !productAccount) return;
     busy = true;
-    setLoading("btn-leave-lobby", true);
+    setLoading(buttonId, true);
     try {
         await sendTx(game, "leaveLobby", gameId);
         leaveGame();
     } catch (e) {
-        getEl("lobby-error").textContent = friendlyError(e);
+        const message = friendlyError(e);
+        getEl("lobby-error").textContent = message;
+        getEl("settings-action-error").textContent = message;
     } finally {
         busy = false;
-        setLoading("btn-leave-lobby", false);
+        setLoading(buttonId, false);
     }
-});
+}
 
-$btnForfeitGame.addEventListener("click", () => {
-    if (busy || gameId === null || !latest) return;
-    getEl("forfeit-error").textContent = "";
-    if (!$forfeitDialog.open) $forfeitDialog.showModal();
+getEl("btn-leave-lobby").addEventListener("click", () => void leaveLobby("btn-leave-lobby"));
+$btnGameSettings.addEventListener("click", openGameSettings);
+getEl("btn-settings-return-top").addEventListener("click", returnToCurrentGame);
+getEl("btn-settings-return").addEventListener("click", returnToCurrentGame);
+getEl("btn-settings-back-home").addEventListener("click", () => {
+    // Returning to the home screen is navigation, not a forfeit. The game
+    // remains in the durable recovery list until the player truly leaves it.
+    leaveGame({ preserveSavedGame: true });
 });
+getEl("btn-settings-leave-lobby").addEventListener("click", () => void leaveLobby("btn-settings-leave-lobby"));
+getEl("btn-settings-forfeit").addEventListener("click", openForfeitDialog);
 
 getEl("btn-cancel-forfeit").addEventListener("click", () => {
     if ($forfeitDialog.open) $forfeitDialog.close();
@@ -3711,8 +4163,9 @@ getEl("btn-confirm-forfeit").addEventListener("click", async () => {
             // This player was the last active participant. Their membership
             // is gone, but preserve the terminal scorecard for this view.
             pendingAbandonedForfeit = id;
-            forgetSavedGame();
-            setGameActions("hidden");
+            forgetKnownGame(id);
+            gameSettingsOpen = false;
+            setGameControls("hidden");
             void poll();
         } else {
             leaveGame();
@@ -3728,6 +4181,14 @@ getEl("btn-confirm-forfeit").addEventListener("click", async () => {
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && gameId !== null) void poll();
+});
+// Embedded mobile hosts do not always emit a visibility transition when a
+// user returns to the app. Reconcile on the browser lifecycle signals too.
+window.addEventListener("pageshow", () => {
+    if (gameId !== null) void poll();
+});
+window.addEventListener("focus", () => {
+    if (gameId !== null) void poll();
 });
 
 function questionKeyFor(phase: PhaseView): number {
@@ -3783,6 +4244,53 @@ async function syncWagerHistory(snap: Snapshot, id: bigint, session: number): Pr
     }
 }
 
+/** The finished scorecard needs the selected final prompt even without a live slot. */
+function snapshotQuestionSlot(phase: PhaseView): number | null {
+    if (phase.slot !== NO_SLOT) return phase.slot;
+    return phase.stage === STAGE_FINISHED
+        && phase.final_difficulty >= 0
+        && phase.final_difficulty < DIFFICULTY_NAMES.length
+        ? FINAL_SLOT_BASE + phase.final_difficulty
+        : null;
+}
+
+function phaseNeedsCanonicalAnswer(stage: number): boolean {
+    return stage === STAGE_REVIEW || stage === STAGE_FINAL_REVIEW || stage === STAGE_FINISHED;
+}
+
+/**
+ * Phase data comes from one game-contract read and always wins the first
+ * paint. Question wording is enriched after that render so an overloaded
+ * registry cannot strand one player on an earlier multiplayer phase.
+ */
+function hydrateSnapshotContent(snap: Snapshot, id: bigint, session: number): void {
+    const slot = snapshotQuestionSlot(snap.phase);
+    if (slot === null) return;
+    const needsAnswer = phaseNeedsCanonicalAnswer(snap.phase.stage);
+    if (snap.questionText && (!needsAnswer || snap.answerText)) return;
+
+    hydrateLiveSnapshotContent(
+        snap,
+        async () => {
+            const [question, answer] = await Promise.all([
+                snap.questionText || questionText(snap.game.pack_id, slot),
+                needsAnswer
+                    ? snap.answerText || canonicalAnswer(snap.game.pack_id, slot)
+                    : Promise.resolve(""),
+            ]);
+            return { question, answer };
+        },
+        (candidate) => isCurrentGame(id, session) && latest === candidate,
+        (candidate, content) => {
+            if (candidate.questionText === content.question && candidate.answerText === content.answer) return;
+            candidate.questionText = content.question;
+            candidate.answerText = content.answer;
+            render(candidate);
+        },
+        (error) => console.warn("quiz content lookup failed", error),
+    );
+}
+
 async function poll(): Promise<void> {
     if (gameId === null || !game) return;
     if (pollInFlight) {
@@ -3794,9 +4302,14 @@ async function poll(): Promise<void> {
     }
     const polledGameId = gameId;
     const polledSession = gameSession;
+    const polledDisplayNameRevision = displayNameRevision;
     pollInFlight = true;
     try {
-        const liveResult = await retryChainRead<any>(() => game.getLiveGame.query(polledGameId));
+        const liveResult = await withTimeout(
+            retryChainRead<any>(() => game.getLiveGame.query(polledGameId)),
+            LIVE_GAME_READ_TIMEOUT_MS,
+            "Timed out checking this quiz.",
+        );
         if (!isCurrentGame(polledGameId, polledSession) || !liveResult.success) return;
         const live = liveResult.value as LiveGameView;
         const phase: PhaseView = {
@@ -3839,54 +4352,69 @@ async function poll(): Promise<void> {
             overturn_votes: Number(submission.overturn_votes),
         }));
 
-        // Drop snapshots that move the game BACKWARDS unless they persist —
-        // a slow read resolving late must not yank the table back a round.
+        // Game phases normally move forward. A slow follower can return an
+        // older snapshot after another player has advanced the table, so do
+        // not immediately pull this device back. A genuine reorg is allowed
+        // through only after three advancing, matching observations at an
+        // equally new (or newer) block.
         const rank = stageRank(phase);
         if (rank < lastRank) {
-            behindStreak += 1;
-            if (behindStreak < 3) return;
+            const previousBlock = latest?.phase.current_block ?? 0n;
+            const candidate = behindPhaseCandidate;
+            const matchesCandidate = candidate !== null
+                && candidate.rank === rank
+                && candidate.stage === phase.stage
+                && candidate.cursor === phase.cursor
+                && phase.current_block > candidate.currentBlock;
+            behindPhaseCandidate = matchesCandidate
+                ? { ...candidate, currentBlock: phase.current_block, sightings: candidate.sightings + 1 }
+                : {
+                    rank,
+                    stage: phase.stage,
+                    cursor: phase.cursor,
+                    currentBlock: phase.current_block,
+                    sightings: 1,
+                };
+            if (behindPhaseCandidate.sightings < 3 || phase.current_block < previousBlock) return;
+            lastRank = rank;
+            behindPhaseCandidate = null;
         } else {
-            behindStreak = 0;
+            behindPhaseCandidate = null;
+            if (rank === lastRank && latest !== null && phase.current_block < latest.phase.current_block) return;
+            lastRank = Math.max(lastRank, rank);
         }
-        lastRank = rank;
 
         const normalizedPlayerNames = playerNames.length === players.length
             ? playerNames
             : Array.from({ length: players.length }, () => "");
-        const myPlayerIndex = players.indexOf(myAddress);
+        const myPlayerIndex = players.findIndex((player) => player.toLowerCase() === myAddress);
         if (myPlayerIndex >= 0 && normalizedPlayerNames[myPlayerIndex] !== undefined) {
-            myDisplayName = normalizedPlayerNames[myPlayerIndex];
-            $displayName.value = myDisplayName;
+            applyOnChainDisplayName(normalizedPlayerNames[myPlayerIndex], polledDisplayNameRevision);
         }
+        // A read from just before a successful alias save must not make the
+        // table briefly revert to a generated name while the next block
+        // catches up. Other players always retain their chain values.
+        const visiblePlayerNames = [...normalizedPlayerNames];
+        if (myPlayerIndex >= 0 && pendingDisplayName !== null) {
+            visiblePlayerNames[myPlayerIndex] = myDisplayName;
+        }
+        const friendlyPlayerLabels = resolvePlayerLabels(players, visiblePlayerNames);
 
-        let qText = "";
-        let aText = "";
-        // Finished snapshots do not have a live slot, but the final recap
-        // still needs its prompt and canonical answer. The selected final
-        // difficulty remains part of the settled game state.
-        const resultSlot = phase.stage === STAGE_FINISHED
-            && phase.final_difficulty >= 0
-            && phase.final_difficulty < DIFFICULTY_NAMES.length
-            ? FINAL_SLOT_BASE + phase.final_difficulty
-            : null;
-        const questionSlot = phase.slot !== NO_SLOT ? phase.slot : resultSlot;
-        if (questionSlot !== null) {
-            const [question, answer] = await Promise.all([
-                questionText(gameView.pack_id, questionSlot),
-                phase.stage === STAGE_REVIEW || phase.stage === STAGE_FINAL_REVIEW || phase.stage === STAGE_FINISHED
-                    ? canonicalAnswer(gameView.pack_id, questionSlot)
-                    : Promise.resolve(""),
-            ]);
-            qText = question;
-            aText = answer;
-            if (!isCurrentGame(polledGameId, polledSession)) return;
-        }
+        const questionSlot = snapshotQuestionSlot(phase);
+        const contentKey = questionSlot === null
+            ? null
+            : registryQuestionCacheKey(gameView.pack_id, questionSlot);
+        const qText = contentKey === null ? "" : questionCache.get(contentKey) ?? "";
+        const aText = contentKey === null || !phaseNeedsCanonicalAnswer(phase.stage)
+            ? ""
+            : answerCache.get(contentKey) ?? "";
 
         const snap: Snapshot = {
             phase,
             game: gameView,
             players,
-            playerNames: normalizedPlayerNames,
+            playerNames: visiblePlayerNames,
+            playerLabels: friendlyPlayerLabels,
             scores,
             difficultyChoices,
             difficultyVoteLocked,
@@ -3949,6 +4477,7 @@ async function poll(): Promise<void> {
         reconcileActionGuards(latest);
         if (actionsSent.size === 0) setTransactionStatus(null);
         render(latest);
+        hydrateSnapshotContent(snap, polledGameId, polledSession);
         // Historic wagers matter for controls, not for the first paint. On a
         // rejoin this used to delay the whole table by one serial RPC per
         // completed question.
@@ -3980,6 +4509,14 @@ function mySubmission(snap: Snapshot): SubmissionView | undefined {
 }
 
 function render(snap: Snapshot): void {
+    if (gameSettingsOpen && isSettingsStage(snap.phase.stage)) {
+        renderGameSettings(snap);
+        return;
+    }
+    // A terminal chain transition wins over a locally open settings page.
+    // Keeping this explicit avoids stranding a player on stale controls after
+    // another participant ends the game.
+    if (gameSettingsOpen) gameSettingsOpen = false;
     switch (snap.phase.stage) {
         case STAGE_LOBBY:
             void renderLobby(snap);
@@ -4005,6 +4542,81 @@ function render(snap: Snapshot): void {
             renderAbandoned(snap);
             break;
     }
+}
+
+function applyGameSettingsPack(packId: number, pack: PackView | null): void {
+    const $art = getEl("settings-pack-emoji");
+    const $title = getEl("settings-pack-title");
+    const $meta = getEl("settings-pack-meta");
+    if (!pack) {
+        $art.className = "game-settings-pack-art";
+        $art.textContent = "✨";
+        $title.textContent = packTitleCache.get(registryPackCacheKey(packId)) ?? "Quiz pack";
+        $meta.textContent = "Pack details will appear when they’re available.";
+        return;
+    }
+    const presentation = packPresentation({ id: packId, ...pack });
+    $art.className = `game-settings-pack-art tone-${presentation.tone}`;
+    $art.textContent = presentation.emoji;
+    $title.textContent = pack.title;
+    $meta.textContent = `${questionCountLabel(pack)}${finalCountLabel(pack)} · ${presentation.category}`;
+}
+
+function renderGameSettings(snap: Snapshot): void {
+    const currentGameId = gameId;
+    if (currentGameId === null) {
+        gameSettingsOpen = false;
+        render(snap);
+        return;
+    }
+    const isLobby = snap.phase.stage === STAGE_LOBBY;
+    setGameControls(isLobby ? "lobby" : "active");
+    getEl("settings-game-code").textContent = String(currentGameId);
+    getEl("settings-progress").textContent = gameProgressLabel(
+        snap.phase.stage,
+        snap.phase.cursor,
+        snap.game.num_questions,
+    );
+    getEl("settings-question-count").textContent = gameQuestionCountLabel(snap.game.num_questions);
+    getEl("settings-answer-pace").textContent = gamePaceLabel(snap.game.answer_blocks, ANSWER_BLOCK_PRESETS);
+    getEl("settings-review-pace").textContent = gamePaceLabel(snap.game.review_blocks, REVIEW_BLOCK_PRESETS);
+    getEl("settings-player-count").textContent = playerCountLabel(
+        snap.phase.active_player_count,
+        snap.phase.player_count,
+    );
+
+    const $return = getEl<HTMLButtonElement>("btn-settings-return");
+    const returnLabel = isLobby ? "Go to lobby" : "Return to game";
+    $return.textContent = returnLabel;
+    getEl("btn-settings-return-top").setAttribute("aria-label", returnLabel);
+    getEl("btn-settings-return-top").setAttribute("title", returnLabel);
+    getEl("btn-settings-leave-lobby").style.display = isLobby ? "" : "none";
+    getEl("btn-settings-forfeit").style.display = isLobby ? "none" : "";
+    getEl("settings-actions-hint").textContent = isLobby
+        ? "Back home keeps your place. Leaving the lobby removes you from this game."
+        : "Back home keeps your place. Forfeiting permanently removes you from this quiz.";
+
+    const packId = snap.game.pack_id;
+    const cached = sealedPackCache.get(registryPackCacheKey(packId));
+    if (cached) {
+        applyGameSettingsPack(packId, cached);
+    } else {
+        applyGameSettingsPack(packId, null);
+        const sessionAtRequest = gameSession;
+        void gameSettingsPack(packId).then((pack) => {
+            if (
+                gameSettingsOpen
+                && isCurrentGame(currentGameId, sessionAtRequest)
+                && latest === snap
+            ) {
+                applyGameSettingsPack(packId, pack);
+            }
+        }).catch(() => {
+            // The useful game details above never depend on a cosmetic pack read.
+        });
+    }
+    showScreen("game-settings");
+    renderQuickPlayStatus();
 }
 
 // ── Lobby ────────────────────────────────────────────────────────────
@@ -4038,7 +4650,7 @@ function renderLobby(snap: Snapshot): void {
         : "Waiting for a player to start…";
     const activePlayers = snap.phase.active_player_count;
     getEl("lobby-occupancy").textContent = `${activePlayers} ${activePlayers === 1 ? "player" : "players"}`;
-    setGameActions("lobby");
+    setGameControls("lobby");
     showScreen("lobby");
 
     if (isStarter) {
@@ -4177,14 +4789,15 @@ function countdownText(snap: Snapshot): string {
     );
 }
 
+function updateGameStageTimer(snap: Snapshot): void {
+    const text = countdownText(snap);
+    $gameStageTimer.textContent = text;
+    $gameStageTimer.classList.toggle("urgent", text.startsWith("~") && Number.parseInt(text.slice(1)) <= 15);
+}
+
 setInterval(() => {
-    if (!latest) return;
-    const text = countdownText(latest);
-    for (const id of ["question-countdown", "review-countdown", "vote-countdown", "final-wager-countdown"]) {
-        const el = getEl(id);
-        el.textContent = text;
-        el.classList.toggle("urgent", text.startsWith("~") && Number.parseInt(text.slice(1)) <= 15);
-    }
+    if (!latest || gameSettingsOpen || !isActiveGameplayStage(latest.phase.stage)) return;
+    updateGameStageTimer(latest);
 }, 1_000);
 
 // ── Question screen ──────────────────────────────────────────────────
@@ -4242,6 +4855,7 @@ function paintWagerGrid(): void {
 
 function renderQuestion(snap: Snapshot): void {
     const isFinal = snap.phase.stage === STAGE_FINAL_ANSWER;
+    getEl<HTMLButtonElement>("btn-submit-answer").textContent = isFinal ? "Submit final answer" : "Submit answer";
     const questionReady = snap.questionText.length > 0;
     getEl("question-number").textContent = isFinal
         ? `Final question · ${DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? ""}`
@@ -4251,7 +4865,6 @@ function renderQuestion(snap: Snapshot): void {
     const $questionText = getEl("question-text");
     $questionText.textContent = questionReady ? snap.questionText : "";
     $questionText.classList.toggle("skeleton", !questionReady);
-    getEl("question-countdown").textContent = countdownText(snap);
 
     const mine = mySubmission(snap);
     const amActive = mine?.active ?? false;
@@ -4290,11 +4903,17 @@ function renderQuestion(snap: Snapshot): void {
                     : pendingMine
                       ? `“${optimisticAnswer?.answer}” · wagered ${optimisticAnswer?.wager} · confirming…`
                       : "…";
-                return li(span("", fmtPlayer(snap, s.player)), span("right sub", text));
+                const identity = document.createElement("span");
+                identity.className = "answer-row-identity";
+                identity.append(span("answer-row-player", fmtPlayer(snap, s.player)));
+                const row = li(identity, span("live-answer-text", text));
+                row.className = "live-answer-row";
+                return row;
             }),
         );
     }
-    setGameActions("active");
+    setGameControls("active");
+    updateGameStageTimer(snap);
     showScreen("question");
 }
 
@@ -4388,7 +5007,6 @@ function renderFinalWager(snap: Snapshot): void {
     const $input = getEl<HTMLInputElement>("final-wager-input");
     const $button = getEl<HTMLButtonElement>("btn-confirm-final-wager");
 
-    getEl("final-wager-countdown").textContent = countdownText(snap);
     getEl("final-wager-score").textContent = String(score);
     getEl("final-wager-max").textContent = String(score);
     $input.max = String(score);
@@ -4417,7 +5035,8 @@ function renderFinalWager(snap: Snapshot): void {
         });
     }
 
-    setGameActions("active");
+    setGameControls("active");
+    updateGameStageTimer(snap);
     showScreen("final-wager");
 }
 
@@ -4460,7 +5079,6 @@ function renderReview(snap: Snapshot): void {
         ? "Final question — results"
         : `${snap.phase.cursor + 1} of ${snap.game.num_questions} — results`;
     getEl("review-question").textContent = snap.questionText;
-    getEl("review-countdown").textContent = countdownText(snap);
 
     // The canonical answer comes from the registry (fetched only during
     // review) — never inferred from players' submissions.
@@ -4477,10 +5095,11 @@ function renderReview(snap: Snapshot): void {
             const isMe = s.player.toLowerCase() === myAddress;
             const eligibleVoters = snap.phase.active_player_count - (s.active ? 1 : 0);
             const threshold = Math.floor(eligibleVoters / 2) + 1;
-            const row = li(
-                span("", fmtPlayer(snap, s.player)),
-                span("sub", s.active ? "" : "left quiz"),
-            );
+            const identity = document.createElement("span");
+            identity.className = "answer-row-identity";
+            identity.append(span("answer-row-player", fmtPlayer(snap, s.player)));
+            if (!s.active) identity.append(span("sub", "left quiz"));
+            const row = li(identity);
             row.className = "answer-row";
             if (!s.submitted) {
                 row.append(
@@ -4503,6 +5122,7 @@ function renderReview(snap: Snapshot): void {
                     : `mark correct (${s.overturn_votes}/${threshold})`;
                 btn.disabled = voted || busy;
                 btn.addEventListener("click", () => void voteCorrect(s.player));
+                row.classList.add("has-vote-action");
                 row.append(btn);
             }
             row.append(span(`wager-badge ${s.correct ? "correct" : "wrong"}`, String(s.wager)));
@@ -4513,12 +5133,17 @@ function renderReview(snap: Snapshot): void {
     const continued = (mine?.continue_ready ?? false) || actionsSent.has("continue");
     const $btn = getEl<HTMLButtonElement>("btn-continue");
     $btn.disabled = continued || !amActive;
-    $btn.textContent = !amActive ? "You left this quiz" : continued ? "Waiting for others…" : "Ready for next question";
+    $btn.textContent = !amActive
+        ? "You left this quiz"
+        : continued
+          ? "Waiting for others…"
+          : reviewContinueLabel(snap.phase.stage, snap.phase.cursor, snap.game.num_questions);
     getEl("continue-status").textContent =
         `${snap.phase.continue_count}/${snap.phase.active_player_count} active players ready`;
 
     renderLeaderboard(getEl("review-leaderboard"), snap);
-    setGameActions("active");
+    setGameControls("active");
+    updateGameStageTimer(snap);
     showScreen("review");
 }
 
@@ -4586,7 +5211,6 @@ function renderVote(snap: Snapshot): void {
     const leading = Math.max(...counts);
     const denominator = Math.max(1, snap.phase.active_player_count);
 
-    getEl("vote-countdown").textContent = countdownText(snap);
     getEl("vote-status").textContent =
         `${total}/${snap.phase.active_player_count} active players voted` +
         (voteLocked || actionsSent.has("difficulty") ? " — your vote is in" : "");
@@ -4612,7 +5236,8 @@ function renderVote(snap: Snapshot): void {
     // Keep the final prompt out of the client until the wager phase is over.
     // The normal final-answer snapshot fetches its chosen question just in
     // time, preserving the intended "wager before prompt" party flow.
-    setGameActions("active");
+    setGameControls("active");
+    updateGameStageTimer(snap);
     showScreen("vote");
 }
 
@@ -4767,7 +5392,11 @@ function renderResults(snap: Snapshot): void {
     getEl("results-final-correct-answer").textContent = snap.answerText || "—";
     renderFinalStandings(standings, snap);
     stopGamePolling();
-    setGameActions("hidden");
+    // A finished quiz is a scorecard, not a room a player can return to.
+    // Keep it visible here, but remove it from future recovery choices.
+    if (gameId !== null) forgetKnownGame(gameId);
+    gameSettingsOpen = false;
+    setGameControls("hidden");
     showScreen("results");
 }
 
@@ -4775,8 +5404,9 @@ function renderAbandoned(snap: Snapshot): void {
     getEl("abandoned-message").textContent = "Everyone left this quiz before it finished.";
     renderLeaderboard(getEl("abandoned-leaderboard"), snap);
     stopGamePolling();
-    forgetSavedGame();
-    setGameActions("hidden");
+    if (gameId !== null) forgetKnownGame(gameId);
+    gameSettingsOpen = false;
+    setGameControls("hidden");
     showScreen("abandoned");
 }
 

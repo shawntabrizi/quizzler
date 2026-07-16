@@ -82,6 +82,7 @@ main.pack-picker-open > #screen-pack-select.active {
    stays comfortably readable on large displays. */
 #screen-home,
 #screen-lobby,
+#screen-game-settings,
 #screen-question,
 #screen-review,
 #screen-vote,
@@ -99,13 +100,6 @@ main.pack-picker-open > #screen-pack-select.active {
 }
 
 header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-header h1 {
-    font-family: Georgia, "Times New Roman", serif;
-    font-weight: 400;
-    font-size: 2rem;
-    line-height: 1.25;
-}
-header .tagline { color: var(--fg-secondary); font-size: 0.85rem; }
 #chain-status {
     margin-left: auto;
     display: inline-flex;
@@ -140,13 +134,52 @@ header .tagline { color: var(--fg-secondary); font-size: 0.85rem; }
 #conn-pill { color: var(--fg-secondary); }
 #conn-pill.ok { color: var(--fg-success); }
 #conn-pill.err { color: var(--fg-error); }
-#chain-account { color: var(--fg-primary); }
+#chain-account {
+    min-width: 0;
+    max-width: 26ch;
+    overflow: hidden;
+    color: var(--fg-primary);
+    text-overflow: ellipsis;
+}
 .transaction-status {
     color: var(--fg-secondary);
     font-size: 0.76rem;
     line-height: 1.25;
 }
-#game-actions { display: none; gap: 6px; margin-left: 0; }
+.game-stage-timer {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--fg-primary);
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+.game-stage-timer.urgent { color: var(--fg-warning); }
+.game-settings-trigger {
+    display: inline-grid;
+    width: 44px;
+    min-height: 44px;
+    place-items: center;
+    padding: 0;
+    color: var(--fg-primary);
+    background: var(--bg-surface-container);
+    border: 1px solid var(--border-divider);
+    border-radius: var(--radius-full);
+    font-size: 1.2rem;
+    line-height: 1;
+}
+.game-settings-trigger:hover { background: var(--bg-selection-container-hover); }
+main.game-stage-open #chain-status { display: none; }
+main.game-stage-open #game-stage-timer { margin-right: auto; }
+main.game-stage-open #btn-game-settings { margin-left: auto; }
+/* Transaction feedback sits on its own header line during a round so it
+   cannot squeeze the timer or top-right settings control off-screen. */
+main.game-stage-open .transaction-status {
+    flex-basis: 100%;
+    width: 100%;
+    order: 3;
+}
 button.quiet {
     padding: 7px 10px;
     color: var(--fg-secondary);
@@ -327,14 +360,115 @@ main.game-stage-open > section.game-stage.active {
 .lobby-actions #lobby-waiting { flex: 1; }
 .lobby-actions #btn-leave-lobby { margin-left: auto; }
 
+/* This page intentionally uses normal document scrolling rather than the
+   fixed answer dock. It is readable as a quick pause screen on any device. */
+.game-settings-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px;
+}
+.game-settings-heading h2 { font-size: 1.35rem; line-height: 1.2; }
+.game-settings-back {
+    display: inline-grid;
+    width: 44px;
+    min-height: 44px;
+    place-items: center;
+    padding: 0;
+    font-size: 1.45rem;
+    line-height: 1;
+}
+.game-settings-code-card {
+    overflow: hidden;
+    color: #fff;
+    background:
+        radial-gradient(circle at 50% -15%, rgba(167, 139, 250, 0.36), transparent 54%),
+        linear-gradient(135deg, #312e81, #1d1b4b 58%, #18181b);
+    border: 1px solid rgba(196, 181, 253, 0.46);
+    text-align: center;
+}
+.game-settings-eyebrow {
+    color: var(--fg-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.game-settings-code-card .game-settings-eyebrow { color: #ddd6fe; }
+.game-settings-code-card strong {
+    display: block;
+    margin: 5px 0 9px;
+    padding-left: 0.12em;
+    color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: clamp(2.4rem, 8vw, 4.5rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    line-height: 1;
+}
+.game-settings-code-card .hint { margin: 0; color: #ddd6fe; }
+.game-settings-pack {
+    display: grid;
+    grid-template-columns: 70px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+}
+.game-settings-pack-art {
+    display: grid;
+    width: 70px;
+    height: 70px;
+    place-items: center;
+    border-radius: var(--radius-nested);
+    background: linear-gradient(145deg, #7c3aed, #312e81);
+    font-size: 2.5rem;
+}
+.game-settings-pack h3 { margin: 3px 0 4px; font-size: 1.08rem; }
+.game-settings-pack .hint { margin: 0; }
+.game-settings-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 20px;
+}
+.game-settings-details > div {
+    padding: 12px;
+    background: var(--bg-surface-nested);
+    border-radius: var(--radius-small);
+}
+.game-settings-details dt { color: var(--fg-secondary); font-size: 0.75rem; }
+.game-settings-details dd { margin-top: 3px; font-size: 0.92rem; font-weight: 600; }
+.game-settings-actions { display: grid; gap: 10px; }
+.game-settings-actions h2 { margin-bottom: 0; }
+.game-settings-actions .hint { margin-bottom: 2px; }
+.game-settings-actions button { width: 100%; }
+
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row + .row { margin-top: 8px; }
 .grow { flex: 1; min-width: 120px; }
 
-.resume-card {
-    border: 1px solid var(--border-divider-tint);
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), var(--bg-surface-container));
+.your-games {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-divider);
 }
+.your-games-heading { margin-bottom: 10px; }
+.your-games-heading h3 { font-size: 0.95rem; }
+.your-games-heading .hint { margin: 2px 0 0; }
+.your-game-row { justify-content: space-between; }
+.your-game-summary {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+.your-game-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.86rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.your-game-actions { display: inline-flex; flex: 0 0 auto; gap: 6px; }
+.your-game-actions button { min-height: 38px; padding: 7px 10px; font-size: 0.8rem; }
 dialog {
     width: min(420px, calc(100vw - 32px));
     color: var(--fg-primary);
@@ -667,6 +801,16 @@ ul.pack-grid li { position: relative; min-width: 0; }
 .config-pack-art.tone-red { background: linear-gradient(145deg, #dc2626, #7f1d1d); }
 .config-pack-art.tone-cyan { background: linear-gradient(145deg, #0891b2, #164e63); }
 .config-pack-art.tone-indigo { background: linear-gradient(145deg, #4f46e5, #312e81); }
+.game-settings-pack-art.tone-violet { background: linear-gradient(145deg, #7c3aed, #4c1d95); }
+.game-settings-pack-art.tone-rose { background: linear-gradient(145deg, #f43f5e, #881337); }
+.game-settings-pack-art.tone-pink { background: linear-gradient(145deg, #db2777, #831843); }
+.game-settings-pack-art.tone-green { background: linear-gradient(145deg, #16a34a, #14532d); }
+.game-settings-pack-art.tone-blue { background: linear-gradient(145deg, #2563eb, #172554); }
+.game-settings-pack-art.tone-amber { background: linear-gradient(145deg, #d97706, #78350f); }
+.game-settings-pack-art.tone-orange { background: linear-gradient(145deg, #ea580c, #7c2d12); }
+.game-settings-pack-art.tone-red { background: linear-gradient(145deg, #dc2626, #7f1d1d); }
+.game-settings-pack-art.tone-cyan { background: linear-gradient(145deg, #0891b2, #164e63); }
+.game-settings-pack-art.tone-indigo { background: linear-gradient(145deg, #4f46e5, #312e81); }
 .config-pack-copy { padding: 18px; }
 .config-pack-copy h3 { font-size: 1.2rem; line-height: 1.25; }
 .config-pack-copy .hint { margin-top: 6px; }
@@ -675,6 +819,17 @@ ul.pack-grid li { position: relative; min-width: 0; }
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+}
+.config-fields > div { min-width: 0; }
+/* Keep these as real platform controls. Some Android WebViews are less
+   reliable at opening a restyled select, so explicitly preserve the native
+   menu affordance and give it a comfortably large touch target. */
+.config-fields select {
+    display: block;
+    min-height: 48px;
+    touch-action: manipulation;
+    appearance: auto;
+    -webkit-appearance: menulist;
 }
 .field-hint {
     color: var(--fg-secondary);
@@ -778,9 +933,6 @@ ul.pack-grid li { position: relative; min-width: 0; }
 .emoji-picker-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 
 .question-text { font-size: 1.3rem; font-weight: 600; line-height: 1.35; margin: 12px 0 20px; }
-
-.countdown { color: var(--fg-secondary); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
-.countdown.urgent { color: var(--fg-warning); }
 
 /* Once-per-game wager pool: JavaScript adds exactly one choice per
    regular question, and spent choices keep their outcome color. */
@@ -950,6 +1102,16 @@ ul.pack-grid li { position: relative; min-width: 0; }
 .answer-panel .answer-text { font-size: 1.35rem; font-weight: 600; line-height: 1.3; }
 .answer-panel .answer-sub { color: var(--fg-secondary); font-size: 0.85rem; margin-top: 6px; }
 
+.answer-row-identity { display: inline-flex; min-width: 0; align-items: center; gap: 6px; }
+.answer-row-player { min-width: 0; overflow-wrap: anywhere; }
+.live-answer-text {
+    min-width: 0;
+    margin-left: auto;
+    color: var(--fg-secondary);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+    text-align: right;
+}
 .answer-row .player-answer { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .answer-row .player-answer.correct { color: var(--fg-success); }
 .answer-row .player-answer.wrong { color: var(--fg-error); }
@@ -1208,22 +1370,19 @@ ul.pack-grid li { position: relative; min-width: 0; }
             max(16px, env(safe-area-inset-left));
     }
     header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 6px 10px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 14px;
     }
-    header h1 { min-width: 0; font-size: 1.75rem; }
-    header .tagline { grid-column: 1; grid-row: 2; }
     #chain-status {
-        grid-column: 2;
-        grid-row: 1;
         gap: 4px;
         margin-left: 0;
         padding: 4px 7px;
         justify-self: end;
     }
+    #chain-account { max-width: 17ch; }
     #conn-pill.ok {
         position: absolute;
         width: 1px;
@@ -1235,9 +1394,9 @@ ul.pack-grid li { position: relative; min-width: 0; }
         white-space: nowrap;
     }
     #chain-status .chain-status-divider { display: none; }
-    #game-actions { grid-column: 1 / -1; width: 100%; gap: 8px; }
-    #game-actions button { flex: 1 1 0; min-width: 0; }
-    .transaction-status { grid-column: 1 / -1; }
+    .game-stage-timer { min-height: 40px; font-size: 0.9rem; }
+    .game-settings-trigger { width: 40px; min-height: 40px; }
+    .transaction-status { width: 100%; }
     main.game-stage-open { padding-bottom: 0; }
     main.game-stage-open > header { margin-bottom: 12px; }
     .game-stage-content { padding-bottom: 12px; }
@@ -1271,6 +1430,14 @@ ul.pack-grid li { position: relative; min-width: 0; }
     .lobby-actions #btn-start-game,
     .lobby-actions #btn-leave-lobby { width: 100%; margin-left: 0; }
     .lobby-actions #lobby-waiting { text-align: center; }
+    .your-game-row { align-items: stretch; flex-direction: column; }
+    .your-game-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); width: 100%; }
+    .your-game-actions button { width: 100%; }
+    .game-settings-heading { margin-bottom: 12px; }
+    .game-settings-code-card strong { font-size: clamp(2.2rem, 12vw, 3.5rem); }
+    .game-settings-pack { grid-template-columns: 58px minmax(0, 1fr); gap: 12px; }
+    .game-settings-pack-art { width: 58px; height: 58px; font-size: 2rem; }
+    .game-settings-details { grid-template-columns: 1fr; gap: 6px; margin-top: 16px; }
     .instant-play-row { align-items: stretch; flex-direction: column; }
     .instant-play-row button { width: 100%; }
     input[type="text"], input[type="number"], input[type="search"], select, textarea { font-size: 16px; }
@@ -1314,6 +1481,45 @@ ul.pack-grid li { position: relative; min-width: 0; }
         min-height: 48px;
     }
     ul.list li { align-items: flex-start; }
+    /* On narrow screens a review row has a dedicated score column. The name
+       and answer share the remaining width, while an optional vote action
+       gets its own full row instead of collapsing text into a thin column. */
+    ul.list li.answer-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 34px;
+        grid-template-areas:
+            "identity wager"
+            "answer wager";
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 6px;
+    }
+    ul.list li.answer-row.has-vote-action {
+        grid-template-areas:
+            "identity wager"
+            "answer wager"
+            "action action";
+    }
+    .answer-row-identity { grid-area: identity; min-width: 0; }
+    .answer-row .player-answer { grid-area: answer; min-width: 0; }
+    .answer-row .vote-btn { grid-area: action; justify-self: start; max-width: 100%; }
+    .answer-row .wager-badge { grid-area: wager; align-self: center; }
+    ul.list li.live-answer-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "identity"
+            "answer";
+        align-items: start;
+        gap: 4px;
+    }
+    .live-answer-row .answer-row-identity { grid-area: identity; }
+    .live-answer-row .live-answer-text {
+        grid-area: answer;
+        margin-left: 0;
+        overflow-wrap: anywhere;
+        text-align: left;
+    }
     .final-wager-card { gap: 14px; }
     .final-wager-score strong { font-size: 1.55rem; }
     .results-final-summary { gap: 12px; padding-top: 18px; }
