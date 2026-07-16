@@ -1,0 +1,28 @@
+[package]
+name = "quizzler-pack-signals"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+
+[[bin]]
+name = "quizzler-pack-signals"
+path = "src/pack_signals.rs"
+
+[features]
+# Enables pvm_contract's thread-local storage backend for the focused host
+# tests below. It is never enabled for the deployed PolkaVM build.
+host-test = ["pvm_contract/host-test"]
+
+[dependencies]
+pallet-revive-uapi = { version = "0.10", default-features = false }
+picoalloc = { version = "5", default-features = false }
+polkavm-derive = { version = "0.31.0" }
+parity-scale-codec = { version = "3.7", default-features = false, features = ["derive"] }
+pvm_contract = { git = "https://github.com/paritytech/cargo-pvm-contract", branch = "charles/cdm-integration" }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
+overflow-checks = false

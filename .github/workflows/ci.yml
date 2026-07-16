@@ -76,7 +76,7 @@ jobs:
       - name: Run pure logic tests
         run: cargo test --locked --manifest-path contracts/logic/Cargo.toml
 
-  # The three deployed PolkaVM crates were previously never compiled in CI,
+  # The four deployed PolkaVM crates were previously never compiled in CI,
   # so a contract-breaking change could land green.
   contracts:
     name: Contract builds
@@ -101,6 +101,7 @@ jobs:
             contracts/quizzler/target
             contracts/registry/target
             contracts/session-registry/target
+            contracts/pack-signals/target
           key: ${{ runner.os }}-cargo-contracts-${{ hashFiles('contracts/*/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-contracts-
@@ -123,3 +124,7 @@ jobs:
       - name: Build session-registry contract
         run: cargo pvm-contract build
         working-directory: contracts/session-registry
+
+      - name: Build pack-signals contract
+        run: cargo pvm-contract build
+        working-directory: contracts/pack-signals

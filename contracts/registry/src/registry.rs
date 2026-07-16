@@ -27,6 +27,12 @@ const MAX_QUESTIONS_PER_BATCH: usize = 8;
 /// Catalog clients can replace many individual `get_pack` calls with a small
 /// number of bounded read calls.
 const MAX_PACKS_PER_VIEW_BATCH: usize = 32;
+/// The catalog renders a small rail at a time. Keeping this bounded makes a
+/// direct chain read predictable even when community packs become numerous.
+const MAX_SEALED_PACKS_PER_VIEW_PAGE: usize = 24;
+/// `get_sealed_packs` uses this cursor to request the newest page. Zero is
+/// reserved for the terminal cursor returned after the oldest page.
+const SEALED_PACK_CURSOR_LATEST: u32 = u32::MAX;
 // Regular questions occupy u8 slots 0..=0xef (finals live at 0xf0+),
 // sized for the ~200-question starter packs.
 const MAX_REGULAR_QUESTIONS: u8 = 200;
@@ -65,6 +71,29 @@ struct PackView {
     sealed: bool,
 }
 
+/// A sealed pack together with its immutable id. `PackView` deliberately
+/// predates catalog paging and therefore has no id field; keeping this as a
+/// separate view preserves the existing `get_pack` / `get_packs` ABI while
+/// giving a browser everything it needs to render a page in one read.
+#[derive(pvm::SolAbi)]
+struct SealedPackView {
+    pack_id: u32,
+    creator: pvm::Address,
+    title: String,
+    emoji: String,
+    regular_count: u8,
+    finals_set_count: u8,
+    sealed: bool,
+}
+
+/// Newest-first sealed-pack page. `next_cursor == 0` means there are no older
+/// sealed packs. The first request uses `u32::MAX` as `cursor`.
+#[derive(pvm::SolAbi)]
+struct SealedPackPage {
+    packs: alloc::vec::Vec<SealedPackView>,
+    next_cursor: u32,
+}
+
 /// Static-size view for the game contract's cross-contract validation.
 #[derive(pvm::SolAbi)]
 struct PackStatus {
@@ -94,6 +123,12 @@ struct Storage {
     // (creator, client-selected nonce) → pack id. The nonce makes a creation
     // durable and unambiguous when one account publishes from multiple tabs.
     created_pack_of: pvm::storage::Mapping<([u8; 20], u64), u32>,
+    /// Append-only sequence of pack ids in the order they were sealed. A
+    /// separate sequence is essential: creation ids include incomplete
+    /// drafts, while catalog pages must contain playable packs only. These are
+    /// deliberately appended so all pre-existing storage slots remain stable.
+    sealed_pack_count: u32,
+    sealed_pack_at: pvm::storage::Mapping<u32, u32>,
 }
 
 fn fail(msg: &str) -> ! {
@@ -110,8 +145,9 @@ fn caller20() -> [u8; 20] {
 mod registry {
     use super::{
         MAX_ANSWER_BYTES, MAX_ANSWERS, MAX_PACKS_PER_VIEW_BATCH, MAX_QUESTIONS_PER_BATCH,
-        MAX_REGULAR_QUESTIONS, MAX_TEXT_BYTES, MAX_TITLE_BYTES, PackMeta, PackStatus, PackView,
-        Question, QuestionInput, Storage, caller20, fail, final_slot, logic, pvm,
+        MAX_REGULAR_QUESTIONS, MAX_SEALED_PACKS_PER_VIEW_PAGE, MAX_TEXT_BYTES, MAX_TITLE_BYTES,
+        PackMeta, PackStatus, PackView, Question, QuestionInput, SEALED_PACK_CURSOR_LATEST,
+        SealedPackPage, SealedPackView, Storage, caller20, fail, final_slot, logic, pvm,
     };
     use alloc::string::String;
     use alloc::vec::Vec;
@@ -243,6 +279,28 @@ mod registry {
         }
     }
 
+    fn sealed_pack_view(pack_id: u32) -> SealedPackView {
+        let m = match Storage::pack_meta().get(&pack_id) {
+            Some(m) => m,
+            // Every `sealed_pack_at` entry is written only after the pack is
+            // present. A loud failure makes a broken storage invariant visible
+            // instead of silently dropping a catalog card.
+            None => fail("SealedIndexCorrupt"),
+        };
+        if !m.sealed {
+            fail("SealedIndexCorrupt");
+        }
+        SealedPackView {
+            pack_id,
+            creator: pvm::Address::from(m.creator),
+            title: m.title,
+            emoji: m.emoji,
+            regular_count: m.regular_count,
+            finals_set_count: m.finals_set.iter().filter(|&&s| s).count() as u8,
+            sealed: true,
+        }
+    }
+
     fn create_pack_record(title: String, emoji: String, creation_nonce: u64) {
         if !valid_display_text(&title, MAX_TITLE_BYTES) {
             fail("BadTitle");
@@ -278,6 +336,7 @@ mod registry {
     #[pvm::constructor]
     pub fn new() -> Result<(), Error> {
         Storage::pack_count().set(&0);
+        Storage::sealed_pack_count().set(&0);
         Ok(())
     }
 
@@ -333,11 +392,28 @@ mod registry {
         }
         meta.sealed = true;
         Storage::pack_meta().insert(&pack_id, &meta);
+
+        // Store the catalog sequence only after all validity checks succeed.
+        // A pack can be sealed once, so it can enter this append-only list once.
+        let sequence = Storage::sealed_pack_count().get().unwrap_or(0);
+        Storage::sealed_pack_at().insert(&sequence, &pack_id);
+        let next_sequence = match sequence.checked_add(1) {
+            Some(next) => next,
+            None => fail("SealedPackIndexExhausted"),
+        };
+        Storage::sealed_pack_count().set(&next_sequence);
     }
 
     #[pvm::method]
     pub fn pack_count() -> u32 {
         Storage::pack_count().get().unwrap_or(0)
+    }
+
+    /// Number of playable packs in the append-only sealed catalog. Unlike
+    /// `pack_count`, this excludes unfinished author drafts.
+    #[pvm::method]
+    pub fn sealed_pack_count() -> u32 {
+        Storage::sealed_pack_count().get().unwrap_or(0)
     }
 
     #[pvm::method]
@@ -353,6 +429,49 @@ mod registry {
             fail("ViewBatchTooLarge");
         }
         pack_ids.into_iter().map(pack_view).collect()
+    }
+
+    /// Bounded newest-first page of sealed packs for a serverless catalog.
+    ///
+    /// Pass `u32::MAX` for the first (newest) page. For a later page, pass the
+    /// preceding response's `next_cursor`. A returned `next_cursor` of zero
+    /// means the caller has reached the oldest sealed pack. `limit` must be
+    /// between one and 24, so an untrusted client cannot force an unbounded
+    /// contract read or ABI response.
+    #[pvm::method]
+    pub fn get_sealed_packs(cursor: u32, limit: u8) -> SealedPackPage {
+        let limit = limit as usize;
+        if limit == 0 || limit > MAX_SEALED_PACKS_PER_VIEW_PAGE {
+            fail("BadViewLimit");
+        }
+
+        let sealed_count = Storage::sealed_pack_count().get().unwrap_or(0);
+        let mut upper_exclusive = if cursor == SEALED_PACK_CURSOR_LATEST {
+            sealed_count
+        } else {
+            // A cursor is an append-only sequence boundary, not a pack id.
+            // Reject an invented future boundary rather than treating it as a
+            // partial page, which makes malformed client state obvious.
+            if cursor > sealed_count {
+                fail("BadSealedPackCursor");
+            }
+            cursor
+        };
+
+        let mut packs = Vec::with_capacity(core::cmp::min(limit, upper_exclusive as usize));
+        while upper_exclusive > 0 && packs.len() < limit {
+            upper_exclusive -= 1;
+            let pack_id = match Storage::sealed_pack_at().get(&upper_exclusive) {
+                Some(pack_id) => pack_id,
+                None => fail("SealedIndexCorrupt"),
+            };
+            packs.push(sealed_pack_view(pack_id));
+        }
+
+        SealedPackPage {
+            packs,
+            next_cursor: upper_exclusive,
+        }
     }
 
     /// Fixed-size status for cross-contract validation by the game contract.

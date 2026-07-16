@@ -18,6 +18,9 @@ Asset Hub.
   transactions — with early collapse when every player has acted. Answer matching is
   on-chain: normalization + exact match + Levenshtein tolerance, with a review-phase
   majority vote as the human "close enough" layer.
+- **Pack discovery** (`contracts/registry/`, `contracts/pack-signals/`): sealed packs are
+  paginated directly from the registry. Favorites and favorite counts live in PackSignals,
+  which keeps every pack's score and exposes a bounded top list without an indexer or backend.
 - **Pure logic** (`contracts/logic/`): normalization, Levenshtein, and the phase state
   machine as a host-testable crate (`cargo test`), kept in lockstep with the client via
   `shared/answer-test-vectors.json`.
@@ -62,6 +65,9 @@ Contract (needs Rust nightly + `cargo-pvm-contract`):
 ```sh
 cd contracts/logic && cargo test          # pure-logic unit tests
 cd contracts/quizzler && cargo pvm-contract build
+cd contracts/registry && cargo pvm-contract build
+cd contracts/session-registry && cargo pvm-contract build
+cd contracts/pack-signals && cargo pvm-contract build
 ```
 
 App (needs Node ≥ 22, pnpm):
@@ -72,8 +78,8 @@ pnpm install
 pnpm test                 # normalize-parity unit tests
 pnpm typecheck:tools      # type-check scripts, Playwright config, and E2E helpers
 pnpm validate:packs       # validate all starter-pack files offline
-pnpm deploy:contract      # fresh registry + paired game deployment for the app
-pnpm deploy:e2e-contracts # fresh, isolated contract pair for public LIVE_E2E
+pnpm deploy:contract      # fresh registry + session registry + signals + game deployment
+pnpm deploy:e2e-contracts # fresh, isolated four-contract stack for public LIVE_E2E
 pnpm seed:packs           # seed shared/packs/*.json into the active registry (resume-safe)
 pnpm dev                  # vite dev server on :5301
 pnpm build                # production build into dist/
@@ -82,8 +88,8 @@ LIVE_E2E=1 pnpm test:e2e  # destructive Playwright run against public Paseo
 ```
 
 `deploy:contract` waits for finalized inclusion before it records an address. It deploys one
-fresh registry/game pair and updates the active app configuration and generated ABIs together
-only after both deployments finalize.
+fresh registry, session registry, PackSignals, and game stack and updates the active app
+configuration and generated ABIs together only after every deployment finalizes.
 
 A newly deployed registry starts empty, so run `pnpm seed:packs` before asking players to host
 from it. The seed command is resume-safe and can be rerun after an interrupted batch.
@@ -113,9 +119,8 @@ hosted app alive.
 ## Troubleshooting
 
 - **App boots but every read/write fails after a contract change** — the
-  generated ABIs no longer match the deployed pair. Run `pnpm verify:deployment`,
-  and redeploy with `pnpm deploy:contract` (or `pnpm deploy:game-upgrade` to
-  keep the seeded registry).
+  generated ABIs no longer match the deployed four-contract stack. Run
+  `pnpm verify:deployment`, then redeploy with `pnpm deploy:contract`.
 - **`test:e2e` exits immediately** — the suite is destructive against public
   Paseo and requires the explicit `LIVE_E2E=1` opt-in plus an isolated profile
   from `pnpm deploy:e2e-contracts`.

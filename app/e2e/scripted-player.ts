@@ -19,28 +19,70 @@ import { PASEO_AH } from "./fixtures";
 import { retryChainRead } from "../src/chain-read-retry";
 
 // Read as files: Playwright's ESM loader rejects bare JSON imports.
-const registryAbi = JSON.parse(
-    readFileSync(new URL("../src/abi-registry.json", import.meta.url), "utf8"),
-) as Abi;
-const gameAbi = JSON.parse(
-    readFileSync(new URL("../src/abi-game.json", import.meta.url), "utf8"),
+const registryAbi = JSON.parse(readFileSync(new URL("../src/abi-registry.json", import.meta.url), "utf8")) as Abi;
+const gameAbi = JSON.parse(readFileSync(new URL("../src/abi-game.json", import.meta.url), "utf8")) as Abi;
+const packSignalsAbi = JSON.parse(
+    readFileSync(new URL("../src/abi-pack-signals.json", import.meta.url), "utf8"),
 ) as Abi;
 /** Methods served by the pack registry; everything else is the game. */
 const REGISTRY_METHODS = new Set([
-    "createPackWithNonce", "addQuestions", "sealPack", "packCount", "getPack", "getPacks",
-    "getPackStatus", "getQuestion", "getAnswers", "getPackForCreation",
+    "createPackWithNonce",
+    "addQuestions",
+    "sealPack",
+    "packCount",
+    "sealedPackCount",
+    "getPack",
+    "getPacks",
+    "getSealedPacks",
+    "getPackStatus",
+    "getQuestion",
+    "getAnswers",
+    "getPackForCreation",
+]);
+/** All public PackSignals methods route to its independently deployed contract. */
+const PACK_SIGNALS_METHODS = new Set([
+    "setFavorite",
+    "getFavorites",
+    "getPackSignals",
+    "isFavorite",
+    "favoriteCount",
+    "popularPackCount",
+    "getPopular",
+    "getPopularPage",
+    "registry",
+    "sessionRegistry",
 ]);
 
 function route(functionName: string): { abi: Abi; dest: `0x${string}` } {
     const e2eContracts = getE2EContracts();
-    return REGISTRY_METHODS.has(functionName)
-        ? { abi: registryAbi, dest: e2eContracts.registry.toLowerCase() as `0x${string}` }
-        : { abi: gameAbi, dest: e2eContracts.game.toLowerCase() as `0x${string}` };
+    if (REGISTRY_METHODS.has(functionName)) {
+        return {
+            abi: registryAbi,
+            dest: e2eContracts.registry.toLowerCase() as `0x${string}`,
+        };
+    }
+    if (PACK_SIGNALS_METHODS.has(functionName)) {
+        return {
+            abi: packSignalsAbi,
+            dest: e2eContracts.packSignals.toLowerCase() as `0x${string}`,
+        };
+    }
+    return {
+        abi: gameAbi,
+        dest: e2eContracts.game.toLowerCase() as `0x${string}`,
+    };
 }
 
 const STAGE = {
-    LOBBY: 0, ANSWER: 1, REVIEW: 2, VOTE: 3,
-    FINAL_WAGER: 4, FINAL_ANSWER: 5, FINAL_REVIEW: 6, FINISHED: 7, ABANDONED: 8,
+    LOBBY: 0,
+    ANSWER: 1,
+    REVIEW: 2,
+    VOTE: 3,
+    FINAL_WAGER: 4,
+    FINAL_ANSWER: 5,
+    FINAL_REVIEW: 6,
+    FINISHED: 7,
+    ABANDONED: 8,
 } as const;
 
 export interface PhaseView {
@@ -95,11 +137,18 @@ export class ScriptedPlayer {
         const signer = createDevSigner(dev);
         const ss58 = AccountId(0).dec(getDevPublicKey(dev));
         const player = new ScriptedPlayer(client, api, signer, ss58, ss58ToH160(ss58).toLowerCase());
-        await ensureAccountMapped(ss58, signer, {
-            addressIsMapped: async (addr: string) =>
-                (await api.query.Revive.OriginalAccount.getValue(ss58ToH160(addr))) !== undefined,
-        }, api);
-        player.nonce = await api.apis.AccountNonceApi.account_nonce(ss58, { at: "best" });
+        await ensureAccountMapped(
+            ss58,
+            signer,
+            {
+                addressIsMapped: async (addr: string) =>
+                    (await api.query.Revive.OriginalAccount.getValue(ss58ToH160(addr))) !== undefined,
+            },
+            api,
+        );
+        player.nonce = await api.apis.AccountNonceApi.account_nonce(ss58, {
+            at: "best",
+        });
         return player;
     }
 
@@ -111,14 +160,23 @@ export class ScriptedPlayer {
         const { abi, dest } = route(functionName);
         const data = encodeFunctionData({ abi, functionName, args });
         // unsafe API: descriptor lags the live runtime for ReviveApi_call
-        const res: any = await retryChainRead(() => (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
-            this.ss58, dest, 0n, undefined, undefined, hexToBytes(data), { at: "best" },
-        ));
+        const res: any = await retryChainRead(() =>
+            (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
+                this.ss58,
+                dest,
+                0n,
+                undefined,
+                undefined,
+                hexToBytes(data),
+                { at: "best" },
+            ),
+        );
         if (!res.result.success || res.result.value.flags !== 0) {
             throw new Error(`query ${functionName} reverted`);
         }
         return decodeFunctionResult({
-            abi, functionName,
+            abi,
+            functionName,
             data: toHex(res.result.value.data),
         }) as T;
     }
@@ -126,9 +184,17 @@ export class ScriptedPlayer {
     async tx(functionName: string, args: unknown[], retried = false): Promise<void> {
         const { abi, dest } = route(functionName);
         const data = encodeFunctionData({ abi, functionName, args });
-        const res: any = await retryChainRead(() => (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
-            this.ss58, dest, 0n, undefined, undefined, hexToBytes(data), { at: "best" },
-        ));
+        const res: any = await retryChainRead(() =>
+            (this.client.getUnsafeApi() as any).apis.ReviveApi.call(
+                this.ss58,
+                dest,
+                0n,
+                undefined,
+                undefined,
+                hexToBytes(data),
+                { at: "best" },
+            ),
+        );
         if (!res.result.success) {
             throw new Error(`${functionName} dry-run failed: ${JSON.stringify(res.result.value, br)}`);
         }
@@ -173,24 +239,33 @@ export class ScriptedPlayer {
                 sub.unsubscribe();
                 reject(new Error(`${functionName} timed out waiting for best block`));
             }, 90_000);
-            const sub = tx.signSubmitAndWatch(this.signer, { nonce: useNonce, mortality: { mortal: true, period: 256 } }).subscribe({
-                next: (ev: any) => {
-                    if (ev.type === "txBestBlocksState" && ev.found) {
-                        clearTimeout(timer);
-                        if (!ev.ok) {
-                            reject(new Error(`${functionName} dispatch error: ${JSON.stringify(ev.dispatchError, br)}`));
-                        } else {
-                            resolve();
+            const sub = tx
+                .signSubmitAndWatch(this.signer, {
+                    nonce: useNonce,
+                    mortality: { mortal: true, period: 256 },
+                })
+                .subscribe({
+                    next: (ev: any) => {
+                        if (ev.type === "txBestBlocksState" && ev.found) {
+                            clearTimeout(timer);
+                            if (!ev.ok) {
+                                reject(
+                                    new Error(
+                                        `${functionName} dispatch error: ${JSON.stringify(ev.dispatchError, br)}`,
+                                    ),
+                                );
+                            } else {
+                                resolve();
+                            }
+                            sub.unsubscribe();
                         }
+                    },
+                    error: (err: unknown) => {
+                        clearTimeout(timer);
+                        reject(err);
                         sub.unsubscribe();
-                    }
-                },
-                error: (err: unknown) => {
-                    clearTimeout(timer);
-                    reject(err);
-                    sub.unsubscribe();
-                },
-            });
+                    },
+                });
         });
     }
 
@@ -242,10 +317,7 @@ export class ScriptedPlayer {
         return this.query<PackView>("getPack", [packId]);
     }
 
-    private async waitForPack(
-        packId: number,
-        ready: (pack: PackView) => boolean,
-    ): Promise<PackView> {
+    private async waitForPack(packId: number, ready: (pack: PackView) => boolean): Promise<PackView> {
         let pack = await this.getPack(packId);
         for (let attempt = 0; attempt < 3 && !ready(pack); attempt += 1) {
             await wait(750);
@@ -308,10 +380,30 @@ export class ScriptedPlayer {
             "test pack",
         );
         await this.ensureTestQuestions(packId, [
-            { text: question.text, answers: question.answers, is_final: false, difficulty: 0 },
-            { text: "Final (easy): what is 2 plus 2?", answers: ["4"], is_final: true, difficulty: 0 },
-            { text: "Final (medium): what is 6 times 7?", answers: ["42"], is_final: true, difficulty: 1 },
-            { text: "Final (hard): what is 17 squared?", answers: ["289"], is_final: true, difficulty: 2 },
+            {
+                text: question.text,
+                answers: question.answers,
+                is_final: false,
+                difficulty: 0,
+            },
+            {
+                text: "Final (easy): what is 2 plus 2?",
+                answers: ["4"],
+                is_final: true,
+                difficulty: 0,
+            },
+            {
+                text: "Final (medium): what is 6 times 7?",
+                answers: ["42"],
+                is_final: true,
+                difficulty: 1,
+            },
+            {
+                text: "Final (hard): what is 17 squared?",
+                answers: ["289"],
+                is_final: true,
+                difficulty: 2,
+            },
         ]);
         await this.ensureSealed(packId);
         return packId;
@@ -345,14 +437,17 @@ export class ScriptedPlayer {
      * A test can hold its difficulty vote briefly to inspect the live
      * distribution after the UI player has voted.
      */
-    async playUntilFinished(gameId: bigint, opts: {
-        answer: string;
-        wager?: number;
-        finalWager?: number;
-        difficultyVote?: number;
-        onStage?: (phase: PhaseView) => void;
-        beforeDifficultyVote?: () => Promise<void>;
-    }): Promise<void> {
+    async playUntilFinished(
+        gameId: bigint,
+        opts: {
+            answer: string;
+            wager?: number;
+            finalWager?: number;
+            difficultyVote?: number;
+            onStage?: (phase: PhaseView) => void;
+            beforeDifficultyVote?: () => Promise<void>;
+        },
+    ): Promise<void> {
         const done = new Set<string>();
         const deadline = Date.now() + 480_000;
         for (;;) {

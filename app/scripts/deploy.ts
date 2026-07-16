@@ -1,21 +1,21 @@
 /**
- * Deploy Quizzler's pack registry, session registry, and paired game contract
- * to Paseo Asset Hub via pallet-revive's `instantiate_with_code`.
+ * Deploy Quizzler's pack registry, session registry, pack-signals, and game
+ * contracts to Paseo Asset Hub via pallet-revive's `instantiate_with_code`.
  *
  * The normal command immediately updates the active app address/ABI files.
  * `DEPLOY_E2E_PROFILE=1` instead writes a separate, ignored disposable
- * contract triple for the public live E2E suite. Live E2E always gets a fresh
- * pack registry, so it can never write player-facing catalog data.
+ * four-contract profile for the public live E2E suite. Live E2E always gets a
+ * fresh registry, so it can never write player-facing catalog or favorite data.
  *
  * Usage:
  *   pnpm deploy:contract
  *   DEPLOY_DEV_ACCOUNT=Bob pnpm deploy:contract
  *   pnpm deploy:e2e-contracts
- *   pnpm deploy:game-upgrade
  *
  * Build all contracts first:
  *   cd ../contracts/registry && cargo pvm-contract build
  *   cd ../contracts/session-registry && cargo pvm-contract build
+ *   cd ../contracts/pack-signals && cargo pvm-contract build
  *   cd ../contracts/quizzler && cargo pvm-contract build
  */
 
@@ -37,12 +37,8 @@ import { instantiatedContractAddress } from "../src/deployment-events";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONTRACTS = join(__dirname, "..", "..", "contracts");
 const REGISTRY_BASE = join(CONTRACTS, "registry", "target", "quizzler-registry.release");
-const SESSION_REGISTRY_BASE = join(
-    CONTRACTS,
-    "session-registry",
-    "target",
-    "quizzler-session-registry.release",
-);
+const SESSION_REGISTRY_BASE = join(CONTRACTS, "session-registry", "target", "quizzler-session-registry.release");
+const PACK_SIGNALS_BASE = join(CONTRACTS, "pack-signals", "target", "quizzler-pack-signals.release");
 const GAME_BASE = join(CONTRACTS, "quizzler", "target", "quizzler.release");
 const ADDRESS_FILE = join(__dirname, "..", "src", "contract-address.json");
 const E2E_ADDRESS_FILE = join(__dirname, "..", ".quizzler-e2e-contract-address.json");
@@ -50,10 +46,18 @@ const E2E_ADDRESS_FILE = join(__dirname, "..", ".quizzler-e2e-contract-address.j
 const RPC = process.env.PASEO_AH_RPC ?? "wss://paseo-asset-hub-next-rpc.polkadot.io";
 const DEV_ACCOUNT = (process.env.DEPLOY_DEV_ACCOUNT ?? "Alice") as Parameters<typeof createDevSigner>[0];
 const DEPLOY_E2E_PROFILE = process.env.DEPLOY_E2E_PROFILE === "1";
-const REUSE_ACTIVE_REGISTRY = process.env.REUSE_ACTIVE_REGISTRY === "1";
 
 function sha256(contents: Uint8Array): string {
     return createHash("sha256").update(contents).digest("hex");
+}
+
+/**
+ * ABI JSON is copied verbatim during deploy but is also formatted in source
+ * control. Fingerprint its parsed value so harmless whitespace changes do not
+ * make a valid E2E profile look stale.
+ */
+function sha256Abi(contents: Uint8Array): string {
+    return sha256(new TextEncoder().encode(JSON.stringify(JSON.parse(new TextDecoder().decode(contents)))));
 }
 
 /**
@@ -65,52 +69,32 @@ async function assertActiveAppAbisMatchBuild(): Promise<void> {
     const [
         activeRegistryAbi,
         activeSessionRegistryAbi,
+        activePackSignalsAbi,
         activeGameAbi,
         builtRegistryAbi,
         builtSessionRegistryAbi,
+        builtPackSignalsAbi,
         builtGameAbi,
     ] = await Promise.all([
         readFile(join(__dirname, "..", "src", "abi-registry.json")),
         readFile(join(__dirname, "..", "src", "abi-session-registry.json")),
+        readFile(join(__dirname, "..", "src", "abi-pack-signals.json")),
         readFile(join(__dirname, "..", "src", "abi-game.json")),
         readFile(`${REGISTRY_BASE}.abi.json`),
         readFile(`${SESSION_REGISTRY_BASE}.abi.json`),
+        readFile(`${PACK_SIGNALS_BASE}.abi.json`),
         readFile(`${GAME_BASE}.abi.json`),
     ]);
     if (
-        sha256(activeRegistryAbi) !== sha256(builtRegistryAbi)
-        || sha256(activeSessionRegistryAbi) !== sha256(builtSessionRegistryAbi)
-        || sha256(activeGameAbi) !== sha256(builtGameAbi)
+        sha256Abi(activeRegistryAbi) !== sha256Abi(builtRegistryAbi) ||
+        sha256Abi(activeSessionRegistryAbi) !== sha256Abi(builtSessionRegistryAbi) ||
+        sha256Abi(activePackSignalsAbi) !== sha256Abi(builtPackSignalsAbi) ||
+        sha256Abi(activeGameAbi) !== sha256Abi(builtGameAbi)
     ) {
         throw new Error(
-            "The checked-in app ABI files do not match this contract build. Deploy the active app triple first, then deploy an isolated LIVE_E2E profile.",
+            "The checked-in app ABI files do not match this contract build. Deploy the active four-contract stack first, then deploy an isolated LIVE_E2E profile.",
         );
     }
-}
-
-function isAddress(value: unknown): value is `0x${string}` {
-    return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
-}
-
-/**
- * Pack data is immutable once published, so a live game upgrade may safely
- * retain the currently active catalog while deploying a fresh session
- * registry and game. This path deliberately reads only the checked-in active
- * config; E2E is forbidden from using it.
- */
-async function activeRegistryAddress(): Promise<`0x${string}`> {
-    let active: Record<string, unknown>;
-    try {
-        active = JSON.parse(await readFile(ADDRESS_FILE, "utf8")) as Record<string, unknown>;
-    } catch (error) {
-        throw new Error(
-            `Cannot reuse the active pack registry: failed to read ${ADDRESS_FILE}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-    }
-    if (!isAddress(active.registry)) {
-        throw new Error(`Cannot reuse the active pack registry: ${ADDRESS_FILE} has no valid registry address.`);
-    }
-    return active.registry;
 }
 
 /**
@@ -134,17 +118,23 @@ async function submitFinalized(tx: any, signer: PolkadotSigner, label: string): 
         try {
             // Mortal txs cannot linger in the pool across reruns and collide
             // with a later run's manually assigned nonces.
-            subscription = tx.signSubmitAndWatch(signer, { mortality: { mortal: true, period: 256 } }).subscribe({
-                next: (event: any) => {
-                    if (event.type !== "finalized") return;
-                    if (!event.ok) {
-                        finish(new Error(`${label} failed: ${JSON.stringify(event.dispatchError, bigintReplacer)}`));
-                    } else {
-                        finish(undefined, event);
-                    }
-                },
-                error: (error: unknown) => finish(error instanceof Error ? error : new Error(String(error))),
-            });
+            subscription = tx
+                .signSubmitAndWatch(signer, {
+                    mortality: { mortal: true, period: 256 },
+                })
+                .subscribe({
+                    next: (event: any) => {
+                        if (event.type !== "finalized") return;
+                        if (!event.ok) {
+                            finish(
+                                new Error(`${label} failed: ${JSON.stringify(event.dispatchError, bigintReplacer)}`),
+                            );
+                        } else {
+                            finish(undefined, event);
+                        }
+                    },
+                    error: (error: unknown) => finish(error instanceof Error ? error : new Error(String(error))),
+                });
         } catch (error) {
             finish(error instanceof Error ? error : new Error(String(error)));
         }
@@ -163,7 +153,10 @@ async function instantiate(
     console.log(`Deploying ${label} (${artifacts.bytecode.length} bytes)…`);
 
     const dryRun = await (api as any).apis.ReviveApi.instantiate(
-        address, 0n, undefined, undefined,
+        address,
+        0n,
+        undefined,
+        undefined,
         { type: "Upload", value: artifacts.bytecode },
         constructorData,
         undefined,
@@ -190,13 +183,13 @@ async function instantiate(
     }
     const deployedAddress = instantiatedContractAddress(result.events ?? []);
     console.log(`  ${label} at ${deployedAddress} (finalized block #${result.block?.number ?? "unknown"})`);
-    return { address: deployedAddress, bytecodeSha256: sha256(artifacts.bytecode) };
+    return {
+        address: deployedAddress,
+        bytecodeSha256: sha256(artifacts.bytecode),
+    };
 }
 
 async function main(): Promise<void> {
-    if (DEPLOY_E2E_PROFILE && REUSE_ACTIVE_REGISTRY) {
-        throw new Error("REUSE_ACTIVE_REGISTRY=1 cannot be used with DEPLOY_E2E_PROFILE=1; E2E must deploy an isolated fresh registry.");
-    }
     if (DEPLOY_E2E_PROFILE) await assertActiveAppAbisMatchBuild();
 
     const client = createClient(getWsProvider(RPC));
@@ -206,25 +199,18 @@ async function main(): Promise<void> {
         const address = AccountId(0).dec(getDevPublicKey(DEV_ACCOUNT));
         console.log(`Deploying as //${DEV_ACCOUNT} (${address}) on ${RPC}`);
 
-        await ensureAccountMapped(address, signer, {
-            addressIsMapped: async (account: string) =>
-                (await api.query.Revive.OriginalAccount.getValue(ss58ToH160(account))) !== undefined,
-        }, api);
+        await ensureAccountMapped(
+            address,
+            signer,
+            {
+                addressIsMapped: async (account: string) =>
+                    (await api.query.Revive.OriginalAccount.getValue(ss58ToH160(account))) !== undefined,
+            },
+            api,
+        );
 
-        const deployedRegistry = REUSE_ACTIVE_REGISTRY
-            ? null
-            : await instantiate(
-                api,
-                signer,
-                address,
-                "registry",
-                REGISTRY_BASE,
-                new Uint8Array(0),
-            );
-        const registry = deployedRegistry?.address ?? await activeRegistryAddress();
-        if (deployedRegistry === null) {
-            console.log(`Reusing active immutable pack registry at ${registry}`);
-        }
+        const deployedRegistry = await instantiate(api, signer, address, "registry", REGISTRY_BASE, new Uint8Array(0));
+        const registry = deployedRegistry.address;
         const deployedSessionRegistry = await instantiate(
             api,
             signer,
@@ -234,34 +220,48 @@ async function main(): Promise<void> {
             new Uint8Array(0),
         );
         const sessionRegistry = deployedSessionRegistry.address;
-        const gameConstructorData = hexToBytes(
+        const linkedContractConstructorData = hexToBytes(
             encodeAbiParameters(
                 [{ type: "address" }, { type: "address" }],
                 [registry as `0x${string}`, sessionRegistry as `0x${string}`],
             ),
         );
-        const deployedGame = await instantiate(
+        const deployedPackSignals = await instantiate(
             api,
             signer,
             address,
-            "game",
-            GAME_BASE,
-            gameConstructorData,
+            "pack signals",
+            PACK_SIGNALS_BASE,
+            linkedContractConstructorData,
         );
+        const packSignals = deployedPackSignals.address;
+        const deployedGame = await instantiate(api, signer, address, "game", GAME_BASE, linkedContractConstructorData);
         const game = deployedGame.address;
-        const [registryAbi, sessionRegistryAbi, gameAbi, registryCode, sessionRegistryCode, gameCode] = await Promise.all([
+        const [
+            registryAbi,
+            sessionRegistryAbi,
+            packSignalsAbi,
+            gameAbi,
+            registryCode,
+            sessionRegistryCode,
+            packSignalsCode,
+            gameCode,
+        ] = await Promise.all([
             readFile(`${REGISTRY_BASE}.abi.json`),
             readFile(`${SESSION_REGISTRY_BASE}.abi.json`),
+            readFile(`${PACK_SIGNALS_BASE}.abi.json`),
             readFile(`${GAME_BASE}.abi.json`),
             readFile(`${REGISTRY_BASE}.polkavm`),
             readFile(`${SESSION_REGISTRY_BASE}.polkavm`),
+            readFile(`${PACK_SIGNALS_BASE}.polkavm`),
             readFile(`${GAME_BASE}.polkavm`),
         ]);
 
         if (
-            (deployedRegistry !== null && sha256(registryCode) !== deployedRegistry.bytecodeSha256)
-            || sha256(sessionRegistryCode) !== deployedSessionRegistry.bytecodeSha256
-            || sha256(gameCode) !== deployedGame.bytecodeSha256
+            sha256(registryCode) !== deployedRegistry.bytecodeSha256 ||
+            sha256(sessionRegistryCode) !== deployedSessionRegistry.bytecodeSha256 ||
+            sha256(packSignalsCode) !== deployedPackSignals.bytecodeSha256 ||
+            sha256(gameCode) !== deployedGame.bytecodeSha256
         ) {
             throw new Error("Build artifacts changed during deployment. Rebuild and deploy again.");
         }
@@ -273,13 +273,15 @@ async function main(): Promise<void> {
                     {
                         registry,
                         sessionRegistry,
+                        packSignals,
                         game,
                         chain: "paseo-asset-hub",
                         deployedAt: new Date().toISOString(),
                         profile: "e2e",
-                        registryAbiSha256: sha256(registryAbi),
-                        sessionRegistryAbiSha256: sha256(sessionRegistryAbi),
-                        gameAbiSha256: sha256(gameAbi),
+                        registryAbiSha256: sha256Abi(registryAbi),
+                        sessionRegistryAbiSha256: sha256Abi(sessionRegistryAbi),
+                        packSignalsAbiSha256: sha256Abi(packSignalsAbi),
+                        gameAbiSha256: sha256Abi(gameAbi),
                     },
                     null,
                     4,
@@ -289,27 +291,19 @@ async function main(): Promise<void> {
             return;
         }
 
-        // Refresh ABI files before switching the active address triple, so a
-        // failed copy cannot redirect the app to a partially configured triple.
-        const abiCopies = [
-            copyFile(
-                `${SESSION_REGISTRY_BASE}.abi.json`,
-                join(__dirname, "..", "src", "abi-session-registry.json"),
-            ),
+        // Refresh ABI files before switching the active address set, so a
+        // failed copy cannot redirect the app to a partially configured stack.
+        await Promise.all([
+            copyFile(`${REGISTRY_BASE}.abi.json`, join(__dirname, "..", "src", "abi-registry.json")),
+            copyFile(`${SESSION_REGISTRY_BASE}.abi.json`, join(__dirname, "..", "src", "abi-session-registry.json")),
+            copyFile(`${PACK_SIGNALS_BASE}.abi.json`, join(__dirname, "..", "src", "abi-pack-signals.json")),
             copyFile(`${GAME_BASE}.abi.json`, join(__dirname, "..", "src", "abi-game.json")),
-        ];
-        // A live game upgrade uses the active immutable catalog, whose ABI is
-        // already the app ABI. Do not overwrite it from an unrelated local
-        // registry build.
-        if (!REUSE_ACTIVE_REGISTRY) {
-            abiCopies.push(copyFile(`${REGISTRY_BASE}.abi.json`, join(__dirname, "..", "src", "abi-registry.json")));
-        }
-        await Promise.all(abiCopies);
+        ]);
         await writeFile(
             ADDRESS_FILE,
-            `${JSON.stringify({ registry, sessionRegistry, game, chain: "paseo-asset-hub", deployedAt: new Date().toISOString() }, null, 4)}\n`,
+            `${JSON.stringify({ registry, sessionRegistry, packSignals, game, chain: "paseo-asset-hub", deployedAt: new Date().toISOString() }, null, 4)}\n`,
         );
-        console.log(`\nWrote active contract triple to ${ADDRESS_FILE} and refreshed ABI files`);
+        console.log(`\nWrote active four-contract stack to ${ADDRESS_FILE} and refreshed ABI files`);
     } finally {
         client.destroy();
     }

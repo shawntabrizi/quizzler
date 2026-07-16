@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import gameAbi from "./abi-game.json";
+import packSignalsAbi from "./abi-pack-signals.json";
 import registryAbi from "./abi-registry.json";
 import sessionRegistryAbi from "./abi-session-registry.json";
 
@@ -60,6 +61,39 @@ describe("transaction ABI", () => {
                 name: "",
                 type: "tuple",
                 components: expect.arrayContaining([{ name: "emoji", type: "string" }]),
+            },
+        ]);
+    });
+
+    it("pages every sealed pack directly from the registry", () => {
+        const sealedPackCount = method(registryAbi as AbiItem[], "sealedPackCount");
+        expect(sealedPackCount.stateMutability).toBe("view");
+        expect(sealedPackCount.inputs).toEqual([]);
+        expect(sealedPackCount.outputs).toEqual([{ name: "", type: "uint32" }]);
+
+        const getSealedPacks = method(registryAbi as AbiItem[], "getSealedPacks");
+        expect(getSealedPacks.stateMutability).toBe("view");
+        expect(getSealedPacks.inputs).toEqual([
+            { name: "cursor", type: "uint32" },
+            { name: "limit", type: "uint8" },
+        ]);
+        expect(getSealedPacks.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: expect.arrayContaining([
+                    {
+                        name: "packs",
+                        type: "tuple[]",
+                        components: expect.arrayContaining([
+                            { name: "pack_id", type: "uint32" },
+                            { name: "title", type: "string" },
+                            { name: "emoji", type: "string" },
+                            { name: "sealed", type: "bool" },
+                        ]),
+                    },
+                    { name: "next_cursor", type: "uint32" },
+                ]),
             },
         ]);
     });
@@ -243,5 +277,144 @@ describe("transaction ABI", () => {
                 .map((item) => item.name),
         );
         expect(sessionNames).not.toContain("registerSession");
+    });
+
+    it("exposes only the decentralized favorite and popularity APIs", () => {
+        const constructor = (packSignalsAbi as AbiItem[]).find((item) => item.type === "constructor");
+        expect(constructor?.stateMutability).toBe("nonpayable");
+        expect(constructor?.inputs).toEqual([
+            { name: "registry", type: "address" },
+            { name: "session_registry", type: "address" },
+        ]);
+
+        const registry = method(packSignalsAbi as AbiItem[], "registry");
+        expect(registry.stateMutability).toBe("view");
+        expect(registry.inputs).toEqual([]);
+        expect(registry.outputs).toEqual([{ name: "", type: "address" }]);
+
+        const sessionRegistry = method(packSignalsAbi as AbiItem[], "sessionRegistry");
+        expect(sessionRegistry.stateMutability).toBe("view");
+        expect(sessionRegistry.inputs).toEqual([]);
+        expect(sessionRegistry.outputs).toEqual([{ name: "", type: "address" }]);
+
+        const setFavorite = method(packSignalsAbi as AbiItem[], "setFavorite");
+        expect(setFavorite.stateMutability).toBe("nonpayable");
+        expect(setFavorite.inputs).toEqual([
+            { name: "pack_id", type: "uint32" },
+            { name: "saved", type: "bool" },
+        ]);
+        expect(setFavorite.outputs).toEqual([]);
+
+        const getFavorites = method(packSignalsAbi as AbiItem[], "getFavorites");
+        expect(getFavorites.stateMutability).toBe("view");
+        expect(getFavorites.inputs).toEqual([
+            { name: "account", type: "address" },
+            { name: "cursor", type: "uint64" },
+            { name: "limit", type: "uint32" },
+        ]);
+        expect(getFavorites.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: [
+                    { name: "pack_ids", type: "uint32[]" },
+                    { name: "next_cursor", type: "uint64" },
+                    { name: "total", type: "uint32" },
+                ],
+            },
+        ]);
+
+        const getPackSignals = method(packSignalsAbi as AbiItem[], "getPackSignals");
+        expect(getPackSignals.stateMutability).toBe("view");
+        expect(getPackSignals.inputs).toEqual([
+            { name: "account", type: "address" },
+            { name: "pack_ids", type: "uint32[]" },
+        ]);
+        expect(getPackSignals.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple[]",
+                components: [
+                    { name: "pack_id", type: "uint32" },
+                    { name: "favorite_count", type: "uint32" },
+                    { name: "favorited", type: "bool" },
+                ],
+            },
+        ]);
+
+        const isFavorite = method(packSignalsAbi as AbiItem[], "isFavorite");
+        expect(isFavorite.stateMutability).toBe("view");
+        expect(isFavorite.inputs).toEqual([
+            { name: "account", type: "address" },
+            { name: "pack_id", type: "uint32" },
+        ]);
+        expect(isFavorite.outputs).toEqual([{ name: "", type: "bool" }]);
+
+        const favoriteCount = method(packSignalsAbi as AbiItem[], "favoriteCount");
+        expect(favoriteCount.stateMutability).toBe("view");
+        expect(favoriteCount.inputs).toEqual([{ name: "pack_id", type: "uint32" }]);
+        expect(favoriteCount.outputs).toEqual([{ name: "", type: "uint32" }]);
+
+        const popularPackCount = method(packSignalsAbi as AbiItem[], "popularPackCount");
+        expect(popularPackCount.stateMutability).toBe("view");
+        expect(popularPackCount.inputs).toEqual([]);
+        expect(popularPackCount.outputs).toEqual([{ name: "", type: "uint32" }]);
+
+        const getPopular = method(packSignalsAbi as AbiItem[], "getPopular");
+        expect(getPopular.stateMutability).toBe("view");
+        expect(getPopular.inputs).toEqual([{ name: "limit", type: "uint32" }]);
+        expect(getPopular.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple[]",
+                components: [
+                    { name: "pack_id", type: "uint32" },
+                    { name: "favorite_count", type: "uint32" },
+                ],
+            },
+        ]);
+
+        const getPopularPage = method(packSignalsAbi as AbiItem[], "getPopularPage");
+        expect(getPopularPage.stateMutability).toBe("view");
+        expect(getPopularPage.inputs).toEqual([
+            { name: "cursor_score", type: "uint32" },
+            { name: "cursor", type: "uint64" },
+            { name: "limit", type: "uint32" },
+        ]);
+        expect(getPopularPage.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: [
+                    {
+                        name: "packs",
+                        type: "tuple[]",
+                        components: [
+                            { name: "pack_id", type: "uint32" },
+                            { name: "favorite_count", type: "uint32" },
+                        ],
+                    },
+                    { name: "next_score", type: "uint32" },
+                    { name: "next_cursor", type: "uint64" },
+                    { name: "total", type: "uint32" },
+                ],
+            },
+        ]);
+
+        const publicApi = (packSignalsAbi as AbiItem[])
+            .filter((item) => item.type === "function")
+            .map((item) => item.name);
+        expect(publicApi).toEqual([
+            "registry",
+            "sessionRegistry",
+            "setFavorite",
+            "getFavorites",
+            "getPackSignals",
+            "isFavorite",
+            "favoriteCount",
+            "popularPackCount",
+            "getPopular",
+            "getPopularPage",
+        ]);
     });
 });
