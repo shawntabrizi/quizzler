@@ -5,8 +5,9 @@
 One player opens a lobby from a quiz pack, friends join with a game code, everyone answers
 typed questions on their own device and spends each regular wager from 1 through the number
 of questions once. When time runs out (or everyone has locked in), the table reviews the
-answers together — wrong answers can be voted "close enough" by the other players — and a
-difficulty-voted final round has everyone lock a wager before its prompt is revealed. The
+answers together — wrong answers can be voted "close enough" by the other players — and, when
+there is a real choice, the group votes among viable final difficulties before everyone locks a
+wager and sees the prompt. The
 entire game — lobby, timing, answers, scoring, votes — runs as a smart contract on Paseo
 Asset Hub.
 
@@ -28,8 +29,10 @@ Asset Hub.
   app — Vite + TypeScript, `SignerManager` product accounts, contract calls through
   `@parity/product-sdk-contracts`. The app polls the compact `getLiveGame` snapshot and
   renders whichever screen the chain says the table is on.
-- **Starter content** (`shared/packs/`): 10 packs × 200 questions (+ easy/medium/hard
-  finals each), seeded on-chain by script. Repository-only provenance and editorial review
+- **Starter content** (`shared/packs/`): 10 packs × 200 questions, each labelled Easy,
+  Medium, or Hard, seeded on-chain by script. A game plans its regular rounds from those
+  questions and holds a different unused question back for its final. Repository-only
+  provenance and editorial review
   records live alongside them in [`shared/pack-sources/`](shared/pack-sources/README.md);
   they are never deployed or read at runtime.
 
@@ -140,21 +143,31 @@ hosted app alive.
 The app’s **Pack studio** is import-first: paste a JSON document or import a
 `.json` file, review its local validation and preview, then publish it. Drafts
 are saved locally before anything is sent on-chain. A portable pack file has
-one title, one or more regular questions, and all three final difficulties:
+one title and at least two difficulty-labelled questions:
 
 ```json
 {
   "title": "Friday food quiz",
   "questions": [
-    { "text": "What fruit is used in guacamole?", "answers": ["avocado"] }
-  ],
-  "finals": {
-    "easy": { "text": "…", "answers": ["…"] },
-    "medium": { "text": "…", "answers": ["…"] },
-    "hard": { "text": "…", "answers": ["…"] }
-  }
+    {
+      "text": "What fruit is used in guacamole?",
+      "answers": ["avocado"],
+      "difficulty": "easy"
+    },
+    {
+      "text": "Which region is traditionally associated with guacamole?",
+      "answers": ["Mexico"],
+      "difficulty": "medium"
+    }
+  ]
 }
 ```
+
+`difficulty` must be `"easy"`, `"medium"`, or `"hard"`. The game never
+needs special final-only prompts: it selects its final from an unused ordinary
+question in a difficulty the pack can support. Sparse packs adapt honestly —
+an all-Easy pack goes straight to its final wager, while a pack with multiple
+eligible tiers lets the group vote among only those tiers.
 
 The optional top-level `emoji` is preserved on import; authors can also choose
 or paste any raw emoji in Pack studio. The publisher normalizes equivalent

@@ -1,13 +1,17 @@
 import { type PackFile, validatePack } from "./pack-validation";
 
-export const PACK_DRAFT_VERSION = 1 as const;
+/**
+ * v2 makes difficulty a property of every question and removes special final
+ * records. This app is unreleased, so intentionally do not carry migration
+ * code for invalid old drafts.
+ */
+export const PACK_DRAFT_VERSION = 2 as const;
 export const PACK_DRAFT_EXPORT_FORMAT = "quizzler-pack-draft" as const;
-export const PACK_DRAFT_STORAGE_NAMESPACE = "quizzler:pack-draft:v1:";
+export const PACK_DRAFT_STORAGE_NAMESPACE = "quizzler:pack-draft:v2:";
 /** Matches the bounded raw UTF-8 artwork invariant enforced by the registry. */
 export const MAX_PACK_EMOJI_BYTES = 32;
 
-export type PackFinalDifficulty = "easy" | "medium" | "hard";
-export type PackPublishPhase = "create" | "questions" | "finals" | "seal";
+export type PackPublishPhase = "create" | "questions" | "seal";
 
 /** Local-only metadata. `emoji` is the raw UTF-8 string the creator chose. */
 export interface PackDraftMetadata {
@@ -32,10 +36,8 @@ export interface PackPublishResume {
     /** Persisted before create so a refresh can resolve the nonce safely. */
     creationNonce?: string;
     phase: PackPublishPhase;
-    /** Number of regular questions confirmed on-chain, starting at zero. */
-    nextRegularQuestion: number;
-    /** Final difficulties already confirmed on-chain. */
-    completedFinals: PackFinalDifficulty[];
+    /** Number of questions confirmed on-chain, starting at zero. */
+    nextQuestion: number;
     createdAt: number;
     updatedAt: number;
 }
@@ -87,7 +89,7 @@ export type PackDraftValidation =
     };
 
 export interface PackFileExportOptions {
-    /** Include raw emoji as a compatible extra field alongside the v1 PackFile shape. */
+    /** Include raw emoji as a compatible extra field alongside the PackFile shape. */
     emoji?: string;
     indent?: number;
 }
@@ -106,7 +108,7 @@ export interface ImportedPackDraft {
     validation: PackDraftValidation;
 }
 
-interface PackDraftExportV1 {
+interface PackDraftExportV2 {
     format: typeof PACK_DRAFT_EXPORT_FORMAT;
     version: typeof PACK_DRAFT_VERSION;
     name: string;
@@ -116,12 +118,10 @@ interface PackDraftExportV1 {
 
 const EMPTY_PACK: PackFile = {
     title: "Untitled pack",
-    questions: [{ text: "Question", answers: ["Answer"] }],
-    finals: {
-        easy: { text: "Easy final", answers: ["Answer"] },
-        medium: { text: "Medium final", answers: ["Answer"] },
-        hard: { text: "Hard final", answers: ["Answer"] },
-    },
+    questions: [
+        { text: "Question", answers: ["Answer"], difficulty: "easy" },
+        { text: "Another question", answers: ["Answer"], difficulty: "medium" },
+    ],
 };
 
 /** A valid starter document lets an author edit or replace it immediately. */
@@ -185,7 +185,7 @@ function newDraftId(): string {
 }
 
 function cloneResume(resume: PackPublishResume): PackPublishResume {
-    return { ...resume, completedFinals: [...resume.completedFinals] };
+    return { ...resume };
 }
 
 function cloneDraft(draft: PackDraft): PackDraft {
@@ -244,12 +244,11 @@ export function updatePackDraft(draft: PackDraft, input: UpdatePackDraftInput): 
 function canonicalPack(pack: PackFile): PackFile {
     return {
         title: pack.title,
-        questions: pack.questions.map((question) => ({ text: question.text, answers: [...question.answers] })),
-        finals: {
-            easy: { text: pack.finals.easy.text, answers: [...pack.finals.easy.answers] },
-            medium: { text: pack.finals.medium.text, answers: [...pack.finals.medium.answers] },
-            hard: { text: pack.finals.hard.text, answers: [...pack.finals.hard.answers] },
-        },
+        questions: pack.questions.map((question) => ({
+            text: question.text,
+            answers: [...question.answers],
+            difficulty: question.difficulty,
+        })),
     };
 }
 
@@ -359,7 +358,7 @@ function issue(code: PackDraftValidationIssue["code"], error: unknown): PackDraf
     return { code, message: error instanceof Error ? error.message : String(error) };
 }
 
-/** Parse raw v1 PackFile JSON and validate both authoring content and cover artwork. */
+/** Parse raw PackFile JSON and validate both authoring content and cover artwork. */
 export function validatePackDraftContent(rawJson: string, emoji: string): PackDraftValidation {
     const issues: PackDraftValidationIssue[] = [];
     let parsed: unknown;
@@ -402,18 +401,12 @@ export interface CreatePackPublishResumeInput {
     packId?: number | null;
     creationNonce?: string | bigint;
     phase?: PackPublishPhase;
-    nextRegularQuestion?: number;
-    completedFinals?: readonly PackFinalDifficulty[];
+    nextQuestion?: number;
     now?: number;
 }
 
 function nonNegativeInteger(value: number | undefined, fallback: number): number {
     return Number.isSafeInteger(value) && value! >= 0 ? value! : fallback;
-}
-
-function uniqueFinals(value: readonly PackFinalDifficulty[] | undefined): PackFinalDifficulty[] {
-    const allowed: PackFinalDifficulty[] = ["easy", "medium", "hard"];
-    return allowed.filter((difficulty) => value?.includes(difficulty));
 }
 
 function validCreationNonce(value: unknown): value is string {
@@ -441,7 +434,7 @@ export function createPackPublishResume(input: CreatePackPublishResumeInput): Pa
         throw new Error("A publish resume pack id must be a non-negative integer.");
     }
     const phase = input.phase ?? (packId === null ? "create" : "questions");
-    if (!(["create", "questions", "finals", "seal"] as const).includes(phase)) {
+    if (!(["create", "questions", "seal"] as const).includes(phase)) {
         throw new Error("A publish resume phase is invalid.");
     }
     const creationNonce = normalizedCreationNonce(input.creationNonce);
@@ -451,8 +444,7 @@ export function createPackPublishResume(input: CreatePackPublishResumeInput): Pa
         packId,
         ...(creationNonce ? { creationNonce } : {}),
         phase,
-        nextRegularQuestion: nonNegativeInteger(input.nextRegularQuestion, 0),
-        completedFinals: uniqueFinals(input.completedFinals),
+        nextQuestion: nonNegativeInteger(input.nextQuestion, 0),
         createdAt: now,
         updatedAt: now,
     };
@@ -483,7 +475,7 @@ export function exportPackFile(pack: PackFile, options: PackFileExportOptions = 
  * chain-specific publish cursor that could be unsafe in another wallet.
  */
 export function exportPackDraft(draft: PackDraft): string {
-    const document: PackDraftExportV1 = {
+    const document: PackDraftExportV2 = {
         format: PACK_DRAFT_EXPORT_FORMAT,
         version: PACK_DRAFT_VERSION,
         name: draft.metadata.name,
@@ -502,7 +494,7 @@ function invalidImport(rawJson: string, emoji: string, message: string): PackDra
 }
 
 /**
- * Import either a plain v1 PackFile JSON document or a local draft backup.
+ * Import either a portable PackFile JSON document or a local draft backup.
  * Invalid text is retained as a named draft so the editor can show errors and
  * let the author fix it instead of discarding their work.
  */
@@ -565,8 +557,7 @@ function validPublishResume(value: unknown): value is PackPublishResume {
     const packId = value.packId;
     const creationNonce = value.creationNonce;
     const phase = value.phase;
-    const nextRegularQuestion = value.nextRegularQuestion;
-    const completedFinals = value.completedFinals;
+    const nextQuestion = value.nextQuestion;
     if (!isRecord(value)
         || value.version !== PACK_DRAFT_VERSION
         || typeof value.contentHash !== "string"
@@ -574,12 +565,10 @@ function validPublishResume(value: unknown): value is PackPublishResume {
         || (packId !== null && (typeof packId !== "number" || !Number.isSafeInteger(packId) || packId < 0))
         || (creationNonce !== undefined && !validCreationNonce(creationNonce))
         || typeof phase !== "string"
-        || !["create", "questions", "finals", "seal"].includes(phase)
-        || typeof nextRegularQuestion !== "number"
-        || !Number.isSafeInteger(nextRegularQuestion)
-        || nextRegularQuestion < 0
-        || !Array.isArray(completedFinals)
-        || !completedFinals.every((difficulty) => typeof difficulty === "string" && ["easy", "medium", "hard"].includes(difficulty))
+        || !["create", "questions", "seal"].includes(phase)
+        || typeof nextQuestion !== "number"
+        || !Number.isSafeInteger(nextQuestion)
+        || nextQuestion < 0
         || !validTimestamp(value.createdAt)
         || !validTimestamp(value.updatedAt)) {
         return false;

@@ -31,16 +31,14 @@ const reviewers = [
 const pack: PackFile = {
   title: "Curated geography",
   questions: [
-    { text: "Which city is the capital of France?", answers: ["Paris"] },
-  ],
-  finals: {
-    easy: { text: "Which continent contains France?", answers: ["Europe"] },
-    medium: { text: "What river flows through Paris?", answers: ["Seine"] },
-    hard: {
+    { text: "Which city is the capital of France?", answers: ["Paris"], difficulty: "easy" },
+    { text: "What river flows through Paris?", answers: ["Seine"], difficulty: "medium" },
+    {
       text: "Which arrondissement contains the Eiffel Tower?",
       answers: ["7th arrondissement", "7th"],
+      difficulty: "hard",
     },
-  },
+  ],
 };
 
 function reviewedEntry(
@@ -66,34 +64,14 @@ function reviewedManifest(overrides: Record<string, unknown> = {}) {
     version: 1,
     status: "release-ready",
     pack: { file: "01-curated.json", title: pack.title },
-    questions: [
+    questions: pack.questions.map((question, index) =>
       reviewedEntry(
-        "qz-curated-q001",
-        pack.questions[0]!.text,
-        pack.questions[0]!.answers,
-        "medium",
+        `qz-curated-q${String(index + 1).padStart(3, "0")}`,
+        question.text,
+        question.answers,
+        question.difficulty,
       ),
-    ],
-    finals: {
-      easy: reviewedEntry(
-        "qz-curated-final-easy",
-        pack.finals.easy.text,
-        pack.finals.easy.answers,
-        "easy",
-      ),
-      medium: reviewedEntry(
-        "qz-curated-final-medium",
-        pack.finals.medium.text,
-        pack.finals.medium.answers,
-        "medium",
-      ),
-      hard: reviewedEntry(
-        "qz-curated-final-hard",
-        pack.finals.hard.text,
-        pack.finals.hard.answers,
-        "hard",
-      ),
-    },
+    ),
     ...overrides,
   };
 }
@@ -109,7 +87,6 @@ describe("editorial provenance validation", () => {
           status: "draft",
           pack: { file: "01-curated.json", title: pack.title },
           questions: [],
-          finals: {},
         },
       },
     ]);
@@ -117,7 +94,7 @@ describe("editorial provenance validation", () => {
     expect(reports[0]).toMatchObject({
       status: "draft",
       documented: 0,
-      total: 4,
+      total: 3,
     });
     expect(reports[0]!.warnings.join(" ")).toContain("draft coverage");
   });
@@ -133,8 +110,8 @@ describe("editorial provenance validation", () => {
 
     expect(reports[0]).toMatchObject({
       status: "release-ready",
-      documented: 4,
-      total: 4,
+      documented: 3,
+      total: 3,
     });
   });
 
@@ -160,7 +137,6 @@ describe("editorial provenance validation", () => {
                 answers: ["Answer"],
               },
             ],
-            finals: {},
           },
         },
       ]),
@@ -174,6 +150,7 @@ describe("editorial provenance validation", () => {
         {
           text: "Which country currently has the largest population?",
           answers: ["India"],
+          difficulty: "easy",
         },
       ],
     };
@@ -184,7 +161,7 @@ describe("editorial provenance validation", () => {
             "qz-curated-q001",
             dynamicPack.questions[0]!.text,
             dynamicPack.questions[0]!.answers,
-            "medium",
+            "easy",
           ),
           stability: "dynamic",
         },
@@ -202,8 +179,8 @@ describe("editorial provenance validation", () => {
     const duplicatePack: PackFile = {
       ...pack,
       questions: [
-        { text: "What is the capital of France?", answers: ["Paris"] },
-        { text: "Which city is the capital of France?", answers: ["Paris"] },
+        { text: "What is the capital of France?", answers: ["Paris"], difficulty: "easy" },
+        { text: "Which city is the capital of France?", answers: ["Paris"], difficulty: "easy" },
       ],
     };
     const manifest = reviewedManifest({
@@ -212,7 +189,7 @@ describe("editorial provenance validation", () => {
           `qz-curated-q00${index + 1}`,
           question.text,
           question.answers,
-          "medium",
+          "easy",
         ),
       ),
     });

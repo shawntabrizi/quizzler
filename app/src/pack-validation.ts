@@ -5,17 +5,23 @@ export const MAX_PACK_TITLE_BYTES = 64;
 export const MAX_QUESTION_BYTES = 256;
 export const MAX_ACCEPTED_ANSWERS = 5;
 export const MAX_ANSWER_BYTES = 64;
-export const MAX_REGULAR_QUESTIONS = 200;
+/** A pack needs one regular round and one unused question for its final. */
+export const MIN_PACK_QUESTIONS = 2;
+export const MAX_PACK_QUESTIONS = 200;
+
+export const PACK_DIFFICULTIES = ["easy", "medium", "hard"] as const;
+export type PackDifficulty = (typeof PACK_DIFFICULTIES)[number];
 
 export interface PackQuestion {
     text: string;
     answers: string[];
+    /** Editorial tier used for both regular-round pacing and final selection. */
+    difficulty: PackDifficulty;
 }
 
 export interface PackFile {
     title: string;
     questions: PackQuestion[];
-    finals: Record<"easy" | "medium" | "hard", PackQuestion>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -33,8 +39,13 @@ export function normalizeAcceptedAnswers(answers: readonly string[]): string[] {
 }
 
 function validateQuestion(value: unknown, where: string): PackQuestion {
-    if (!isRecord(value) || typeof value.text !== "string" || !Array.isArray(value.answers)) {
-        throw new Error(`${where}: expected question text and an answers array`);
+    if (
+        !isRecord(value)
+        || typeof value.text !== "string"
+        || !Array.isArray(value.answers)
+        || !PACK_DIFFICULTIES.includes(value.difficulty as PackDifficulty)
+    ) {
+        throw new Error(`${where}: expected question text, an answers array, and an easy/medium/hard difficulty`);
     }
     if (!value.answers.every((answer) => typeof answer === "string")) {
         throw new Error(`${where}: every accepted answer must be a string`);
@@ -59,25 +70,20 @@ function validateQuestion(value: unknown, where: string): PackQuestion {
     if (normalizedAnswers.length > MAX_ACCEPTED_ANSWERS) {
         throw new Error(`${where}: at most ${MAX_ACCEPTED_ANSWERS} distinct accepted answers are allowed`);
     }
-    return { text: value.text, answers };
+    return { text: value.text, answers, difficulty: value.difficulty as PackDifficulty };
 }
 
 /** Validate a pack without needing a chain connection. */
 export function validatePack(value: unknown, where = "pack"): PackFile {
-    if (!isRecord(value) || typeof value.title !== "string" || !Array.isArray(value.questions) || !isRecord(value.finals)) {
-        throw new Error(`${where}: expected title, questions, and easy/medium/hard finals`);
+    if (!isRecord(value) || typeof value.title !== "string" || !Array.isArray(value.questions)) {
+        throw new Error(`${where}: expected a title and questions array`);
     }
     if (!value.title.trim() || utf8ByteLength(value.title) > MAX_PACK_TITLE_BYTES || /[\u0000-\u001f\u007f-\u009f]/u.test(value.title)) {
         throw new Error(`${where}: title must be 1–${MAX_PACK_TITLE_BYTES} UTF-8 bytes`);
     }
-    if (value.questions.length === 0 || value.questions.length > MAX_REGULAR_QUESTIONS) {
-        throw new Error(`${where}: expected 1–${MAX_REGULAR_QUESTIONS} regular questions`);
+    if (value.questions.length < MIN_PACK_QUESTIONS || value.questions.length > MAX_PACK_QUESTIONS) {
+        throw new Error(`${where}: expected ${MIN_PACK_QUESTIONS}–${MAX_PACK_QUESTIONS} questions`);
     }
     const questions = value.questions.map((question, index) => validateQuestion(question, `${where} question ${index + 1}`));
-    const finals = {
-        easy: validateQuestion(value.finals.easy, `${where} easy final`),
-        medium: validateQuestion(value.finals.medium, `${where} medium final`),
-        hard: validateQuestion(value.finals.hard, `${where} hard final`),
-    };
-    return { title: value.title, questions, finals };
+    return { title: value.title, questions };
 }

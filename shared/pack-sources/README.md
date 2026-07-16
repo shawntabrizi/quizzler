@@ -64,7 +64,7 @@ manifest to `"status": "release-ready"`. Then run:
 pnpm audit:editorial
 ```
 
-The strict audit blocks every `release-ready` pack unless all 203 items are covered and
+The strict audit blocks every `release-ready` pack unless all 200 questions are covered and
 passes any still-draft packs untouched. Once the whole library is curated, use
 `pnpm audit:editorial -- --all` to make every built-in pack strict.
 

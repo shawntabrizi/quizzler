@@ -14,7 +14,6 @@ describe("pack presentation", () => {
             id: 1,
             title: "Movies & TV",
             emoji: "🍿",
-            regular_count: 200,
         })).toMatchObject({
             emoji: "🍿",
             category: "Screen",
@@ -27,7 +26,6 @@ describe("pack presentation", () => {
             id: 42,
             title: "Music",
             emoji: "🎸",
-            regular_count: 10,
         })).toMatchObject({
             emoji: "🎸",
             category: "Community",

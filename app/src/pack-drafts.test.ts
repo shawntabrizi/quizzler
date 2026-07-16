@@ -22,11 +22,13 @@ import {
     type PackDraftStore,
 } from "./pack-drafts";
 
-const question = { text: "What fruit is used in guacamole?", answers: ["avocado"] };
+const question = { text: "What fruit is used in guacamole?", answers: ["avocado"], difficulty: "easy" as const };
 const pack: PackFile = {
     title: "Friday food quiz",
-    questions: [question],
-    finals: { easy: question, medium: question, hard: question },
+    questions: [
+        question,
+        { text: "Which spice is made from dried flower buds?", answers: ["cloves"], difficulty: "medium" },
+    ],
 };
 
 class MemoryStorage implements BrowserStorageLike {

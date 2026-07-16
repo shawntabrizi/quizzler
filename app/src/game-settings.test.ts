@@ -33,5 +33,6 @@ describe("game settings labels", () => {
     it("names the regular-review transition into the final round", () => {
         expect(reviewContinueLabel(2, 3, 5)).toBe("Ready for next question");
         expect(reviewContinueLabel(2, 4, 5)).toBe("Choose final difficulty");
+        expect(reviewContinueLabel(2, 4, 5, false)).toBe("Set final wager");
     });
 });

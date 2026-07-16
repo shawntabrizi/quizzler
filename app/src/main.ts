@@ -100,7 +100,13 @@ import {
     type PackDraftValidation,
     type PackPublishResume,
 } from "./pack-drafts";
-import { normalizeAcceptedAnswers, type PackQuestion } from "./pack-validation";
+import { normalizeAcceptedAnswers, PACK_DIFFICULTIES, type PackQuestion } from "./pack-validation";
+import {
+    difficultyIndexesFromMask,
+    difficultySummary,
+    maxPlayableQuestionCount,
+    packDifficultyCounts,
+} from "./pack-capabilities";
 import {
     featuredPack,
     packPresentation,
@@ -181,7 +187,6 @@ const STAGE_FINAL_REVIEW = 6;
 const STAGE_FINISHED = 7;
 const STAGE_ABANDONED = 8;
 const FINAL_QKEY = 255;
-const FINAL_SLOT_BASE = 0xf0;
 const NO_SLOT = 255;
 const NO_PACK = 0xffffffff;
 const MAX_GAME_QUESTIONS = 20;
@@ -191,6 +196,13 @@ const REGISTRY_CONTENT_READ_TIMEOUT_MS = 8_000;
 const KNOWN_GAMES_STORAGE_TIMEOUT_MS = 2_500;
 const PREFLIGHT_TTL_MS = 5 * 60_000;
 const DIFFICULTY_NAMES = ["Easy", "Medium", "Hard"];
+
+function naturalList(items: readonly string[]): string {
+    if (items.length <= 1) return items[0] ?? "";
+    if (items.length === 2) return items.join(" and ");
+    return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
+}
+
 const PACK_VIEW_BATCH_SIZE = 32;
 const PRODUCT_DERIVATION_INDEX = 0;
 
@@ -281,6 +293,10 @@ interface PhaseView {
     deadline: bigint;
     current_block: bigint;
     final_difficulty: number;
+    /** Bitmask of difficulty tiers that have a reserved, unused final prompt. */
+    viable_final_difficulties: number;
+    /** Chosen final prompt after the vote; retained through finished results. */
+    final_slot: number;
     /** Registry slot of the live question (255 when none). */
     slot: number;
     submit_count: number;
@@ -332,8 +348,10 @@ interface PackView {
     creator: string;
     title: string;
     emoji: string;
-    regular_count: number;
-    finals_set_count: number;
+    question_count: number;
+    easy_count: number;
+    medium_count: number;
+    hard_count: number;
     sealed: boolean;
 }
 
@@ -2936,7 +2954,7 @@ const SEALED_PACK_CURSOR_LATEST = 0xffff_ffff;
 const NEW_PACK_PAGE_SIZE = 12;
 const BROWSE_PACK_PAGE_SIZE = 24;
 const SIGNAL_VIEW_BATCH_SIZE = 32;
-const PACK_CATALOG_CACHE_VERSION = 2;
+const PACK_CATALOG_CACHE_VERSION = 3;
 const PACK_CATALOG_CACHE_LIMIT = 96;
 
 let refreshingPacks: Promise<void> | null = null;
@@ -2985,10 +3003,14 @@ function isCachedCatalogPack(value: unknown): value is CatalogPack {
         && typeof pack.creator === "string"
         && typeof pack.title === "string"
         && typeof pack.emoji === "string"
-        && Number.isSafeInteger(pack.regular_count)
-        && (pack.regular_count as number) >= 0
-        && Number.isSafeInteger(pack.finals_set_count)
-        && (pack.finals_set_count as number) >= 0
+        && Number.isSafeInteger(pack.question_count)
+        && (pack.question_count as number) >= 0
+        && Number.isSafeInteger(pack.easy_count)
+        && (pack.easy_count as number) >= 0
+        && Number.isSafeInteger(pack.medium_count)
+        && (pack.medium_count as number) >= 0
+        && Number.isSafeInteger(pack.hard_count)
+        && (pack.hard_count as number) >= 0
         && pack.sealed === true;
 }
 
@@ -3063,11 +3085,15 @@ function numericField(record: Record<string, unknown>, snake: string, camel = sn
 function catalogPackFromView(id: number, raw: unknown): CatalogPack | null {
     if (raw === null || typeof raw !== "object") return null;
     const value = raw as Record<string, unknown>;
-    const regularCount = numericField(value, "regular_count", "regularCount");
-    const finalsSetCount = numericField(value, "finals_set_count", "finalsSetCount");
+    const questionCount = numericField(value, "question_count", "questionCount");
+    const easyCount = numericField(value, "easy_count", "easyCount");
+    const mediumCount = numericField(value, "medium_count", "mediumCount");
+    const hardCount = numericField(value, "hard_count", "hardCount");
     if (
-        regularCount === null
-        || finalsSetCount === null
+        questionCount === null
+        || easyCount === null
+        || mediumCount === null
+        || hardCount === null
         || typeof value.creator !== "string"
         || typeof value.title !== "string"
         || typeof value.emoji !== "string"
@@ -3080,8 +3106,10 @@ function catalogPackFromView(id: number, raw: unknown): CatalogPack | null {
         creator: value.creator,
         title: value.title,
         emoji: value.emoji,
-        regular_count: regularCount,
-        finals_set_count: finalsSetCount,
+        question_count: questionCount,
+        easy_count: easyCount,
+        medium_count: mediumCount,
+        hard_count: hardCount,
         sealed: true,
     };
 }
@@ -3408,14 +3436,21 @@ function refreshPacks({ includeDiscovery = getEl("screen-pack-select").classList
     return request;
 }
 
-function questionCountLabel(pack: Pick<PackView, "regular_count">): string {
-    return `${pack.regular_count} ${pack.regular_count === 1 ? "question" : "questions"}`;
+function questionCountLabel(pack: Pick<PackView, "question_count">): string {
+    return `${pack.question_count} ${pack.question_count === 1 ? "question" : "questions"}`;
 }
 
-function finalCountLabel(pack: Pick<PackView, "finals_set_count">): string {
-    const count = pack.finals_set_count;
-    if (count === 0) return "";
-    return ` · ${count} ${count === 1 ? "final" : "finals"}`;
+function packDifficultyLabel(pack: Pick<PackView, "easy_count" | "medium_count" | "hard_count">): string {
+    return difficultySummary(packDifficultyCounts({
+        easy: pack.easy_count,
+        medium: pack.medium_count,
+        hard: pack.hard_count,
+    }));
+}
+
+/** A normal game always holds one separate pack question for its final. */
+function maxRoundsForPack(pack: Pick<PackView, "question_count">): number {
+    return maxPlayableQuestionCount(pack.question_count, MAX_GAME_QUESTIONS);
 }
 
 function updateSelectedPackSummary(): void {
@@ -3432,7 +3467,7 @@ function updateSelectedPackSummary(): void {
     $configPackArt.className = `config-pack-art tone-${presentation.tone}`;
     $configPackArt.textContent = presentation.emoji;
     $configPackTitle.textContent = selectedPack.title;
-    $configPackMeta.textContent = `${questionCountLabel(selectedPack)}${finalCountLabel(selectedPack)} · ${presentation.category}`;
+    $configPackMeta.textContent = `${questionCountLabel(selectedPack)} · ${packDifficultyLabel(selectedPack)} · ${presentation.category}`;
 }
 
 function selectPack(id: number, pack: CatalogPack): void {
@@ -3440,7 +3475,15 @@ function selectPack(id: number, pack: CatalogPack): void {
     selectedPack = pack;
     $btnCreateGame.disabled = false;
     $btnPackContinue.disabled = false;
-    const maxQ = Math.min(pack.regular_count, MAX_GAME_QUESTIONS);
+    const maxQ = maxRoundsForPack(pack);
+    if (maxQ <= 0) {
+        selectedPackId = null;
+        selectedPack = null;
+        $btnCreateGame.disabled = true;
+        $btnPackContinue.disabled = true;
+        $packSelectionError.textContent = "This pack needs at least two questions before it can host a game.";
+        return;
+    }
     renderQuestionCountOptions(maxQ);
     for (const input of $packList.querySelectorAll<HTMLInputElement>('input[name="pack-choice"]')) {
         input.checked = Number(input.value) === id;
@@ -3470,7 +3513,7 @@ function packCard(pack: CatalogPack, occurrence: string): HTMLLIElement {
     choice.checked = selectedPackId === pack.id;
     choice.setAttribute(
         "aria-label",
-        `${pack.title}, ${questionCountLabel(pack)}${finalCountLabel(pack)}. ${presentation.category} pack.`,
+        `${pack.title}, ${questionCountLabel(pack)}, ${packDifficultyLabel(pack)}. ${presentation.category} pack.`,
     );
     choice.addEventListener("change", () => selectPack(pack.id, pack));
 
@@ -3495,7 +3538,7 @@ function packCard(pack: CatalogPack, occurrence: string): HTMLLIElement {
     const signalMeta = signal
         ? span("pack-card-favorite-count", favoriteCountLabel(signal.favoriteCount))
         : span("pack-card-favorite-count muted", "Loading saves…");
-    const meta = span("pack-card-meta", `${questionCountLabel(pack)}${finalCountLabel(pack)} · `);
+    const meta = span("pack-card-meta", `${questionCountLabel(pack)} · ${packDifficultyLabel(pack)} · `);
     meta.append(signalMeta);
     copy.append(
         heading,
@@ -3619,8 +3662,10 @@ function renderPackList(): void {
                 pack.id,
                 pack.title,
                 pack.emoji ?? "",
-                pack.regular_count,
-                pack.finals_set_count,
+                pack.question_count,
+                pack.easy_count,
+                pack.medium_count,
+                pack.hard_count,
             ]),
             newPackIds,
             browsePackIds,
@@ -3825,10 +3870,12 @@ function readCreatedGameConfig(showErrors = false): CreatedGameConfig | null {
         if (showErrors) showConfigError(message);
         return null;
     };
-    const maxQuestions = Math.min(selectedPack.regular_count, MAX_GAME_QUESTIONS);
+    const maxQuestions = maxRoundsForPack(selectedPack);
     const numQuestions = selectedQuestionCount;
     if (!questionCountOptions(maxQuestions).includes(numQuestions)) {
-        return fail(`Choose between 1 and ${maxQuestions} questions.`);
+        return fail(maxQuestions > 0
+            ? `Choose one of the available game lengths up to ${maxQuestions} questions.`
+            : "This pack needs at least two questions before it can host a game.");
     }
     const answerBlocks = selectedAnswerBlocks;
     if (!isAllowedBlockPreset(answerBlocks, ANSWER_BLOCK_PRESETS)) {
@@ -4168,10 +4215,14 @@ const $btnPublishPack = getEl<HTMLButtonElement>("btn-publish-pack");
 const $emojiPickerDialog = getEl<HTMLDialogElement>("emoji-picker-dialog");
 const $emojiPickerHost = getEl("emoji-picker-host");
 const MAX_IMPORT_BATCH_SIZE = 8;
-const FINAL_DIFFICULTIES = ["easy", "medium", "hard"] as const;
+type PublishQuestion = { text: string; answers: string[]; difficulty: number };
 
-type FinalDifficulty = (typeof FINAL_DIFFICULTIES)[number];
-type PublishQuestion = { text: string; answers: string[]; is_final: boolean; difficulty: number };
+function difficultyCountsForQuestions(questions: readonly PackQuestion[]) {
+    return questions.reduce((counts, question) => {
+        counts[question.difficulty] += 1;
+        return counts;
+    }, { easy: 0, medium: 0, hard: 0 });
+}
 
 function setPackStudioPublishing(publishing: boolean): void {
     packPublishInProgress = publishing;
@@ -4273,7 +4324,7 @@ function renderPackDraftPreview(): void {
     getEl("builder-preview-emoji").textContent = validation.emoji;
     getEl("builder-preview-title").textContent = validation.pack.title;
     getEl("builder-preview-meta").textContent =
-        `${validation.pack.questions.length} regular ${validation.pack.questions.length === 1 ? "question" : "questions"} · 3 finals · ${validation.emoji}`;
+        `${validation.pack.questions.length} ${validation.pack.questions.length === 1 ? "question" : "questions"} · ${difficultySummary(difficultyCountsForQuestions(validation.pack.questions))} · ${validation.emoji}`;
     $builderValidation.textContent = "";
     $btnPublishPack.disabled = busy;
     if (canResumePackPublish(draft, validation)) {
@@ -4430,14 +4481,13 @@ async function openEmojiPicker(): Promise<void> {
 getEl("btn-open-emoji-picker").addEventListener("click", () => void openEmojiPicker());
 getEl("btn-close-emoji-picker").addEventListener("click", () => $emojiPickerDialog.close());
 
-function publishQuestion(question: PackQuestion, isFinal: boolean, difficulty: number): PublishQuestion {
+function publishQuestion(question: PackQuestion): PublishQuestion {
     return {
         text: question.text,
         // The registry rejects duplicate normalized answers. Preserve friendly
         // source variants in a draft, but emit one canonical value per match.
         answers: normalizeAcceptedAnswers(question.answers),
-        is_final: isFinal,
-        difficulty,
+        difficulty: PACK_DIFFICULTIES.indexOf(question.difficulty),
     };
 }
 
@@ -4506,23 +4556,12 @@ async function reconcilePublishResume(
     if (!packResult.success) throw new Error("The saved pack could not be read from this registry.");
     const pack = packResult.value as PackView;
     if (pack.creator.toLowerCase() !== myAddress) throw new Error("The saved pack belongs to another account.");
-    if (pack.regular_count > validation.pack.questions.length) {
+    if (pack.question_count > validation.pack.questions.length) {
         throw new Error("The published pack has more questions than this draft, so it cannot be resumed safely.");
     }
-    let completedFinals = resume.completedFinals;
-    if (pack.finals_set_count === 3) {
-        completedFinals = [...FINAL_DIFFICULTIES];
-    } else if (pack.finals_set_count > 0) {
-        const existing = await Promise.all(FINAL_DIFFICULTIES.map(async (difficulty) => {
-            const result = await registry.getQuestion.query(resume.packId!, FINAL_SLOT_BASE + FINAL_DIFFICULTIES.indexOf(difficulty));
-            return result.success ? difficulty : null;
-        }));
-        completedFinals = existing.filter((difficulty): difficulty is FinalDifficulty => difficulty !== null);
-    }
     return nextPublishResume(resume, {
-        phase: pack.sealed ? "seal" : pack.regular_count < validation.pack.questions.length ? "questions" : "finals",
-        nextRegularQuestion: pack.regular_count,
-        completedFinals,
+        phase: pack.sealed ? "seal" : pack.question_count < validation.pack.questions.length ? "questions" : "seal",
+        nextQuestion: pack.question_count,
     });
 }
 
@@ -4573,27 +4612,15 @@ async function publishPackDraft(): Promise<void> {
 
         const packId = resume.packId;
         if (packId === null) throw new Error("Couldn’t resolve the pack id.");
-        while (resume.nextRegularQuestion < validation.pack.questions.length) {
-            const start = resume.nextRegularQuestion;
+        while (resume.nextQuestion < validation.pack.questions.length) {
+            const start = resume.nextQuestion;
             const batch = validation.pack.questions
                 .slice(start, start + MAX_IMPORT_BATCH_SIZE)
-                .map((question) => publishQuestion(question, false, 0));
+                .map(publishQuestion);
             $builderPublishStatus.textContent = `Publishing questions ${start + 1}–${start + batch.length} of ${validation.pack.questions.length}…`;
             await sendTx(registry, "addQuestions", packId, batch);
             resume = await reconcilePublishResume(resume, validation);
-            if (resume.nextRegularQuestion <= start) throw new Error("Still saving your questions. Tap Publish again in a moment to pick up where you left off.");
-            await persistPublishResume(draftId, resume);
-        }
-
-        const remainingFinals = FINAL_DIFFICULTIES.filter((difficulty) => !resume.completedFinals.includes(difficulty));
-        if (remainingFinals.length > 0) {
-            $builderPublishStatus.textContent = "Publishing final questions…";
-            const finals = remainingFinals.map((difficulty, index) =>
-                publishQuestion(validation.pack.finals[difficulty], true, FINAL_DIFFICULTIES.indexOf(difficulty)),
-            );
-            await sendTx(registry, "addQuestions", packId, finals);
-            resume = await reconcilePublishResume(resume, validation);
-            if (resume.completedFinals.length < 3) throw new Error("Still saving your final questions. Tap Publish again in a moment to pick up where you left off.");
+            if (resume.nextQuestion <= start) throw new Error("Still saving your questions. Tap Publish again in a moment to pick up where you left off.");
             await persistPublishResume(draftId, resume);
         }
 
@@ -4604,13 +4631,16 @@ async function publishPackDraft(): Promise<void> {
             await sendTx(registry, "sealPack", packId);
         }
         await persistPublishResume(draftId, null);
+        const publishedCounts = difficultyCountsForQuestions(validation.pack.questions);
         const published: CatalogPack = {
             id: packId,
             creator: myAddress,
             title: validation.pack.title,
             emoji: validation.emoji,
-            regular_count: validation.pack.questions.length,
-            finals_set_count: 3,
+            question_count: validation.pack.questions.length,
+            easy_count: publishedCounts.easy,
+            medium_count: publishedCounts.medium,
+            hard_count: publishedCounts.hard,
             sealed: true,
         };
         mergeCatalogPacks([published]);
@@ -4664,6 +4694,8 @@ function createdLobbySnapshot(config: CreatedGameConfig): Snapshot {
             deadline: 2n ** 64n - 1n,
             current_block: 0n,
             final_difficulty: 255,
+            viable_final_difficulties: 0,
+            final_slot: NO_SLOT,
             slot: NO_SLOT,
             submit_count: 0,
             continue_count: 0,
@@ -4969,14 +5001,13 @@ async function syncWagerHistory(snap: Snapshot, id: bigint, session: number): Pr
     }
 }
 
-/** The finished scorecard needs the selected final prompt even without a live slot. */
+/** The final prompt is only fetched once it is allowed to be revealed. */
 function snapshotQuestionSlot(phase: PhaseView): number | null {
     if (phase.slot !== NO_SLOT) return phase.slot;
-    return phase.stage === STAGE_FINISHED
-        && phase.final_difficulty >= 0
-        && phase.final_difficulty < DIFFICULTY_NAMES.length
-        ? FINAL_SLOT_BASE + phase.final_difficulty
-        : null;
+    const isFinalPromptStage = phase.stage === STAGE_FINAL_ANSWER
+        || phase.stage === STAGE_FINAL_REVIEW
+        || phase.stage === STAGE_FINISHED;
+    return isFinalPromptStage && phase.final_slot !== NO_SLOT ? phase.final_slot : null;
 }
 
 function phaseNeedsCanonicalAnswer(stage: number): boolean {
@@ -5043,6 +5074,8 @@ async function poll(): Promise<void> {
             deadline: BigInt(live.deadline),
             current_block: BigInt(live.current_block),
             final_difficulty: Number(live.final_difficulty),
+            viable_final_difficulties: Number(live.viable_final_difficulties),
+            final_slot: Number(live.final_slot),
             slot: Number(live.slot),
             submit_count: Number(live.submit_count),
             continue_count: Number(live.continue_count),
@@ -5291,7 +5324,7 @@ function applyGameSettingsPack(packId: number, pack: PackView | null): void {
     $art.className = `game-settings-pack-art tone-${presentation.tone}`;
     $art.textContent = presentation.emoji;
     $title.textContent = pack.title;
-    $meta.textContent = `${questionCountLabel(pack)}${finalCountLabel(pack)} · ${presentation.category}`;
+    $meta.textContent = `${questionCountLabel(pack)} · ${packDifficultyLabel(pack)} · ${presentation.category}`;
 }
 
 function renderGameSettings(snap: Snapshot): void {
@@ -5767,8 +5800,8 @@ function renderFinalWager(snap: Snapshot): void {
     // Once this player has locked their own wager, warming the chosen prompt
     // removes the final-round loading beat without revealing it to anyone
     // who is still deciding their stake.
-    if (locked && snap.phase.final_difficulty >= 0 && snap.phase.final_difficulty < 3) {
-        void questionText(snap.game.pack_id, FINAL_SLOT_BASE + snap.phase.final_difficulty).catch(() => {
+    if (locked && snap.phase.final_slot !== NO_SLOT) {
+        void questionText(snap.game.pack_id, snap.phase.final_slot).catch(() => {
             // The final-answer snapshot remains the source of truth and will retry.
         });
     }
@@ -5888,6 +5921,7 @@ function renderReview(snap: Snapshot): void {
     );
 
     const continued = (mine?.continue_ready ?? false) || actionsSent.has("continue");
+    const finalVoteAvailable = difficultyIndexesFromMask(snap.phase.viable_final_difficulties).length > 1;
     const $btn = getEl<HTMLButtonElement>("btn-continue");
     const $viewResults = getEl<HTMLButtonElement>("btn-view-final-results");
     // The final answer has already settled everyone's score. Unlike a regular
@@ -5899,7 +5933,7 @@ function renderReview(snap: Snapshot): void {
         ? "You left this quiz"
         : continued
           ? "Waiting for others…"
-          : reviewContinueLabel(snap.phase.stage, snap.phase.cursor, snap.game.num_questions);
+          : reviewContinueLabel(snap.phase.stage, snap.phase.cursor, snap.game.num_questions, finalVoteAvailable);
     $btn.classList.toggle("primary", !isFinal);
     $btn.classList.toggle("quiet", isFinal);
     $viewResults.style.display = isFinal ? "" : "none";
@@ -5990,10 +6024,15 @@ function renderVote(snap: Snapshot): void {
         snap.phase.hard_vote_count,
     ];
     const countNames = ["easy", "medium", "hard"];
-    const total = counts.reduce((sum, count) => sum + count, 0);
-    const leading = Math.max(...counts);
+    const viable = difficultyIndexesFromMask(snap.phase.viable_final_difficulties);
+    const total = viable.reduce((sum, difficulty) => sum + counts[difficulty]!, 0);
+    const leading = Math.max(0, ...viable.map((difficulty) => counts[difficulty]!));
     const denominator = Math.max(1, snap.phase.active_player_count);
+    const viableNames = viable.map((difficulty) => DIFFICULTY_NAMES[difficulty] ?? "");
 
+    getEl("vote-hint").textContent = viableNames.length > 1
+        ? `Majority picks between ${naturalList(viableNames)}. Ties favor the harder available choice.`
+        : "The final question is selected from the pack's available difficulty.";
     getEl("vote-status").textContent =
         `${total}/${snap.phase.active_player_count} active players voted` +
         (voteLocked || actionsSent.has("difficulty") ? " — your vote is in" : "");
@@ -6004,15 +6043,19 @@ function renderVote(snap: Snapshot): void {
         const row = getEl(`vote-distribution-${name}`);
         const bar = getEl(`vote-distribution-${name}-bar`);
         const output = getEl(`vote-distribution-${name}-count`);
-        row.classList.toggle("is-leading", total > 0 && count === leading);
+        const available = viable.includes(difficulty);
+        row.hidden = !available;
+        row.classList.toggle("is-leading", available && total > 0 && count === leading);
         bar.style.width = `${Math.round((count / denominator) * 100)}%`;
         output.textContent = String(count);
         output.setAttribute("aria-label", `${DIFFICULTY_NAMES[difficulty]}: ${count} ${count === 1 ? "vote" : "votes"}`);
     }
     for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty")) {
         const difficulty = Number(btn.dataset.difficulty);
-        const selected = voteLocked ? lockedChoice === difficulty : selectedDifficulty === difficulty;
-        btn.disabled = voteLocked || actionsSent.has("difficulty") || !amActive || busy;
+        const available = viable.includes(difficulty);
+        const selected = available && (voteLocked ? lockedChoice === difficulty : selectedDifficulty === difficulty);
+        btn.hidden = !available;
+        btn.disabled = !available || voteLocked || actionsSent.has("difficulty") || !amActive || busy;
         btn.classList.toggle("is-selected", selected);
         btn.setAttribute("aria-pressed", String(selected));
     }
@@ -6029,15 +6072,17 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>(".btn-difficulty"
     btn.addEventListener("click", async () => {
         if (busy || gameId === null || !productAccount || actionsSent.has("difficulty")) return;
         if (!latest || !mySubmission(latest)?.active) return;
+        const difficulty = Number(btn.dataset.difficulty);
+        if (!difficultyIndexesFromMask(latest.phase.viable_final_difficulties).includes(difficulty)) return;
         const myIndex = latest.players.indexOf(myAddress);
         if (myIndex >= 0 && latest.difficultyVoteLocked[myIndex]) return;
         // optimistic: lock the vote in visually, roll back on error
-        selectedDifficulty = Number(btn.dataset.difficulty);
+        selectedDifficulty = difficulty;
         markActionSent("difficulty");
         if (latest) render(latest);
         busy = true;
         try {
-            await sendTx(game, "voteDifficulty", gameId, Number(btn.dataset.difficulty));
+            await sendTx(game, "voteDifficulty", gameId, difficulty);
             void poll();
         } catch (e) {
             const message = txError(e);

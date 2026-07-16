@@ -36,8 +36,15 @@ export function gameProgressLabel(stage: number, cursor: number, questionCount: 
 }
 
 /** The regular-review acknowledgement should explain the next party step. */
-export function reviewContinueLabel(stage: number, cursor: number, questionCount: number): string {
-    if (stage === STAGE_REVIEW && cursor + 1 >= questionCount) return "Choose final difficulty";
+export function reviewContinueLabel(
+    stage: number,
+    cursor: number,
+    questionCount: number,
+    finalVoteAvailable = true,
+): string {
+    if (stage === STAGE_REVIEW && cursor + 1 >= questionCount) {
+        return finalVoteAvailable ? "Choose final difficulty" : "Set final wager";
+    }
     return "Ready for next question";
 }
 

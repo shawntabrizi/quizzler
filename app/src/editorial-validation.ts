@@ -6,7 +6,7 @@ import {
 
 /**
  * Editorial provenance is deliberately kept out of the deployable pack JSON.
- * A pack is still just title/questions/finals on-chain; this module validates
+ * A pack is still just title/questions on-chain; this module validates
  * the versioned, repository-only review record that accompanies starter packs.
  */
 export const EDITORIAL_MANIFEST_VERSION = 1;
@@ -34,7 +34,6 @@ export type SourceRightsClassification =
 
 const REVIEWER_ROLES = ["fact-check", "editorial"] as const;
 const REVIEWER_STATUSES = ["approved", "pending", "needs-changes"] as const;
-const FINAL_DIFFICULTIES = EDITORIAL_DIFFICULTIES;
 const DYNAMIC_PROMPT =
   /\b(?:as\s+of|currently|current|today|latest|newest|most\s+recent|this\s+(?:year|month|week)|right\s+now)\b/iu;
 const SUPERLATIVE_PROMPT =
@@ -139,7 +138,6 @@ export interface PackEditorialManifest {
     title: string;
   };
   questions: EditorialEntry[];
-  finals: Partial<Record<EditorialDifficulty, EditorialEntry>>;
 }
 
 export interface EditorialPackInput {
@@ -176,7 +174,6 @@ interface IssueCollector {
 interface ParsedManifest {
   status: EditorialStatus | null;
   questions: ParsedEntry[];
-  finals: Partial<Record<EditorialDifficulty, ParsedEntry>>;
 }
 
 interface ParsedEntry {
@@ -345,7 +342,7 @@ function parseManifest(
   const where = sourceManifestFilename(input.file);
   if (!isRecord(input.manifest)) {
     issue(collector, where, "expected a JSON object");
-    return { status: null, questions: [], finals: {} };
+    return { status: null, questions: [] };
   }
   if (input.manifest.version !== EDITORIAL_MANIFEST_VERSION) {
     issue(collector, where, `version must be ${EDITORIAL_MANIFEST_VERSION}`);
@@ -389,29 +386,7 @@ function parseManifest(
       )
     : (issue(collector, where, "questions must be an array"), []);
 
-  const rawFinals = input.manifest.finals;
-  const finals: Partial<Record<EditorialDifficulty, ParsedEntry>> = {};
-  if (!isRecord(rawFinals)) {
-    issue(collector, where, "finals must be an object");
-  } else {
-    for (const key of Object.keys(rawFinals)) {
-      if (!isOneOf(key, FINAL_DIFFICULTIES)) {
-        issue(
-          collector,
-          where,
-          `finals contains unsupported difficulty ${JSON.stringify(key)}`,
-        );
-        continue;
-      }
-      finals[key] = parseEntry(
-        rawFinals[key],
-        `${where} finals.${key}`,
-        collector,
-      );
-    }
-  }
-
-  return { status, questions, finals };
+  return { status, questions };
 }
 
 function validateSource(
@@ -600,7 +575,7 @@ function validateReleaseMetadata(
     issue(
       collector,
       entry.where,
-      `final difficulty must be ${expectedDifficulty}`,
+      `difficulty must match the pack question (${expectedDifficulty})`,
     );
   }
 
@@ -695,44 +670,29 @@ function validateReleaseMetadata(
   }
 }
 
-function expectedRegularQuestion(
+function expectedQuestion(
   entry: ParsedEntry,
   question: PackQuestion,
 ): boolean {
   return (
     entry.question === question.text &&
     entry.answers !== null &&
-    sameAcceptedAnswers(entry.answers, question.answers)
+    sameAcceptedAnswers(entry.answers, question.answers) &&
+    entry.value.difficulty === question.difficulty
   );
 }
 
-function expectedFinalQuestion(
-  entry: ParsedEntry | undefined,
-  question: PackQuestion,
-): boolean {
-  return Boolean(entry && expectedRegularQuestion(entry, question));
-}
-
 function documentedCoverage(pack: PackFile, parsed: ParsedManifest): number {
-  const regular = pack.questions.reduce(
+  return pack.questions.reduce(
     (count, question) =>
       count +
       (parsed.questions.some((entry) =>
-        expectedRegularQuestion(entry, question),
+        expectedQuestion(entry, question),
       )
         ? 1
         : 0),
     0,
   );
-  const finals = FINAL_DIFFICULTIES.reduce(
-    (count, difficulty) =>
-      count +
-      (expectedFinalQuestion(parsed.finals[difficulty], pack.finals[difficulty])
-        ? 1
-        : 0),
-    0,
-  );
-  return regular + finals;
 }
 
 function validateReleaseCoverage(
@@ -745,12 +705,12 @@ function validateReleaseCoverage(
     issue(
       collector,
       where,
-      `release-ready manifest needs exactly ${input.pack.questions.length} regular entries`,
+      `release-ready manifest needs exactly ${input.pack.questions.length} question entries`,
     );
   }
   for (const [index, question] of input.pack.questions.entries()) {
     const matching = parsed.questions.filter((entry) =>
-      expectedRegularQuestion(entry, question),
+      expectedQuestion(entry, question),
     );
     if (matching.length === 0) {
       issue(
@@ -768,18 +728,6 @@ function validateReleaseCoverage(
   }
   for (const entry of parsed.questions)
     validateReleaseMetadata(entry, null, collector);
-
-  for (const difficulty of FINAL_DIFFICULTIES) {
-    const entry = parsed.finals[difficulty];
-    if (!expectedFinalQuestion(entry, input.pack.finals[difficulty])) {
-      issue(
-        collector,
-        where,
-        `missing or stale provenance for ${difficulty} final`,
-      );
-    }
-    if (entry) validateReleaseMetadata(entry, difficulty, collector);
-  }
 }
 
 function collectDuplicateIds(
@@ -822,18 +770,11 @@ function collectLikelyDuplicates(
 }
 
 function activeQuestions(input: EditorialPackInput): ActiveQuestion[] {
-  return [
-    ...input.pack.questions.map((question, index) => ({
+  return input.pack.questions.map((question, index) => ({
       file: input.file,
       where: `question ${index + 1}`,
       text: question.text,
-    })),
-    ...FINAL_DIFFICULTIES.map((difficulty) => ({
-      file: input.file,
-      where: `${difficulty} final`,
-      text: input.pack.finals[difficulty].text,
-    })),
-  ];
+    }));
 }
 
 function hasCompleteDynamicReview(value: unknown): boolean {
@@ -860,11 +801,9 @@ function pushWarning(warnings: string[], message: string): void {
 function matchingEntry(
   parsed: ParsedManifest,
   question: PackQuestion,
-  finalDifficulty?: EditorialDifficulty,
 ): ParsedEntry | undefined {
-  if (finalDifficulty) return parsed.finals[finalDifficulty];
   return parsed.questions.find((entry) =>
-    expectedRegularQuestion(entry, question),
+    expectedQuestion(entry, question),
   );
 }
 
@@ -887,9 +826,8 @@ function collectEditorialAdvisories(inputs: readonly ParsedInput[]): void {
     const checkQuestion = (
       question: PackQuestion,
       where: string,
-      finalDifficulty?: EditorialDifficulty,
     ) => {
-      const entry = matchingEntry(parsed, question, finalDifficulty);
+      const entry = matchingEntry(parsed, question);
       const prompt = question.text;
       const stability = entry?.value.stability;
       const dynamicResolved =
@@ -933,16 +871,6 @@ function collectEditorialAdvisories(inputs: readonly ParsedInput[]): void {
         report,
       });
     });
-    for (const difficulty of FINAL_DIFFICULTIES) {
-      const where = `${difficulty} final`;
-      checkQuestion(input.pack.finals[difficulty], where, difficulty);
-      allQuestions.push({
-        file: input.file,
-        where,
-        text: input.pack.finals[difficulty].text,
-        report,
-      });
-    }
   }
 
   // A full semantic duplicate detector would create too many false positives
@@ -1007,9 +935,9 @@ function validateEditorialLibrary(
 
   for (const input of inputs) {
     const parsed = parseManifest(input, collector);
-    suppliedEntries.push(...parsed.questions, ...Object.values(parsed.finals));
+    suppliedEntries.push(...parsed.questions);
     const documented = documentedCoverage(input.pack, parsed);
-    const total = input.pack.questions.length + FINAL_DIFFICULTIES.length;
+    const total = input.pack.questions.length;
     const warnings: string[] = [];
     if (parsed.status === "draft" && documented !== total) {
       warnings.push(

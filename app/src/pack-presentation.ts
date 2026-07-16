@@ -3,8 +3,6 @@ export interface PackListItem {
     title: string;
     /** Immutable creator-selected artwork returned by the registry. */
     emoji: string;
-    regular_count: number;
-    finals_set_count?: number;
 }
 
 export interface PackPresentation {
