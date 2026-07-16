@@ -19,7 +19,7 @@ function method(abi: AbiItem[], name: string): AbiItem {
 }
 
 describe("transaction ABI", () => {
-    it("exposes nonce-bound pack creation, batched imports, and immutable emoji metadata", () => {
+    it("exposes nonce-bound difficulty-tagged pack imports and immutable metadata", () => {
         const createPack = method(registryAbi as AbiItem[], "createPackWithNonce");
         expect(createPack.stateMutability).toBe("nonpayable");
         expect(createPack.inputs).toEqual([
@@ -42,7 +42,6 @@ describe("transaction ABI", () => {
                 components: expect.arrayContaining([
                     { name: "text", type: "string" },
                     { name: "answers", type: "string[]" },
-                    { name: "is_final", type: "bool" },
                     { name: "difficulty", type: "uint8" },
                 ]),
             },
@@ -60,9 +59,40 @@ describe("transaction ABI", () => {
             {
                 name: "",
                 type: "tuple",
-                components: expect.arrayContaining([{ name: "emoji", type: "string" }]),
+                components: expect.arrayContaining([
+                    { name: "emoji", type: "string" },
+                    { name: "question_count", type: "uint8" },
+                    { name: "easy_count", type: "uint8" },
+                    { name: "medium_count", type: "uint8" },
+                    { name: "hard_count", type: "uint8" },
+                ]),
             },
         ]);
+
+        const getPackStatus = method(registryAbi as AbiItem[], "getPackStatus");
+        expect(getPackStatus.outputs).toEqual([
+            {
+                name: "",
+                type: "tuple",
+                components: expect.arrayContaining([
+                    { name: "question_count", type: "uint8" },
+                    { name: "easy_count", type: "uint8" },
+                    { name: "medium_count", type: "uint8" },
+                    { name: "hard_count", type: "uint8" },
+                ]),
+            },
+        ]);
+
+        const slotsForDifficulty = method(registryAbi as AbiItem[], "getQuestionSlotsForDifficulty");
+        expect(slotsForDifficulty.stateMutability).toBe("view");
+        expect(slotsForDifficulty.inputs).toEqual([
+            { name: "pack_id", type: "uint32" },
+            { name: "difficulty", type: "uint8" },
+        ]);
+        expect(slotsForDifficulty.outputs).toEqual([{ name: "", type: "uint8[]" }]);
+
+        const questionDifficulty = method(registryAbi as AbiItem[], "getQuestionDifficulty");
+        expect(questionDifficulty.outputs).toEqual([{ name: "", type: "uint8" }]);
     });
 
     it("pages every sealed pack directly from the registry", () => {
@@ -234,6 +264,8 @@ describe("transaction ABI", () => {
                 name: "",
                 type: "tuple",
                 components: expect.arrayContaining([
+                    { name: "final_slot", type: "uint8" },
+                    { name: "viable_final_difficulties", type: "uint8" },
                     { name: "final_wager_count", type: "uint32" },
                     { name: "easy_vote_count", type: "uint32" },
                     { name: "medium_vote_count", type: "uint32" },
@@ -248,6 +280,8 @@ describe("transaction ABI", () => {
                 name: "",
                 type: "tuple",
                 components: expect.arrayContaining([
+                    { name: "final_slot", type: "uint8" },
+                    { name: "viable_final_difficulties", type: "uint8" },
                     { name: "difficulty_choices", type: "uint8[]" },
                     { name: "difficulty_vote_locked", type: "bool[]" },
                     { name: "final_wagers", type: "uint32[]" },
