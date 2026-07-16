@@ -53,8 +53,8 @@ pub fn valid_player_name(name: &str) -> bool {
 // ── Stages ───────────────────────────────────────────────────────────
 //
 // A game moves through stages paced purely by block number:
-//   Lobby → [Answer → Review] × num_questions → Vote → FinalWager →
-//   FinalAnswer → FinalReview → Finished
+//   Lobby → [Answer → Review] × num_questions → [Vote when there is a real
+//   choice] → FinalWager → FinalAnswer → FinalReview → Finished
 //
 // An explicit lobby departure can also reach Abandoned (empty lobby), as can
 // the last active participant forfeiting a running quiz.
@@ -286,6 +286,235 @@ pub fn resolve_difficulty(counts: [u32; 3]) -> u8 {
         }
     }
     best
+}
+
+// ── Question planning ───────────────────────────────────────────────
+
+/// A deterministic game-local selection of ordinary pack slots. The final
+/// candidate for each tier is deliberately chosen from slots left unused by
+/// the regular round, so no question can appear twice in a game.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct QuestionSlotPlan {
+    pub regular_slots: Vec<u8>,
+    pub final_slots: [Option<u8>; 3],
+    /// Bit 0 = easy, bit 1 = medium, bit 2 = hard. A bit is set only when a
+    /// distinct unused candidate of that difficulty remains after planning
+    /// the regular round.
+    pub viable_final_difficulties: u8,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum QuestionPlanError {
+    /// A final question must be distinct from the requested regular round.
+    NotEnoughQuestionsForFinal,
+    /// The advertised candidate sets cannot satisfy the requested plan.
+    Impossible,
+    /// The caller-supplied deterministic selector returned an out-of-range
+    /// index. Treat this as an invariant failure rather than risking a trap.
+    InvalidRandomIndex,
+}
+
+/// Fixed regular-round target: 40% easy, 40% medium, 20% hard. This gives
+/// the supported game lengths the intended mixes 5 = 2/2/1, 10 = 4/4/2,
+/// 15 = 6/6/3, and 20 = 8/8/4.
+fn desired_question_difficulty_counts(num_questions: u8) -> [u8; 3] {
+    let hard = num_questions / 5;
+    let non_hard = num_questions - hard;
+    let medium = non_hard / 2;
+    let easy = non_hard - medium;
+    [easy, medium, hard]
+}
+
+fn fallback_order(difficulty: usize) -> [usize; 3] {
+    match difficulty {
+        // If an easy target is unavailable, medium is the gentlest fallback.
+        0 => [1, 2, 0],
+        // A missing middle tier favors easier questions over harder ones.
+        1 => [0, 2, 1],
+        // A missing hard target falls back to medium before easy.
+        2 => [1, 0, 2],
+        _ => unreachable!("difficulty is always in 0..3"),
+    }
+}
+
+fn planned_question_difficulty_counts(
+    capacity: [u8; 3],
+    num_questions: u8,
+) -> Result<[u8; 3], QuestionPlanError> {
+    let desired = desired_question_difficulty_counts(num_questions);
+    let mut planned = [0u8; 3];
+    for difficulty in 0..3 {
+        planned[difficulty] = core::cmp::min(desired[difficulty], capacity[difficulty]);
+    }
+
+    for difficulty in 0..3 {
+        let missing = desired[difficulty].saturating_sub(planned[difficulty]);
+        for _ in 0..missing {
+            let mut filled = false;
+            for fallback in fallback_order(difficulty) {
+                if planned[fallback] < capacity[fallback] {
+                    planned[fallback] += 1;
+                    filled = true;
+                    break;
+                }
+            }
+            if !filled {
+                return Err(QuestionPlanError::Impossible);
+            }
+        }
+    }
+
+    // The three per-tier counters are u8 because a pack has at most 255
+    // questions, but their aggregate can exceed u8 in host-side callers.
+    // Keep this invariant check wide so it reports an impossible plan rather
+    // than overflowing in a debug build.
+    if planned.iter().map(|count| u16::from(*count)).sum::<u16>() != u16::from(num_questions) {
+        return Err(QuestionPlanError::Impossible);
+    }
+    Ok(planned)
+}
+
+fn pick_slot<F>(slots: &mut Vec<u8>, choose_index: &mut F) -> Result<u8, QuestionPlanError>
+where
+    F: FnMut(usize) -> usize,
+{
+    if slots.is_empty() {
+        return Err(QuestionPlanError::Impossible);
+    }
+    let index = choose_index(slots.len());
+    if index >= slots.len() {
+        return Err(QuestionPlanError::InvalidRandomIndex);
+    }
+    Ok(slots.swap_remove(index))
+}
+
+fn planned_question_difficulty_sequence<F>(
+    mut remaining: [u8; 3],
+    choose_index: &mut F,
+) -> Result<Vec<u8>, QuestionPlanError>
+where
+    F: FnMut(usize) -> usize,
+{
+    let total: usize = remaining.iter().map(|count| usize::from(*count)).sum();
+    let mut sequence = Vec::with_capacity(total);
+    if total == 0 {
+        return Ok(sequence);
+    }
+
+    // This is the intentional warm-up rule: use the easiest available
+    // regular tier first, rather than putting a lone Easy question aside for
+    // a possible final-round option.
+    for difficulty in 0..3 {
+        if remaining[difficulty] > 0 {
+            sequence.push(difficulty as u8);
+            remaining[difficulty] -= 1;
+            break;
+        }
+    }
+
+    while sequence.len() < total {
+        let previous = *sequence.last().unwrap_or(&u8::MAX);
+        let before_previous = if sequence.len() >= 2 {
+            sequence[sequence.len() - 2]
+        } else {
+            u8::MAX
+        };
+        let prohibit_repeat = previous == before_previous
+            && remaining
+                .iter()
+                .enumerate()
+                .any(|(difficulty, count)| *count > 0 && difficulty as u8 != previous);
+
+        let eligible_total: usize = remaining
+            .iter()
+            .enumerate()
+            .filter(|(difficulty, count)| {
+                **count > 0 && (!prohibit_repeat || *difficulty as u8 != previous)
+            })
+            .map(|(_, count)| usize::from(*count))
+            .sum();
+        if eligible_total == 0 {
+            return Err(QuestionPlanError::Impossible);
+        }
+        let mut choice = choose_index(eligible_total);
+        if choice >= eligible_total {
+            return Err(QuestionPlanError::InvalidRandomIndex);
+        }
+        let mut selected = None;
+        for difficulty in 0..3 {
+            if remaining[difficulty] == 0 || (prohibit_repeat && difficulty as u8 == previous) {
+                continue;
+            }
+            let weight = remaining[difficulty] as usize;
+            if choice < weight {
+                selected = Some(difficulty);
+                break;
+            }
+            choice -= weight;
+        }
+        let difficulty = selected.ok_or(QuestionPlanError::Impossible)?;
+        sequence.push(difficulty as u8);
+        remaining[difficulty] -= 1;
+    }
+    Ok(sequence)
+}
+
+/// Plan the regular round from per-difficulty ordinary pack slots, then
+/// reserve one final candidate for every difficulty that has a remaining
+/// unused slot. `choose_index` is supplied by the caller: the contract uses
+/// a deterministic hash stream, while tests use a fixed selector.
+pub fn plan_question_slots<F>(
+    mut slots_by_difficulty: [Vec<u8>; 3],
+    num_questions: u8,
+    mut choose_index: F,
+) -> Result<QuestionSlotPlan, QuestionPlanError>
+where
+    F: FnMut(usize) -> usize,
+{
+    let total_candidates: usize = slots_by_difficulty.iter().map(|slots| slots.len()).sum();
+    if total_candidates <= num_questions as usize {
+        return Err(QuestionPlanError::NotEnoughQuestionsForFinal);
+    }
+
+    let capacity = [
+        slots_by_difficulty[0].len() as u8,
+        slots_by_difficulty[1].len() as u8,
+        slots_by_difficulty[2].len() as u8,
+    ];
+    let planned = planned_question_difficulty_counts(capacity, num_questions)?;
+    let sequence = planned_question_difficulty_sequence(planned, &mut choose_index)?;
+    let mut regular_slots = Vec::with_capacity(num_questions as usize);
+    for difficulty in sequence {
+        regular_slots.push(pick_slot(
+            &mut slots_by_difficulty[difficulty as usize],
+            &mut choose_index,
+        )?);
+    }
+    if regular_slots.len() != num_questions as usize {
+        return Err(QuestionPlanError::Impossible);
+    }
+
+    let mut final_slots = [None; 3];
+    let mut viable_final_difficulties = 0u8;
+    for difficulty in 0..3 {
+        if slots_by_difficulty[difficulty].is_empty() {
+            continue;
+        }
+        final_slots[difficulty] = Some(pick_slot(
+            &mut slots_by_difficulty[difficulty],
+            &mut choose_index,
+        )?);
+        viable_final_difficulties |= 1u8 << difficulty;
+    }
+    if viable_final_difficulties == 0 {
+        return Err(QuestionPlanError::NotEnoughQuestionsForFinal);
+    }
+
+    Ok(QuestionSlotPlan {
+        regular_slots,
+        final_slots,
+        viable_final_difficulties,
+    })
 }
 
 #[cfg(test)]

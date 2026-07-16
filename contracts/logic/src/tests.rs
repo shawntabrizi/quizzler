@@ -1,5 +1,6 @@
 use super::*;
 use alloc::string::ToString;
+use alloc::vec;
 
 // ── Shared vectors (parity with app/src/normalize.ts) ────────────────
 
@@ -241,4 +242,108 @@ fn difficulty_resolution() {
 fn to_string_is_available_in_no_std_alloc() {
     // guards the alloc-only build: String/ToString must come from alloc
     assert_eq!(1912u32.to_string(), "1912");
+}
+
+// ── Question planner ────────────────────────────────────────────────
+
+#[test]
+fn planner_starts_with_easy_when_easy_slots_exist() {
+    let easy_slots = [1u8, 2];
+    let plan = plan_question_slots(
+        [
+            vec![easy_slots[0], easy_slots[1]],
+            vec![10, 11, 12],
+            vec![20, 21, 22],
+        ],
+        5,
+        |_| 0,
+    )
+    .expect("enough slots for regular questions and a final");
+
+    assert!(
+        easy_slots.contains(&plan.regular_slots[0]),
+        "the first regular question must be Easy when an Easy slot exists"
+    );
+}
+
+#[test]
+fn planner_never_uses_three_of_a_tier_while_another_tier_remains() {
+    // Bias every random choice toward Hard. Once two Hard questions have
+    // appeared, Medium must interrupt while it remains. A third Hard at the
+    // end is permitted only after all alternate tiers are exhausted.
+    let initial = [1, 1, 5];
+    let sequence = planned_question_difficulty_sequence(initial, &mut |bound| bound - 1)
+        .expect("each tier has enough candidates for a mixed regular round");
+    assert_eq!(sequence, vec![0, 2, 2, 1, 2, 2, 2]);
+    let mut remaining = initial;
+
+    for (index, difficulty) in sequence.iter().copied().enumerate() {
+        remaining[difficulty as usize] -= 1;
+        if index < 2 || sequence[index - 2] != difficulty || sequence[index - 1] != difficulty {
+            continue;
+        }
+
+        assert!(
+            remaining
+                .iter()
+                .enumerate()
+                .all(|(tier, count)| tier as u8 == difficulty || *count == 0),
+            "tier {difficulty} appeared three times even though another tier remained"
+        );
+    }
+}
+
+#[test]
+fn planner_never_reuses_regular_or_final_slots() {
+    let plan = plan_question_slots(
+        [vec![1, 2, 3], vec![10, 11, 12], vec![20, 21, 22]],
+        5,
+        |_| 0,
+    )
+    .expect("enough slots for regular questions and a final");
+
+    for (index, slot) in plan.regular_slots.iter().enumerate() {
+        assert!(
+            !plan.regular_slots[..index].contains(slot),
+            "regular slot {slot} was selected twice"
+        );
+    }
+    let mut reserved = vec![];
+    for slot in plan.final_slots.iter().filter_map(|slot| *slot) {
+        assert!(
+            !plan.regular_slots.contains(&slot),
+            "final slot {slot} also appeared in the regular round"
+        );
+        assert!(
+            !reserved.contains(&slot),
+            "the same final slot was reserved for two difficulties"
+        );
+        reserved.push(slot);
+    }
+}
+
+#[test]
+fn all_easy_pack_exposes_only_easy_as_a_final_choice() {
+    let plan = plan_question_slots([vec![0, 1, 2, 3, 4, 5], vec![], vec![]], 5, |_| 0)
+        .expect("six Easy slots can play five regular questions plus a final");
+
+    assert_eq!(plan.viable_final_difficulties, 0b001);
+    assert!(plan.final_slots[0].is_some());
+    assert_eq!(plan.final_slots[1], None);
+    assert_eq!(plan.final_slots[2], None);
+}
+
+#[test]
+fn sparse_tiers_expose_only_difficulties_left_after_regular_plan() {
+    // Four regular questions target 2 Easy / 2 Medium. With one Easy, two
+    // Medium, and two Hard candidates, the nearest-tier fallback consumes
+    // one Hard regular question. Only the remaining Hard slot is eligible for
+    // the final; offering Easy or Medium would repeat a regular question.
+    let plan = plan_question_slots([vec![0], vec![10, 11], vec![20, 21]], 4, |_| 0)
+        .expect("one unused Hard slot remains for the final");
+
+    assert_eq!(plan.viable_final_difficulties, 0b100);
+    assert_eq!(plan.final_slots[0], None);
+    assert_eq!(plan.final_slots[1], None);
+    assert!(plan.final_slots[2].is_some());
 }

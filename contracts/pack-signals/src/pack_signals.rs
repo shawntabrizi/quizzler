@@ -55,7 +55,10 @@ const MAX_POPULAR_PAGE: u32 = 24;
 struct PackStatus {
     exists: bool,
     sealed: bool,
-    regular_count: u8,
+    question_count: u8,
+    easy_count: u8,
+    medium_count: u8,
+    hard_count: u8,
 }
 
 /// One saved-pack page for a player. `cursor` and `next_cursor` are a pack
@@ -274,9 +277,9 @@ fn session_registry_call<T: pvm::SolAbi>(
 
 #[cfg(not(test))]
 fn registry_pack_status(pack_id: u32) -> PackStatus {
-    // PackStatus is three static ABI words. The extra headroom makes a reply
+    // PackStatus is six static ABI words. The extra headroom makes a reply
     // that fills the buffer reliably identify an incompatible oversized ABI.
-    registry_call("getPackStatus", &["uint32"], &[abi_word_u32(pack_id)], 128)
+    registry_call("getPackStatus", &["uint32"], &[abi_word_u32(pack_id)], 256)
 }
 
 /// Resolve a direct product-account caller or a live session key to the

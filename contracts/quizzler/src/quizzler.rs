@@ -211,15 +211,6 @@ struct PackStatus {
     hard_count: u8,
 }
 
-/// Immutable per-game question plan. At creation the game reserves one
-/// unused final candidate for every bit in `viable_final_difficulties`, then
-/// stores the regular question order and these candidate slots separately.
-struct QuestionPlan {
-    regular_slots: alloc::vec::Vec<u8>,
-    final_slots: [u8; 3],
-    viable_final_difficulties: u8,
-}
-
 // ── Storage ──────────────────────────────────────────────────────────
 
 #[pvm::storage]
@@ -365,140 +356,10 @@ fn mask_has_one_difficulty(mask: u8) -> bool {
     mask != 0 && (mask & (mask - 1)) == 0
 }
 
-/// Fixed regular-round target: 40% easy, 40% medium, 20% hard. This gives
-/// the supported game lengths the intentional mixes 5 = 2/2/1, 10 = 4/4/2,
-/// 15 = 6/6/3, and 20 = 8/8/4. Sparse packs fall back to nearby available
-/// tiers in `planned_difficulty_counts` rather than becoming unplayable.
-fn desired_difficulty_counts(num_questions: u8) -> [u8; 3] {
-    let hard = num_questions / 5;
-    let non_hard = num_questions - hard;
-    let medium = non_hard / 2;
-    let easy = non_hard - medium;
-    [easy, medium, hard]
-}
-
-fn fallback_order(difficulty: usize) -> [usize; 3] {
-    match difficulty {
-        // If an easy target is unavailable, medium is the gentlest fallback.
-        0 => [1, 2, 0],
-        // For a missing middle tier, prefer an easier question over a harder
-        // one so a sparse community pack does not accidentally become brutal.
-        1 => [0, 2, 1],
-        // A missing hard target falls back to medium before easy.
-        2 => [1, 0, 2],
-        _ => fail("BadDifficulty"),
-    }
-}
-
-/// Allocate the intended regular-round mix within the candidates that remain
-/// after final candidates were reserved. The explicit fallback order keeps a
-/// pack with incomplete metadata useful while still putting the first
-/// available question at the easiest tier later in the schedule builder.
-fn planned_difficulty_counts(capacity: [u8; 3], num_questions: u8) -> [u8; 3] {
-    let desired = desired_difficulty_counts(num_questions);
-    let mut planned = [0u8; 3];
-    for difficulty in 0..3 {
-        planned[difficulty] = core::cmp::min(desired[difficulty], capacity[difficulty]);
-    }
-
-    for difficulty in 0..3 {
-        let missing = desired[difficulty].saturating_sub(planned[difficulty]);
-        for _ in 0..missing {
-            let mut filled = false;
-            for fallback in fallback_order(difficulty) {
-                if planned[fallback] < capacity[fallback] {
-                    planned[fallback] += 1;
-                    filled = true;
-                    break;
-                }
-            }
-            if !filled {
-                fail("QuestionPlanImpossible");
-            }
-        }
-    }
-
-    let allocated: u8 = planned.iter().sum();
-    if allocated != num_questions {
-        // This indicates a malformed registry response or an arithmetic
-        // mistake in the planner. Never start a game that could later miss a
-        // promised question.
-        fail("QuestionPlanImpossible");
-    }
-    planned
-}
-
-/// Choose a difficulty sequence with the desired count of each tier. The
-/// first question is always the easiest tier available for regular play, and
-/// later picks are weighted by what remains while avoiding a third identical
-/// difficulty in a row whenever another tier is available.
-fn planned_difficulty_sequence(
-    mut remaining: [u8; 3],
-    seed: &mut [u8; 32],
-    round: &mut u16,
-) -> alloc::vec::Vec<u8> {
-    let total: usize = remaining.iter().map(|count| usize::from(*count)).sum();
-    let mut sequence = alloc::vec::Vec::with_capacity(total);
-    if total == 0 {
-        return sequence;
-    }
-
-    for difficulty in 0..3 {
-        if remaining[difficulty] > 0 {
-            sequence.push(difficulty as u8);
-            remaining[difficulty] -= 1;
-            break;
-        }
-    }
-
-    while sequence.len() < total {
-        let previous = *sequence.last().unwrap_or(&DIFFICULTY_UNSET);
-        let before_previous = if sequence.len() >= 2 {
-            sequence[sequence.len() - 2]
-        } else {
-            DIFFICULTY_UNSET
-        };
-        let prohibit_repeat = previous == before_previous
-            && remaining
-                .iter()
-                .enumerate()
-                .any(|(difficulty, count)| *count > 0 && difficulty as u8 != previous);
-
-        let eligible_total: usize = remaining
-            .iter()
-            .enumerate()
-            .filter(|(difficulty, count)| {
-                **count > 0 && (!prohibit_repeat || *difficulty as u8 != previous)
-            })
-            .map(|(_, count)| usize::from(*count))
-            .sum();
-        let mut choice = plan_random_index(seed, round, eligible_total);
-        let mut selected = None;
-        for difficulty in 0..3 {
-            if remaining[difficulty] == 0 || (prohibit_repeat && difficulty as u8 == previous) {
-                continue;
-            }
-            let weight = remaining[difficulty] as usize;
-            if choice < weight {
-                selected = Some(difficulty);
-                break;
-            }
-            choice -= weight;
-        }
-        let difficulty = match selected {
-            Some(difficulty) => difficulty,
-            None => fail("QuestionPlanImpossible"),
-        };
-        sequence.push(difficulty as u8);
-        remaining[difficulty] -= 1;
-    }
-    sequence
-}
-
-/// Build the regular order, then reserve one final candidate for every
-/// difficulty represented by the *leftover* slots. Planning the regular game
-/// first is important: a pack with exactly one Easy question must use that as
-/// the opening warm-up rather than hide it behind an Easy final choice.
+/// Seed the pure, host-tested planner with the game-specific deterministic
+/// hash stream. The logic crate owns selection invariants while this contract
+/// owns the chain-derived randomness and converts planner errors into clear
+/// transaction reverts.
 fn build_question_plan(
     creator: &[u8; 20],
     game_id: u64,
@@ -507,13 +368,8 @@ fn build_question_plan(
     creation_block: u64,
     pack_id: u32,
     num_questions: u8,
-    mut slots_by_difficulty: [alloc::vec::Vec<u8>; 3],
-) -> QuestionPlan {
-    let total_candidates: usize = slots_by_difficulty.iter().map(|slots| slots.len()).sum();
-    if total_candidates <= num_questions as usize {
-        fail("NotEnoughQuestionsForFinal");
-    }
-
+    slots_by_difficulty: [alloc::vec::Vec<u8>; 3],
+) -> logic::QuestionSlotPlan {
     let mut seed = question_plan_seed(
         creator,
         game_id,
@@ -523,47 +379,15 @@ fn build_question_plan(
         pack_id,
     );
     let mut round = 0u16;
-
-    let capacity = [
-        slots_by_difficulty[0].len() as u8,
-        slots_by_difficulty[1].len() as u8,
-        slots_by_difficulty[2].len() as u8,
-    ];
-    let planned = planned_difficulty_counts(capacity, num_questions);
-    let sequence = planned_difficulty_sequence(planned, &mut seed, &mut round);
-    let mut regular_slots = alloc::vec::Vec::with_capacity(num_questions as usize);
-    for difficulty in sequence {
-        let candidates = &mut slots_by_difficulty[difficulty as usize];
-        let index = plan_random_index(&mut seed, &mut round, candidates.len());
-        regular_slots.push(candidates.swap_remove(index));
-    }
-    if regular_slots.len() != num_questions as usize {
-        fail("QuestionPlanImpossible");
-    }
-
-    // Only difficulties with an unused candidate after the regular plan are
-    // valid final-vote controls. This naturally adapts an all-easy pack (one
-    // Easy choice, no vote) and never promises a tier that would repeat a
-    // regular question.
-    let mut final_slots = [FINAL_SLOT_UNSET; 3];
-    let mut viable_final_difficulties = 0u8;
-    for difficulty in 0..3 {
-        let candidates = &mut slots_by_difficulty[difficulty];
-        if candidates.is_empty() {
-            continue;
+    match logic::plan_question_slots(slots_by_difficulty, num_questions, |bound| {
+        plan_random_index(&mut seed, &mut round, bound)
+    }) {
+        Ok(plan) => plan,
+        Err(logic::QuestionPlanError::NotEnoughQuestionsForFinal) => {
+            fail("NotEnoughQuestionsForFinal")
         }
-        let index = plan_random_index(&mut seed, &mut round, candidates.len());
-        final_slots[difficulty] = candidates.swap_remove(index);
-        viable_final_difficulties |= difficulty_bit(difficulty as u8);
-    }
-    if viable_final_difficulties == 0 {
-        fail("NotEnoughQuestionsForFinal");
-    }
-
-    QuestionPlan {
-        regular_slots,
-        final_slots,
-        viable_final_difficulties,
+        Err(logic::QuestionPlanError::Impossible) => fail("QuestionPlanImpossible"),
+        Err(logic::QuestionPlanError::InvalidRandomIndex) => fail("QuestionPlanRandomIndexInvalid"),
     }
 }
 
@@ -1529,8 +1353,11 @@ mod quizzler {
         }
         for difficulty in 0..3u8 {
             if plan.viable_final_difficulties & (1u8 << difficulty) != 0 {
-                Storage::final_slots()
-                    .insert(&(id, difficulty), &plan.final_slots[difficulty as usize]);
+                let slot = match plan.final_slots[difficulty as usize] {
+                    Some(slot) => slot,
+                    None => fail("FinalSlotMissing"),
+                };
+                Storage::final_slots().insert(&(id, difficulty), &slot);
             }
         }
         let players: Vec<[u8; 20]> = alloc::vec![creator];
