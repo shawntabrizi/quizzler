@@ -1,7 +1,7 @@
 /**
  * Friendly, stable player identities for party UI.
  *
- * A custom alias always wins. When no alias is stored on-chain, the fallback
+ * A chosen name always wins. When no name is stored on-chain, the fallback
  * is derived deterministically from the account identity, so every device and
  * every player sees the same friendly label without storing more profile data.
  */
@@ -22,7 +22,6 @@ const ANIMALS = [
 
 const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
-const TIE_BREAK_SALT = 0x9e3779b97f4a7c15n;
 
 function h160Bytes(value: string): Uint8Array | null {
     const hex = value.trim().replace(/^0x/i, "");
@@ -33,14 +32,6 @@ function h160Bytes(value: string): Uint8Array | null {
         bytes[index] = Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16);
     }
     return bytes;
-}
-
-function hashBytes(bytes: Uint8Array, salt = 0n): bigint {
-    let hash = BigInt.asUintN(64, FNV_OFFSET ^ salt);
-    for (const byte of bytes) {
-        hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * FNV_PRIME);
-    }
-    return hash;
 }
 
 /** Never surface a malformed identity string as UI text, either. */
@@ -60,45 +51,26 @@ function stableBytes(value: string): Uint8Array {
     return bytes;
 }
 
-function tagFor(bytes: Uint8Array, salt = 0n): string {
-    // 64 bits makes a collision between party-sized rosters fantastically
-    // unlikely while remaining a compact, non-address-like player tag.
-    return hashBytes(bytes, salt).toString(36).toUpperCase().padStart(13, "0");
-}
-
-function savedAlias(value: string | undefined): string {
+function savedName(value: string | undefined): string {
     return value?.trim() ?? "";
 }
 
-/** A deterministic, friendly, collision-resistant identity for an address. */
+/** A deterministic, friendly fallback identity for an address. */
 export function generatedPlayerName(address: string): string {
     const bytes = stableBytes(address);
-    return `${ADJECTIVES[bytes[0] % ADJECTIVES.length]} ${ANIMALS[bytes[1] % ANIMALS.length]} · ${tagFor(bytes)}`;
+    return `${ADJECTIVES[bytes[0] % ADJECTIVES.length]} ${ANIMALS[bytes[1] % ANIMALS.length]}`;
 }
 
-/** The player's selected alias when present, otherwise their generated name. */
-export function playerName(address: string, alias?: string): string {
-    return savedAlias(alias) || generatedPlayerName(address);
+/** The player's chosen name when present, otherwise their generated name. */
+export function playerName(address: string, name?: string): string {
+    return savedName(name) || generatedPlayerName(address);
 }
 
 /**
- * Resolve the whole roster at once so deliberately duplicated aliases remain
- * understandable. A custom alias is kept intact and gets a friendly tag only
- * when another person at this table chose the same visible name.
+ * Resolve the whole roster at once. Names intentionally stay exactly as people
+ * chose them: a casual party of at most 24 people does not need identifier
+ * suffixes or blockchain-like codes to distinguish an occasional duplicate.
  */
-export function playerLabels(players: readonly string[], aliases: readonly string[]): string[] {
-    const baseLabels = players.map((address, index) => playerName(address, aliases[index]));
-    const counts = new Map<string, number>();
-    for (const label of baseLabels) {
-        const key = label.toLowerCase();
-        counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-
-    return baseLabels.map((label, index) => {
-        if ((counts.get(label.toLowerCase()) ?? 0) < 2) return label;
-        const alias = savedAlias(aliases[index]);
-        const bytes = stableBytes(players[index]);
-        const discriminator = tagFor(bytes, TIE_BREAK_SALT);
-        return alias ? `${alias} · ${discriminator}` : `${label} · ${discriminator}`;
-    });
+export function playerLabels(players: readonly string[], names: readonly string[]): string[] {
+    return players.map((address, index) => playerName(address, names[index]));
 }
