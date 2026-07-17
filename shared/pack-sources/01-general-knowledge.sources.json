@@ -32,8 +32,8 @@
     },
     {
       "id": "qz-general-knowledge-q005",
-      "question": "What is the linguistic term for two words spelled the same but with different meanings, such as bat the animal and bat the sports equipment?",
-      "answers": ["Homograph", "homographs", "a homograph"],
+      "question": "What do you call a word that is spelled the same as another word but has a different meaning?",
+      "answers": ["Homograph", "a homograph", "Homonym", "a homonym"],
       "difficulty": "easy"
     },
     {
@@ -86,14 +86,18 @@
     },
     {
       "id": "qz-general-knowledge-q014",
-      "question": "What is the tallest animal in the world?",
-      "answers": ["Giraffe", "giraffes"],
+      "question": "How many days are there in a leap year?",
+      "answers": [
+        "366",
+        "three hundred and sixty six",
+        "three hundred sixty six"
+      ],
       "difficulty": "easy"
     },
     {
       "id": "qz-general-knowledge-q015",
-      "question": "Which planet is the largest in our solar system?",
-      "answers": ["Jupiter"],
+      "question": "What is the name of the wooden puppet whose nose grows whenever he tells a lie?",
+      "answers": ["Pinocchio", "Pinnochio", "Pinochio"],
       "difficulty": "easy"
     },
     {
@@ -158,8 +162,8 @@
     },
     {
       "id": "qz-general-knowledge-q027",
-      "question": "Carrots are rich in beta-carotene, which the body can convert into which vitamin?",
-      "answers": ["Vitamin A", "A"],
+      "question": "Which orange vegetable is popularly said to help you see in the dark?",
+      "answers": ["Carrot", "carrots"],
       "difficulty": "easy"
     },
     {
@@ -242,8 +246,8 @@
     },
     {
       "id": "qz-general-knowledge-q041",
-      "question": "What is the name of the cowboy doll in the Toy Story films?",
-      "answers": ["Woody", "Sheriff Woody"],
+      "question": "What is the largest bird in the world?",
+      "answers": ["Ostrich", "An ostrich"],
       "difficulty": "easy"
     },
     {
@@ -260,8 +264,8 @@
     },
     {
       "id": "qz-general-knowledge-q044",
-      "question": "Which green ogre lives in a swamp in a series of DreamWorks films?",
-      "answers": ["Shrek"],
+      "question": "Which fairy tale character lets down her long hair from a tall tower?",
+      "answers": ["Rapunzel", "Repunzel"],
       "difficulty": "easy"
     },
     {
@@ -350,8 +354,8 @@
     },
     {
       "id": "qz-general-knowledge-q059",
-      "question": "Which Italian city is home to a famously leaning bell tower?",
-      "answers": ["Pisa"],
+      "question": "What is the official language of Brazil?",
+      "answers": ["Portuguese"],
       "difficulty": "easy"
     },
     {
@@ -434,8 +438,8 @@
     },
     {
       "id": "qz-general-knowledge-q073",
-      "question": "Which country has the world's only national flag that is not a rectangle or a square?",
-      "answers": ["Nepal"],
+      "question": "What is the collective name for a group of flamingos?",
+      "answers": ["Flamboyance", "A flamboyance"],
       "difficulty": "hard"
     },
     {
@@ -992,7 +996,13 @@
     {
       "id": "qz-general-knowledge-q165",
       "question": "What is the capital of Mongolia?",
-      "answers": ["Ulaanbaatar", "Ulan Bator", "Ulanbatar", "Ulaanbatar", "Ulanbaatar"],
+      "answers": [
+        "Ulaanbaatar",
+        "Ulan Bator",
+        "Ulanbatar",
+        "Ulaanbatar",
+        "Ulanbaatar"
+      ],
       "difficulty": "hard"
     },
     {

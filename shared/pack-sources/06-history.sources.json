@@ -496,7 +496,7 @@
     {
       "id": "qz-history-q080",
       "question": "The Hindenburg, which burst into flames in 1937, was what type of aircraft?",
-      "answers": ["Airship", "Zeppelin", "Dirigible"],
+      "answers": ["Airship", "Zeppelin", "Blimp", "Dirigible"],
       "difficulty": "easy"
     },
     {

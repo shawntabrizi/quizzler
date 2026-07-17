@@ -1353,11 +1353,11 @@
    "difficulty": "hard"
   },
   {
-   "text": "Bluetooth technology is named after Harald Bluetooth, a 10th-century king of which two countries?",
+   "text": "Bluetooth technology is named after a 10th-century king of which country?",
    "answers": [
+    "Denmark",
     "Denmark and Norway",
-    "Norway and Denmark",
-    "Denmark & Norway"
+    "Norway"
    ],
    "difficulty": "hard"
   },
@@ -1387,9 +1387,10 @@
    "difficulty": "hard"
   },
   {
-   "text": "Which simple game about steering an ever-growing line came pre-installed on classic Nokia phones?",
+   "text": "The very first computer mouse, invented in the 1960s, was made mostly of which material?",
    "answers": [
-    "Snake"
+    "Wood",
+    "Wooden"
    ],
    "difficulty": "hard"
   },

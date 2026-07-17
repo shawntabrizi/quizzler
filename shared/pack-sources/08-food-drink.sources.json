@@ -410,8 +410,8 @@
     },
     {
       "id": "qz-food-drink-q068",
-      "question": "Which alcoholic drink category includes ale and lager and is traditionally ordered by the pint in British pubs?",
-      "answers": ["beer"],
+      "question": "Which broad category of drink is traditionally ordered by the pint in British pubs?",
+      "answers": ["beer", "ale", "lager", "cider", "stout"],
       "difficulty": "easy"
     },
     {
@@ -847,8 +847,8 @@
     },
     {
       "id": "qz-food-drink-q141",
-      "question": "Which cocktail is traditionally made with equal parts orange juice and sparkling wine?",
-      "answers": ["mimosa"],
+      "question": "Which brunch cocktail tops up orange juice with sparkling wine?",
+      "answers": ["mimosa", "bucks fizz", "buck's fizz"],
       "difficulty": "medium"
     },
     {

@@ -1076,8 +1076,8 @@
     },
     {
       "id": "qz-tech-crypto-q178",
-      "question": "Bluetooth technology is named after Harald Bluetooth, a 10th-century king of which two countries?",
-      "answers": ["Denmark and Norway", "Norway and Denmark", "Denmark & Norway"],
+      "question": "Bluetooth technology is named after a 10th-century king of which country?",
+      "answers": ["Denmark", "Denmark and Norway", "Norway"],
       "difficulty": "hard"
     },
     {
@@ -1103,8 +1103,8 @@
     },
     {
       "id": "qz-tech-crypto-q182",
-      "question": "Which simple game about steering an ever-growing line came pre-installed on classic Nokia phones?",
-      "answers": ["Snake"],
+      "question": "The very first computer mouse, invented in the 1960s, was made mostly of which material?",
+      "answers": ["Wood", "Wooden"],
       "difficulty": "hard"
     },
     {

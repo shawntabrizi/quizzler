@@ -434,8 +434,8 @@
     },
     {
       "id": "qz-science-nature-q202",
-      "question": "Which vitamin does your skin produce when it is exposed to sunlight?",
-      "answers": ["vitamin D", "D"],
+      "question": "In which season do deciduous trees drop their leaves?",
+      "answers": ["Autumn", "Fall", "The fall"],
       "difficulty": "easy"
     },
     {
@@ -1094,8 +1094,8 @@
     },
     {
       "id": "qz-science-nature-q205",
-      "question": "How many hearts does an octopus have?",
-      "answers": ["3", "three"],
+      "question": "Which Australian animal has fingerprints so similar to a human's they can confuse crime scenes?",
+      "answers": ["Koala", "Koalas", "Koala bear"],
       "difficulty": "hard"
     }
   ]

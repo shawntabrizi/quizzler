@@ -1011,7 +1011,13 @@
     {
       "id": "qz-video-games-q168",
       "question": "Princess Zelda was named after the wife of which famous American author?",
-      "answers": ["F. Scott Fitzgerald", "Scott Fitzgerald", "Fitzgerald", "Zelda Fitzgerald", "F. Scott Fitzgerald's wife"],
+      "answers": [
+        "F. Scott Fitzgerald",
+        "Scott Fitzgerald",
+        "Fitzgerald",
+        "Zelda Fitzgerald",
+        "F. Scott Fitzgerald's wife"
+      ],
       "difficulty": "hard"
     },
     {
@@ -1197,7 +1203,12 @@
     {
       "id": "qz-video-games-q199",
       "question": "Which 1982 Atari 2600 game was famously buried in a New Mexico landfill?",
-      "answers": ["E.T.", "ET", "E.T. the Extra-Terrestrial", "E.T. the Extra Terrestrial"],
+      "answers": [
+        "E.T.",
+        "ET",
+        "E.T. the Extra-Terrestrial",
+        "E.T. the Extra Terrestrial"
+      ],
       "difficulty": "hard"
     },
     {
