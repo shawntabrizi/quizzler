@@ -10,7 +10,8 @@
  * Boot follows the product-sdk contracts-demo: SignerManager → product
  * account → chain client → contract handles → account mapping. Answers and
  * correctness are public on-chain. The client reveals submitted answers and
- * wagers after the local player locks in, while keeping correctness for review.
+ * wagers only after the chain records the local player's submission, while
+ * keeping correctness for review.
  */
 
 import "./styles.css";
@@ -64,6 +65,7 @@ import {
 import { parseGameCode, parseIntegerInRange, utf8ByteLength } from "./input";
 import { consumeSharedLobbyInvite, sharedLobbyInviteUrl } from "./invite";
 import { normalizeAnswer } from "./normalize";
+import { answerSubmissionScreenState } from "./answer-submission";
 import {
     finalOutcomeText,
     finalWagerValue,
@@ -501,13 +503,28 @@ function clearActionSent(action: string): void {
  */
 function reconcileActionGuards(snap: Snapshot): void {
     const mine = snap.submissions.find((submission) => submission.player.toLowerCase() === myAddress);
-    if (mine?.submitted) clearActionSent("submit");
+    if (mine?.submitted) {
+        clearActionSent("submit");
+        if (isPendingAnswerSubmission(snap)) {
+            pendingAnswerSubmission = null;
+            selectedWager = null;
+            getEl<HTMLInputElement>("answer-input").value = "";
+        }
+    }
     if (mine?.continue_ready) clearActionSent("continue");
     const myIndex = snap.players.indexOf(myAddress);
     if (myIndex >= 0 && snap.difficultyVoteLocked[myIndex]) clearActionSent("difficulty");
     if (myIndex >= 0 && snap.finalWagerLocked[myIndex]) clearActionSent("final-wager");
     const now = Date.now();
     for (const [action, sentAt] of actionSentAt) {
+        if (action === "submit" && isPendingAnswerSubmission(snap)) {
+            // A wallet prompt can legitimately take longer than the usual
+            // reconciliation window. Once best-chain inclusion succeeds, use
+            // the normal short window to recover safely from a reorg or a
+            // lagging RPC snapshot.
+            if (pendingAnswerSubmission?.acceptedAt === null || now - sentAt < 18_000) continue;
+            pendingAnswerSubmission = null;
+        }
         if (now - sentAt < 18_000) continue;
         clearActionSent(action);
         setTransactionStatus("Still confirming — you can retry safely if needed.");
@@ -548,9 +565,25 @@ let activeFinalWagerKey = "";
 // a local route only: it lets players see the trophy page immediately while
 // polling continues until the terminal on-chain stage arrives.
 let finalResultsPreviewOpen = false;
-// Optimistic local echo of my in-flight answer, shown until the chain
-// confirms it (rolled back if the tx fails).
-let optimisticAnswer: { qkey: number; answer: string; wager: number } | null = null;
+/**
+ * A signing prompt is deliberately not a submitted answer. Keep the player's
+ * form on screen, locked, until an authoritative snapshot observes it. This
+ * prevents a rejected signature from becoming a free peek at other answers.
+ */
+let pendingAnswerSubmission: {
+    gameId: bigint;
+    session: number;
+    qkey: number;
+    /** Null while signing/sending; set once a best-chain inclusion succeeds. */
+    acceptedAt: number | null;
+} | null = null;
+
+function isPendingAnswerSubmission(snap: Snapshot): boolean {
+    return pendingAnswerSubmission !== null
+        && pendingAnswerSubmission.gameId === gameId
+        && pendingAnswerSubmission.session === gameSession
+        && pendingAnswerSubmission.qkey === questionKeyFor(snap.phase);
+}
 
 // Registry content caches (immutable once sealed)
 const questionCache = new Map<string, string>();
@@ -4781,7 +4814,7 @@ function enterGame(id: bigint, initialSnapshot: Snapshot | null = null): void {
     activeAnswerKey = "";
     activeFinalWagerKey = "";
     finalResultsPreviewOpen = false;
-    optimisticAnswer = null;
+    pendingAnswerSubmission = null;
     lastRank = -1;
     behindPhaseCandidate = null;
     latestObservedAt = initialSnapshot ? Date.now() : 0;
@@ -4815,7 +4848,7 @@ function leaveGame({ preserveSavedGame = false }: { preserveSavedGame?: boolean 
     activeAnswerKey = "";
     activeFinalWagerKey = "";
     finalResultsPreviewOpen = false;
-    optimisticAnswer = null;
+    pendingAnswerSubmission = null;
     latestObservedAt = 0;
     gameEntryMark = null;
     awaitingFirstGameSnapshot = false;
@@ -5210,7 +5243,7 @@ async function poll(): Promise<void> {
             actionKey = key;
             actionsSent.clear();
             actionSentAt.clear();
-            optimisticAnswer = null;
+            pendingAnswerSubmission = null;
             selectedDifficulty = null;
             finalResultsPreviewOpen = false;
         }
@@ -5229,12 +5262,8 @@ async function poll(): Promise<void> {
         } else if (latest.phase.stage !== STAGE_FINAL_WAGER) {
             activeFinalWagerKey = "";
         }
-        // chain caught up with the optimistic echo
-        if (optimisticAnswer && mySubmission(latest)?.submitted) {
-            optimisticAnswer = null;
-        }
         reconcileActionGuards(latest);
-        if (actionsSent.size === 0) setTransactionStatus(null);
+        if (actionsSent.size === 0 && !isPendingAnswerSubmission(latest)) setTransactionStatus(null);
         render(latest);
         hydrateSnapshotContent(snap, polledGameId, polledSession);
         // Historic wagers matter for controls, not for the first paint. On a
@@ -5609,6 +5638,7 @@ function paintWagerGrid(): void {
         btn.classList.toggle("used-wrong", outcome === false);
         btn.classList.toggle("selected", selected);
         btn.disabled = outcome !== undefined;
+        btn.setAttribute("aria-disabled", String(outcome !== undefined));
         btn.setAttribute("aria-pressed", String(selected));
         btn.setAttribute(
             "aria-label",
@@ -5621,7 +5651,8 @@ function paintWagerGrid(): void {
 
 function renderQuestion(snap: Snapshot): void {
     const isFinal = snap.phase.stage === STAGE_FINAL_ANSWER;
-    getEl<HTMLButtonElement>("btn-submit-answer").textContent = isFinal ? "Submit final answer" : "Submit answer";
+    const $submitAnswer = getEl<HTMLButtonElement>("btn-submit-answer");
+    const defaultSubmitLabel = isFinal ? "Submit final answer" : "Submit answer";
     const questionReady = snap.questionText.length > 0;
     getEl("question-number").textContent = isFinal
         ? `Final question · ${DIFFICULTY_NAMES[snap.phase.final_difficulty] ?? ""}`
@@ -5634,11 +5665,20 @@ function renderQuestion(snap: Snapshot): void {
 
     const mine = mySubmission(snap);
     const amActive = mine?.active ?? false;
-    const optimistic =
-        optimisticAnswer !== null && optimisticAnswer.qkey === questionKeyFor(snap.phase);
-    const answered = (mine?.submitted ?? false) || optimistic;
-    getEl("answer-form").style.display = answered || !questionReady || !amActive ? "none" : "";
-    getEl("submitted-card").style.display = answered ? "" : "none";
+    const pending = isPendingAnswerSubmission(snap);
+    const submissionState = answerSubmissionScreenState(Boolean(mine?.submitted), pending);
+    const answered = submissionState.showLiveAnswers;
+    const $answerInput = getEl<HTMLInputElement>("answer-input");
+    $answerInput.readOnly = submissionState.lockAnswerForm;
+    $answerInput.setAttribute("aria-busy", String(submissionState.lockAnswerForm));
+    $submitAnswer.textContent = pending
+        ? pendingAnswerSubmission?.acceptedAt === null ? "Submitting…" : "Answer sent"
+        : defaultSubmitLabel;
+    $submitAnswer.disabled = submissionState.lockAnswerForm;
+    $submitAnswer.classList.toggle("loading", submissionState.lockAnswerForm);
+    $submitAnswer.setAttribute("aria-busy", String(submissionState.lockAnswerForm));
+    getEl("answer-form").style.display = !submissionState.showAnswerForm || !questionReady || !amActive ? "none" : "";
+    getEl("submitted-card").style.display = submissionState.showLiveAnswers ? "" : "none";
 
     if (!answered && amActive) {
         getEl("wager-grid-block").style.display = isFinal ? "none" : "";
@@ -5650,6 +5690,12 @@ function renderQuestion(snap: Snapshot): void {
         } else {
             ensureWagerButtons(snap.game.num_questions);
             paintWagerGrid();
+            if (submissionState.lockAnswerForm) {
+                for (const button of $wagerButtons) {
+                    button.disabled = true;
+                    button.setAttribute("aria-disabled", "true");
+                }
+            }
         }
     } else {
         getEl("final-wager-locked").style.display = "none";
@@ -5658,17 +5704,13 @@ function renderQuestion(snap: Snapshot): void {
         renderList(
             getEl("live-answers"),
             snap.submissions.map((s) => {
-                const pendingMine =
-                    s.player.toLowerCase() === myAddress && !s.submitted && optimistic;
                 const text = !s.active
                     ? s.submitted
                         ? `“${s.answer}” · left quiz`
                         : "left quiz"
                     : s.submitted
                     ? `“${s.answer}” · wagered ${s.wager}`
-                    : pendingMine
-                      ? `“${optimisticAnswer?.answer}” · wagered ${optimisticAnswer?.wager} · confirming…`
-                      : "…";
+                    : "…";
                 const identity = document.createElement("span");
                 identity.className = "answer-row-identity";
                 identity.append(span("answer-row-player", fmtPlayer(snap, s.player)));
@@ -5709,28 +5751,53 @@ getEl("btn-submit-answer").addEventListener("click", async () => {
         }
         wager = selectedWager;
     }
-    if (actionsSent.has("submit")) return;
-    // Optimistic: flip to the submitted view immediately; roll back on error.
-    markActionSent("submit");
-    optimisticAnswer = { qkey: questionKeyFor(latest.phase), answer, wager };
-    render(latest);
+    if (actionsSent.has("submit") || isPendingAnswerSubmission(latest)) return;
+    const submittedGameId = gameId;
+    const submittedSession = gameSession;
+    const submittedQuestionKey = questionKeyFor(latest.phase);
+    // Keep signing distinct from submitting. A player can reject the wallet
+    // prompt, so neither the live-answer card nor teammates' answers may be
+    // revealed until the chain has accepted this exact action.
+    pendingAnswerSubmission = {
+        gameId: submittedGameId,
+        session: submittedSession,
+        qkey: submittedQuestionKey,
+        acceptedAt: null,
+    };
     busy = true;
+    render(latest);
     try {
         if (isFinal) {
-            await sendTx(game, "submitFinalAnswer", gameId, answer);
+            await sendTx(game, "submitFinalAnswer", submittedGameId, answer);
         } else {
-            await sendTx(game, "submitAnswer", gameId, answer, wager);
+            await sendTx(game, "submitAnswer", submittedGameId, answer, wager);
         }
-        selectedWager = null;
-        getEl<HTMLInputElement>("answer-input").value = "";
-        void poll();
+        if (
+            gameId === submittedGameId
+            && gameSession === submittedSession
+            && pendingAnswerSubmission?.qkey === submittedQuestionKey
+        ) {
+            // sendTx resolves only once the call is included in a best block.
+            // Still wait for the live snapshot before showing any answers.
+            pendingAnswerSubmission.acceptedAt = Date.now();
+            markActionSent("submit");
+            setTransactionStatus("Answer sent — confirming…");
+            if (latest) render(latest);
+            void poll();
+        }
     } catch (e) {
-        clearActionSent("submit");
-        optimisticAnswer = null;
-        $err.textContent = friendlyError(e);
-        if (latest) render(latest);
+        if (
+            gameId === submittedGameId
+            && gameSession === submittedSession
+            && pendingAnswerSubmission?.qkey === submittedQuestionKey
+        ) {
+            pendingAnswerSubmission = null;
+            clearActionSent("submit");
+            $err.textContent = friendlyError(e);
+        }
     } finally {
         busy = false;
+        if (latest) render(latest);
     }
 });
 
