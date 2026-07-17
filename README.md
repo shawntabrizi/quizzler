@@ -125,6 +125,12 @@ Each build automatically embeds a small release label in the Home and in-game
 settings footers: the package version plus the current Git revision (for
 example, `v0.1.0 · abc1234`). It is computed from `HEAD` during the Vite build,
 so every merged PR has a distinct visible version without a manual version bump.
+Game settings also shows a compact 12-character **release fingerprint**. It is
+computed from that frontend label, the active four-contract address stack, and
+the canonical default-pack catalog (metadata plus every starter-pack file).
+This lets playtesters distinguish full-stack releases without exposing chain
+addresses on the Home screen. It is not a version for every community pack:
+sealed packs are individually identified by their registry address and pack ID.
 Propagation takes a minute or two (IPFS pin + DotNS confirmation + gateway
 cache). Bulletin storage has a **~2-week retention window** — the content
 stays addressable only while a provider serves it, so re-run `pnpm deploy:dot`

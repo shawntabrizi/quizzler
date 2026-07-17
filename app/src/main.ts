@@ -124,11 +124,16 @@ import {
 import { appendLog, getEl, li, renderList, span } from "./ui";
 
 declare const __QUIZZLER_APP_BUILD_VERSION__: string;
+declare const __QUIZZLER_RELEASE_FINGERPRINT__: string;
 
 const APP_BUILD_VERSION = __QUIZZLER_APP_BUILD_VERSION__;
+const RELEASE_FINGERPRINT = __QUIZZLER_RELEASE_FINGERPRINT__;
 
 for (const element of document.querySelectorAll<HTMLElement>("[data-app-build-version]")) {
     element.textContent = `Version ${APP_BUILD_VERSION}`;
+}
+for (const element of document.querySelectorAll<HTMLElement>("[data-app-release-fingerprint]")) {
+    element.textContent = `Release ${RELEASE_FINGERPRINT}`;
 }
 
 function isContractAddress(value: unknown): value is `0x${string}` {
