@@ -123,6 +123,14 @@ import {
 } from "./pack-library";
 import { appendLog, getEl, li, renderList, span } from "./ui";
 
+declare const __QUIZZLER_APP_BUILD_VERSION__: string;
+
+const APP_BUILD_VERSION = __QUIZZLER_APP_BUILD_VERSION__;
+
+for (const element of document.querySelectorAll<HTMLElement>("[data-app-build-version]")) {
+    element.textContent = `Version ${APP_BUILD_VERSION}`;
+}
+
 function isContractAddress(value: unknown): value is `0x${string}` {
     return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
 }

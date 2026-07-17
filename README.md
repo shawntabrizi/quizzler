@@ -120,6 +120,11 @@ Current deployment: see `app/src/contract-address.json`.
 Bulletin Chain, then points the `quizzler.dot` DotNS name at the new CID. It
 uses the direct `bulletin-deploy` publisher; it does not list the app in
 Playground or require a Playground competition enrollment.
+
+Each build automatically embeds a small release label in the Home and in-game
+settings footers: the package version plus the current Git revision (for
+example, `v0.1.0 · abc1234`). It is computed from `HEAD` during the Vite build,
+so every merged PR has a distinct visible version without a manual version bump.
 Propagation takes a minute or two (IPFS pin + DotNS confirmation + gateway
 cache). Bulletin storage has a **~2-week retention window** — the content
 stays addressable only while a provider serves it, so re-run `pnpm deploy:dot`
