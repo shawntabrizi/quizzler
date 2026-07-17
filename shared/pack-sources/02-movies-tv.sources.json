@@ -20,8 +20,8 @@
     },
     {
       "id": "qz-movies-tv-q003",
-      "question": "In the classic Disney film, which princess leaves a glass slipper behind at the ball?",
-      "answers": ["Cinderella"],
+      "question": "In Disney's The Jungle Book, what kind of animal is Baloo?",
+      "answers": ["Bear", "A bear"],
       "difficulty": "easy"
     },
     {

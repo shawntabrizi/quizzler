@@ -533,10 +533,11 @@
       "difficulty": "easy"
     },
     {
-      "text": "Which vitamin does your skin produce when it is exposed to sunlight?",
+      "text": "In which season do deciduous trees drop their leaves?",
       "answers": [
-        "vitamin D",
-        "D"
+        "Autumn",
+        "Fall",
+        "The fall"
       ],
       "difficulty": "easy"
     },
@@ -1360,10 +1361,11 @@
       "difficulty": "hard"
     },
     {
-      "text": "How many hearts does an octopus have?",
+      "text": "Which Australian animal has fingerprints so similar to a human's they can confuse crime scenes?",
       "answers": [
-        "3",
-        "three"
+        "Koala",
+        "Koalas",
+        "Koala bear"
       ],
       "difficulty": "hard"
     }

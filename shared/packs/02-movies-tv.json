@@ -3,7 +3,7 @@
   "questions": [
     { "text": "Who directed both Titanic and Avatar?", "answers": ["James Cameron","Cameron"], "difficulty": "easy" },
     { "text": "'May the Force be with you' is a famous line from which film franchise?", "answers": ["Star Wars"], "difficulty": "easy" },
-    { "text": "In the classic Disney film, which princess leaves a glass slipper behind at the ball?", "answers": ["Cinderella"], "difficulty": "easy" },
+    { "text": "In Disney's The Jungle Book, what kind of animal is Baloo?", "answers": ["Bear","A bear"], "difficulty": "easy" },
     { "text": "Jack and Rose fall in love aboard a doomed ocean liner in which 1997 film?", "answers": ["Titanic"], "difficulty": "easy" },
     { "text": "What is the name of the lion cub who becomes king in The Lion King?", "answers": ["Simba"], "difficulty": "easy" },
     { "text": "Which actor played Iron Man in the Marvel Cinematic Universe?", "answers": ["Robert Downey Jr.","Robert Downey Jr","Robert Downey Junior","RDJ"], "difficulty": "easy" },
